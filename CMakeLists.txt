@@ -1,7 +1,7 @@
 set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
 
 cmake_minimum_required(VERSION 3.12)
-project(minWAbort)
+project(minWRollback)
 
 # 指定c++标准
 set(CMAKE_CXX_STANDARD 11)
@@ -19,6 +19,6 @@ file(GLOB SRC_LIST "*.cpp")
 file(GLOB HEADERS "*.h")
 
 
-add_executable(minWAbort ${SRC_LIST} ${HEADERS})
-target_link_libraries(minWAbort ${GTEST_LIBRARIES} ${TBB_LIBRARIES} pthread)
-target_compile_options(minWAbort PRIVATE -Wpedantic -Wno-unused-variable -Wno-unused-parameter -Wno-comment -Wno-sign-compare -Wno-pedantic -Wno-return-type -Wno-uninitialized)
+add_executable(minWRollback ${SRC_LIST} ${HEADERS})
+target_link_libraries(minWRollback ${GTEST_LIBRARIES} ${TBB_LIBRARIES} pthread)
+target_compile_options(minWRollback PRIVATE -Wpedantic -Wno-unused-variable -Wno-unused-parameter -Wno-comment -Wno-sign-compare -Wno-pedantic -Wno-return-type -Wno-uninitialized)

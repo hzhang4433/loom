@@ -37,6 +37,8 @@ class Vertex : public std::enable_shared_from_this<Vertex>
         DependencyType getDependencyType() const;
         void setDependencyType(DependencyType type);
 
+        int mapToHyperId() const;
+
     private:
         int m_hyperId;                                                                              // 记录节点对应的超(节点)id
         std::string m_id;                                                                           // 记录节点自身的id

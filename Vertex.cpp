@@ -24,3 +24,7 @@ DependencyType Vertex::getDependencyType() const {
 void Vertex::setDependencyType(DependencyType type) { 
     m_dependencyType = type; 
 }
+
+int Vertex::mapToHyperId() const { 
+    return m_hyperId; 
+}

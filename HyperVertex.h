@@ -18,5 +18,6 @@ class HyperVertex : public std::enable_shared_from_this<HyperVertex>
         Vertex::Ptr getVertexById(const std::string& id) const;
 
     private:
+        int hyperId;    // 超节点ID
         tbb::concurrent_unordered_map<std::string, Vertex::Ptr> m_vertices;    // 记录所有节点
 };

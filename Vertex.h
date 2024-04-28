@@ -4,7 +4,7 @@
 #include <string>
 #include <tbb/concurrent_unordered_map.h>
 #include <tbb/concurrent_unordered_set.h>
-#include "common.h"
+#include "common/common.h"
 
 class Vertex : public std::enable_shared_from_this<Vertex>
 {
@@ -34,8 +34,8 @@ class Vertex : public std::enable_shared_from_this<Vertex>
         const tbb::concurrent_unordered_set<Vertex::Ptr, VertexHash, VertexEqual>& getChildren() const;
         void addChild(Vertex::Ptr child);
 
-        DependencyType getDependencyType() const;
-        void setDependencyType(DependencyType type);
+        minw::DependencyType getDependencyType() const;
+        void setDependencyType(minw::DependencyType type);
 
         int mapToHyperId() const;
 
@@ -51,5 +51,5 @@ class Vertex : public std::enable_shared_from_this<Vertex>
         bool isNested;                                                                              // 标记节点是否是嵌套节点
         Ptr m_parent;                                                                               // 记录父节点
         tbb::concurrent_unordered_set<Vertex::Ptr, VertexHash, VertexEqual> m_children;             // 记录子节点
-        DependencyType m_dependencyType;                                                            // 记录父子节点间依赖类型
+        minw::DependencyType m_dependencyType;                                                            // 记录父子节点间依赖类型
 };

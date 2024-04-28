@@ -17,11 +17,11 @@ void Vertex::addChild(Vertex::Ptr child) {
     m_children.insert(child); 
 }
 
-DependencyType Vertex::getDependencyType() const { 
+minw::DependencyType Vertex::getDependencyType() const { 
     return m_dependencyType; 
 }
 
-void Vertex::setDependencyType(DependencyType type) { 
+void Vertex::setDependencyType(minw::DependencyType type) { 
     m_dependencyType = type; 
 }
 

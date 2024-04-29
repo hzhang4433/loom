@@ -1,5 +1,6 @@
 #pragma once
 
+#include "../../common/common.h"
 
 namespace TPCC {
     enum TransactionType {

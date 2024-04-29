@@ -6,6 +6,13 @@
 class Workload {
     public:
         Workload() {
+            for (int i = 0; i < 3000; i++) {
+                if (i < 1000) {
+                    c_lasts[i + 1] = random.rand_last_name(i);
+                } else {
+                    c_lasts[i + 1] = random.rand_last_name(random.non_uniform_distribution(255, 0, 999));
+                }
+            }
             txGenerator = std::make_shared<Transaction>();
         }
         
@@ -31,4 +38,5 @@ class Workload {
     private:
         Random random;
         Transaction::Ptr txGenerator;
+        std::string c_lasts[3001];
 };

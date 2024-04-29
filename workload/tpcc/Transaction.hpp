@@ -62,12 +62,26 @@ class Transaction : public std::enable_shared_from_this<Transaction>
             minw::DependencyType dependency;
         };
 
+        struct OrderInfo {
+            uint64_t o_id;
+            uint32_t o_ol_cnt;
+            int32_t o_c_id;
+        };
+
+        struct OrderLineInfo {
+            uint64_t o_id;
+            uint32_t ol_i_id;
+        };
+
     protected:
         Random random;                                          // random generator
         std::array<std::atomic<uint64_t>, 10> order_counters;   // order counter
-        // 待测试...
+        // 静态变量 待测试...
         static const std::array<std::string, 3000> c_lasts;     // const last name
         static const std::unordered_map<std::string, std::vector<int32_t>> c_last_to_c_id; // last name to customer id
+        static std::unordered_map<std::string, OrderInfo> latestOrder; // format: (w_id-d_id-c_id, {o_id, o_ol_cnt})
+        static std::unordered_map<std::string, OrderInfo> oldestNewOrder; // format: (w_id-d_id, {o_id, o_c_id, o_ol_cnt})
+        static std::unordered_map<std::string, std::vector<OrderLineInfo>> latestOrderLines; // format: (d_id, [{o_id, ol_i_id}, ...])
         // tx operations
         std::unordered_set<std::string> readRows;               // read rows
         std::unordered_set<std::string> updateRows;             // update rows
@@ -299,6 +313,7 @@ class OrderStatusTransaction : public Transaction
                     1.2 利用c_w_id, c_d_id, c_last范围查询 => 转化为c_ids => 取第n/2(向上取整)个id
                 2. order表: 根据w_id, d_id, c_id查找最近的o_id, 读取o_id字段 => 随机生成一个
                 3. orderLine表: 根据w_id, d_id, o_id查找, 读取ol_i_id, ol_supply_w_id, ol_quantity, ol_amount等字段
+                需要额外维护的数据：(w_id-d_id-c_id, {o_id, o_ol_cnt})
             */
 
             Transaction::Ptr root = std::make_shared<Transaction>();
@@ -337,6 +352,7 @@ class DeliveryTransaction : public Transaction
                 2. order表: 根据w_id, d_id, o_id查找, 读取o_ol_cnt, o_c_id字段, 更新o_carrier_id字段
                 3. orderLine表: 根据w_id, d_id, o_id查找, 读取ol_amount字段, 更新ol_delivery_d字段 => 计算ol_amount总和
                 4. customer表: 根据w_id, d_id, o_c_id查找, 读取c_balance字段, 更新c_balance字段
+                需要额外维护的数据：(w_id-d_id, {o_id, o_c_id, o_ol_cnt})
             */
 
             Transaction::Ptr root = std::make_shared<Transaction>();

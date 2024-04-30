@@ -6,6 +6,7 @@
 #include <memory>
 #include <unordered_set>
 #include <unordered_map>
+#include <queue>
 #include "Random.hpp"
 #include "common.hpp"
 
@@ -79,10 +80,11 @@ class Transaction : public std::enable_shared_from_this<Transaction>
         Random random;                                          // random generator
         // 静态变量 待测试...
         static const std::array<std::string, 3000> c_lasts;     // const last name
-        static const std::unordered_map<std::string, std::vector<int32_t>> c_last_to_c_id; // last name to customer id
-        static std::unordered_map<std::string, OrderInfo> wdc_latestOrder; // format: (w_id-d_id-c_id, {o_id, o_ol_cnt})
-        static std::unordered_map<std::string, OrderInfo> wd_oldestNewOrder; // format: (w_id-d_id, {o_id, o_c_id, o_ol_cnt})
-        static std::unordered_map<std::string, std::vector<OrderLineInfo>> d_latestOrderLines; // format: (d_id, [{o_id, ol_i_id}, ...])
+        static const std::unordered_map<std::string, std::vector<int32_t>> c_last_to_c_id;      // last name to customer id
+        static std::unordered_map<std::string, OrderInfo> wdc_latestOrder;                      // format: (w_id-d_id-c_id, {o_id, o_ol_cnt})
+        static std::unordered_map<std::string, std::queue<OrderInfo>> wd_oldestNewOrder;        // format: (w_id-d_id, {o_id, o_c_id, o_ol_cnt})
+        static std::unordered_map<std::string, std::vector<OrderLineInfo>> d_latestOrderLines;  // format: (d_id, [{o_id, ol_i_id}, ...])
+        static uint64_t orderLineCounter;                                                       // orderLine counter
         // tx operations
         std::unordered_set<std::string> readRows;               // read rows
         std::unordered_set<std::string> updateRows;             // update rows
@@ -192,6 +194,18 @@ class NewOrderTransaction : public Transaction
                 // orderLine子事务添加读写集
                 olAccess->addUpdateRow(std::to_string(newOrderTx->w_id) + "-" + std::to_string(newOrderTx->d_id) + "-" + std::to_string(next_o_id) + "-" + std::to_string(i));
 
+                /* 更新d_latestOrderLines，d_latestOrderLines中只存储最近的20条orderLine记录
+                   判断是否超过20条：
+                    若没超超过20条，则直接添加
+                    若超过20条，则删除最旧的一条 => 覆盖最旧的一条 
+                */
+                if (orderLineCounter < 20) {
+                    d_latestOrderLines[std::to_string(newOrderTx->d_id)].push_back({next_o_id, newOrderTx->orderLines[i].ol_i_id});
+                } else {
+                    d_latestOrderLines[std::to_string(newOrderTx->d_id)][orderLineCounter % 20] = {next_o_id, newOrderTx->orderLines[i].ol_i_id};
+                }
+                orderLineCounter++;
+
                 // items子事务添加依赖
                 itemsAccess->addChild(olAccess, minw::DependencyType::STRONG);
             }
@@ -209,18 +223,24 @@ class NewOrderTransaction : public Transaction
             root->addChild(wAccess, minw::DependencyType::STRONG);
             root->addChild(dAccess, minw::DependencyType::STRONG);
             root->addChild(cAccess, minw::DependencyType::STRONG);
+
+            // 更新wdc_latestOrder
+            wdc_latestOrder[std::to_string(newOrderTx->w_id) + "-" + std::to_string(newOrderTx->d_id) + "-" + std::to_string(newOrderTx->c_id)] = {next_o_id, newOrderTx->o_ol_cnt, newOrderTx->c_id};
+            // 更新wd_oldestNewOrder
+            wd_oldestNewOrder[std::to_string(newOrderTx->w_id) + "-" + std::to_string(newOrderTx->d_id)].push({next_o_id, newOrderTx->o_ol_cnt, newOrderTx->c_id}) ;
+            
             return root;
         }
 
     private:
         // NewOrder事务需要参数
-        uint64_t w_id;
-        uint64_t d_id;
-        uint64_t c_id;
+        uint32_t w_id;
+        uint32_t d_id;
+        int32_t c_id;
         uint32_t o_ol_cnt;
         struct OrderLineInfo {
-            uint64_t ol_i_id;
-            uint64_t ol_supply_w_id;
+            uint32_t ol_i_id;
+            uint32_t ol_supply_w_id;
             uint8_t ol_quantity;
         };
         OrderLineInfo orderLines[15];
@@ -421,8 +441,11 @@ class DeliveryTransaction : public Transaction
             for (int i = 1; i <= TPCC::n_districts; i++) {
                 // newOrder子事务 + customer子事务
                 Transaction::Ptr no_cAccess = std::make_shared<Transaction>();
-                // 获得oldestNewOrder
-                auto& oldestNewOrder = wd_oldestNewOrder.at(std::to_string(deliveryTx->w_id) + "-" + std::to_string(i));
+                
+                // 获得oldestNewOrder并更新wd_oldestNewOrder
+                auto& oldestNewOrder = wd_oldestNewOrder.at(std::to_string(deliveryTx->w_id) + "-" + std::to_string(i)).front();
+                wd_oldestNewOrder.at(std::to_string(deliveryTx->w_id) + "-" + std::to_string(i)).pop();
+
                 // 添加newOrder子事务读写集
                 no_cAccess->addReadRow(std::to_string(deliveryTx->w_id) + "-" + std::to_string(i) + "-" + std::to_string(oldestNewOrder.o_id));
                 no_cAccess->addUpdateRow(std::to_string(deliveryTx->w_id) + "-" + std::to_string(i) + "-" + std::to_string(oldestNewOrder.o_id));
@@ -431,6 +454,7 @@ class DeliveryTransaction : public Transaction
                 Transaction::Ptr oAccess = std::make_shared<Transaction>();
                 oAccess->addReadRow(std::to_string(deliveryTx->w_id) + "-" + std::to_string(i) + "-" + std::to_string(oldestNewOrder.o_id));
                 oAccess->addUpdateRow(std::to_string(deliveryTx->w_id) + "-" + std::to_string(i) + "-" + std::to_string(oldestNewOrder.o_id));
+                
                 // orderlines子事务
                 Transaction::Ptr olsAccess = std::make_shared<Transaction>();
                 for (int j = 0; j < oldestNewOrder.o_ol_cnt; j++) {

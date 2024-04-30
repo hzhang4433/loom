@@ -25,7 +25,7 @@ const std::unordered_map<std::string, std::vector<int32_t>> Transaction::c_last_
 
 // 定义静态变量
 std::unordered_map<std::string, Transaction::OrderInfo> Transaction::wdc_latestOrder;
-std::unordered_map<std::string, Transaction::OrderInfo> Transaction::wd_oldestNewOrder;
+std::unordered_map<std::string, std::queue<Transaction::OrderInfo>> Transaction::wd_oldestNewOrder;
 std::unordered_map<std::string, std::vector<Transaction::OrderLineInfo>> Transaction::d_latestOrderLines;
 
 // 定义并初始化order_counters的每个元素
@@ -36,3 +36,5 @@ static auto _ = [] {
     }
     return 0;
 }();
+
+uint64_t orderLineCounter = 0;

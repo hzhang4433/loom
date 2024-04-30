@@ -1,5 +1,6 @@
 #include <iostream>
 #include <gtest/gtest.h>
+#include "test/TpccTest.cpp"
 
 
 using namespace std;

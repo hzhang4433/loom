@@ -4,7 +4,7 @@
 #include <string>
 #include <tbb/concurrent_unordered_map.h>
 #include <tbb/concurrent_unordered_set.h>
-#include "common/common.h"
+#include "common.h"
 
 class Vertex : public std::enable_shared_from_this<Vertex>
 {

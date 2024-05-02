@@ -1,13 +1,20 @@
 #pragma once
 
+#include <atomic>
+#include "../common/HyperVertex.h"
+
 class minWRollback
 {
     public:
-        minWRollback() = default;
+        minWRollback() : id_counter(0) {}
 
         ~minWRollback() = default;
 
-        void execute();
+        int getId() {
+            return id_counter.fetch_add(1, std::memory_order_relaxed) + 1;
+        }
+
+        void execute(Transaction::Ptr tx);
 
         void buileGraph();
 
@@ -15,4 +22,6 @@ class minWRollback
 
     private:
         //some type => rollbackTxs;
+
+        std::atomic<int> id_counter;   // 分配事务ID
 };

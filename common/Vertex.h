@@ -6,6 +6,8 @@
 #include <tbb/concurrent_unordered_set.h>
 #include "common.h"
 
+class HyperVertex;
+
 class Vertex : public std::enable_shared_from_this<Vertex>
 {
     public:
@@ -24,23 +26,23 @@ class Vertex : public std::enable_shared_from_this<Vertex>
             }
         };
 
-        Vertex(int hyperId, std::string id, double cost, bool isNested = false);
+        Vertex(std::shared_ptr<HyperVertex> hyperVertex, std::string id, double cost, bool isNested = false);
 
         ~Vertex();
 
-        Vertex::Ptr getParent() const { return m_parent; }
-        void setParent(Vertex::Ptr parent) { m_parent = parent; }
+        // Vertex::Ptr getParent() const { return m_parent; }
+        // void setParent(Vertex::Ptr parent) { m_parent = parent; }
 
-        const tbb::concurrent_unordered_set<Vertex::Ptr, VertexHash, VertexEqual>& getChildren() const;
-        void addChild(Vertex::Ptr child);
+        // const tbb::concurrent_unordered_set<Vertex::Ptr, VertexHash, VertexEqual>& getChildren() const;
+        // void addChild(Vertex::Ptr child);
 
         minw::DependencyType getDependencyType() const;
         void setDependencyType(minw::DependencyType type);
 
         int mapToHyperId() const;
 
-    private:
-        int m_hyperId;                                                                              // 记录节点对应的超(节点)id
+    // 公共变量
+        std::shared_ptr<HyperVertex> m_hyperVertex;                                                 // 记录节点对应的超节点
         std::string m_id;                                                                           // 记录节点自身的id
         int m_min_in;                                                                               // 记录节点能被哪个最小id的节点到达
         int m_min_out;                                                                              // 记录节点能到达的最小id的节点
@@ -48,8 +50,11 @@ class Vertex : public std::enable_shared_from_this<Vertex>
         int m_degree;                                                                               // 记录节点的度
         tbb::concurrent_unordered_map<Vertex::Ptr, int, VertexHash, VertexEqual> m_in_edges;        // 记录节点的入边, 格式：节点指针 => 可抵达最小id
         tbb::concurrent_unordered_map<Vertex::Ptr, int, VertexHash, VertexEqual> m_out_edges;       // 记录节点的出边, 格式：节点指针 => 可到达最小id
+        tbb::concurrent_unordered_set<Vertex::Ptr> cascadeVertices;                                 // 记录级联回滚节点
+        tbb::concurrent_unordered_set<std::string> readSet;                                         // 记录读集
+        tbb::concurrent_unordered_set<std::string> writeSet;                                        // 记录写集
         bool isNested;                                                                              // 标记节点是否是嵌套节点
-        Ptr m_parent;                                                                               // 记录父节点
-        tbb::concurrent_unordered_set<Vertex::Ptr, VertexHash, VertexEqual> m_children;             // 记录子节点
-        minw::DependencyType m_dependencyType;                                                            // 记录父子节点间依赖类型
+        // Ptr m_parent;                                                                               // 记录父节点
+        // tbb::concurrent_unordered_set<Vertex::Ptr, VertexHash, VertexEqual> m_children;             // 记录子节点
+        // minw::DependencyType m_dependencyType;                                                            // 记录父子节点间依赖类型
 };

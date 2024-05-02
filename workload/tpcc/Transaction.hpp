@@ -6,6 +6,7 @@
 #include <memory>
 #include <unordered_set>
 #include <unordered_map>
+#include <tbb/concurrent_unordered_set.h>
 #include <queue>
 #include "Random.hpp"
 #include "common.hpp"
@@ -15,6 +16,22 @@ class Transaction : public std::enable_shared_from_this<Transaction>
 {
     public:
         typedef std::shared_ptr<Transaction> Ptr;
+
+        struct ChildTransaction {
+            Transaction::Ptr transaction;
+            minw::DependencyType dependency;
+        };
+
+        struct OrderInfo {
+            uint64_t o_id;
+            uint32_t o_ol_cnt;
+            int32_t o_c_id;
+        };
+
+        struct OrderLineInfo {
+            uint64_t o_id;
+            uint32_t ol_i_id;
+        };
 
         Transaction() {
             for(auto& counter : order_counters) {
@@ -43,9 +60,19 @@ class Transaction : public std::enable_shared_from_this<Transaction>
             children.push_back({child, dependency});
         }
 
+        // get children
+        const std::vector<ChildTransaction>& getChildren() const {
+            return children;
+        }
+
         // add readRows
         void addReadRow(const std::string &row) {
             readRows.insert(row);
+        }
+
+        // get readRows
+        const tbb::concurrent_unordered_set<std::string>& getReadRows() const {
+            return readRows;
         }
 
         // add updateRows
@@ -53,26 +80,20 @@ class Transaction : public std::enable_shared_from_this<Transaction>
             updateRows.insert(row);
         }
 
+        // get updateRows
+        const tbb::concurrent_unordered_set<std::string>& getUpdateRows() const {
+            return updateRows;
+        }
+
         // add sibling transaction
         void addSibling(Transaction::Ptr sibling) {
             siblings.push_back(sibling);
         }
 
-        struct ChildTransaction {
-            Transaction::Ptr transaction;
-            minw::DependencyType dependency;
-        };
-
-        struct OrderInfo {
-            uint64_t o_id;
-            uint32_t o_ol_cnt;
-            int32_t o_c_id;
-        };
-
-        struct OrderLineInfo {
-            uint64_t o_id;
-            uint32_t ol_i_id;
-        };
+        // get siblings
+        const std::vector<Transaction::Ptr>& getSiblings() const {
+            return siblings;
+        }
 
         static std::array<std::atomic<uint64_t>, 10> order_counters;   // order counter
 
@@ -86,8 +107,8 @@ class Transaction : public std::enable_shared_from_this<Transaction>
         static std::unordered_map<std::string, std::vector<OrderLineInfo>> d_latestOrderLines;  // format: (d_id, [{o_id, ol_i_id}, ...])
         static uint64_t orderLineCounter;                                                       // orderLine counter
         // tx operations
-        std::unordered_set<std::string> readRows;               // read rows
-        std::unordered_set<std::string> updateRows;             // update rows
+        tbb::concurrent_unordered_set<std::string> readRows;               // read rows
+        tbb::concurrent_unordered_set<std::string> updateRows;             // update rows
         // tx structure
         std::vector<ChildTransaction> children;                 // child transactions
         std::vector<Transaction::Ptr> siblings;                 // sibling transactions

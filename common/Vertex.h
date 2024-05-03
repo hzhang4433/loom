@@ -26,15 +26,20 @@ class Vertex : public std::enable_shared_from_this<Vertex>
             }
         };
 
-        Vertex(std::shared_ptr<HyperVertex> hyperVertex, std::string id, double cost, bool isNested = false);
+        struct ChildVertex {
+            Vertex::Ptr vertex;
+            minw::DependencyType dependency;
+        };
+
+        Vertex(std::shared_ptr<HyperVertex> hyperVertex, std::string id, bool isNested = false);
 
         ~Vertex();
 
         // Vertex::Ptr getParent() const { return m_parent; }
         // void setParent(Vertex::Ptr parent) { m_parent = parent; }
 
-        // const tbb::concurrent_unordered_set<Vertex::Ptr, VertexHash, VertexEqual>& getChildren() const;
-        // void addChild(Vertex::Ptr child);
+        const tbb::concurrent_unordered_set<ChildVertex>& getChildren() const;
+        void addChild(Vertex::Ptr child, minw::DependencyType dependency);
 
         minw::DependencyType getDependencyType() const;
         void setDependencyType(minw::DependencyType type);
@@ -55,6 +60,6 @@ class Vertex : public std::enable_shared_from_this<Vertex>
         tbb::concurrent_unordered_set<std::string> writeSet;                                        // 记录写集
         bool isNested;                                                                              // 标记节点是否是嵌套节点
         // Ptr m_parent;                                                                               // 记录父节点
-        // tbb::concurrent_unordered_set<Vertex::Ptr, VertexHash, VertexEqual> m_children;             // 记录子节点
+        tbb::concurrent_unordered_set<ChildVertex> m_children;             // 记录子节点
         // minw::DependencyType m_dependencyType;                                                            // 记录父子节点间依赖类型
 };

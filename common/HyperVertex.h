@@ -18,6 +18,9 @@ class HyperVertex : public std::enable_shared_from_this<HyperVertex>
 
         double buildVertexs(Transaction::Ptr tx, Vertex::Ptr vertex, string txid);
 
+        void recognizeCascades(Vertex::Ptr vertex);
+
+
         // Vertex::Ptr getVertexById(const std::string& id) const;
 
     // 公共变量
@@ -25,5 +28,6 @@ class HyperVertex : public std::enable_shared_from_this<HyperVertex>
         int min_in;     // 超节点的最小入度ID
         int min_out;    // 超节点的最小出度ID
         tbb::concurrent_unordered_set<Vertex::Ptr> m_vertices;    // 记录所有节点
+        Vertex::Ptr m_rootVertex;         // 根节点
         
 };

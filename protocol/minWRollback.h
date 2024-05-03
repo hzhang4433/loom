@@ -16,7 +16,7 @@ class minWRollback
 
         void execute(Transaction::Ptr tx);
 
-        void buileGraph();
+        void buileGraph(tbb::concurrent_unordered_set<Vertex::Ptr>& vertices);
 
         void rollback();
 
@@ -24,4 +24,6 @@ class minWRollback
         //some type => rollbackTxs;
 
         std::atomic<int> id_counter;   // 分配事务ID
+        // 存储所有子事务节点
+        tbb::concurrent_unordered_set<Vertex::Ptr> m_vertices;
 };

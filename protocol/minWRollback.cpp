@@ -12,14 +12,16 @@ void minWRollback::execute(Transaction::Ptr tx) {
     HyperVertex::Ptr hyperVertex = make_shared<HyperVertex>(txid);
     Vertex::Ptr vertex;
     hyperVertex->buildVertexs(tx, vertex, to_string(txid));
-    buileGraph();
+    hyperVertex->m_vertices = vertex->cascadeVertices;
+    buileGraph(vertex->cascadeVertices);
+    m_vertices.insert(vertex->cascadeVertices.begin(), vertex->cascadeVertices.end());
 }
 
 /*  构图算法（考虑多线程扩展性）: 将hyperVertex转化为hyperGraph
     详细算法流程:
 
  */
-void minWRollback::buileGraph() {
+void minWRollback::buileGraph(tbb::concurrent_unordered_set<Vertex::Ptr>& vertices) {
 
 }
 

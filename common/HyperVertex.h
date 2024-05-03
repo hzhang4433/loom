@@ -16,11 +16,11 @@ class HyperVertex : public std::enable_shared_from_this<HyperVertex>
 
         ~HyperVertex();
 
-        void buildVertexs(Transaction::Ptr tx, Vertex::Ptr vertex, string txid);
+        double buildVertexs(Transaction::Ptr tx, Vertex::Ptr vertex, string txid);
 
         // Vertex::Ptr getVertexById(const std::string& id) const;
 
-    private:
+    // 公共变量
         int hyperId;    // 超节点ID
         int min_in;     // 超节点的最小入度ID
         int min_out;    // 超节点的最小出度ID

@@ -17,7 +17,7 @@ double getCostandCascadeSet(Transaction::Ptr tx, Vertex::Ptr vertex, string txid
 
 }
 
-void HyperVertex::buildVertexs(Transaction::Ptr tx, Vertex::Ptr vertex, string txid) {
+double HyperVertex::buildVertexs(Transaction::Ptr tx, Vertex::Ptr vertex, string txid) {
     // 随机生成执行时间
     double execTime = 1;
 
@@ -27,18 +27,21 @@ void HyperVertex::buildVertexs(Transaction::Ptr tx, Vertex::Ptr vertex, string t
     } else {
         vertex = make_shared<Vertex>(this, txid, execTime, true);
         vector<Vertex::Ptr> strongChildren;
-        // 递归统计级联回滚权重和级联子节点
+        // 递归计算子节点权重 级联回滚权重和级联子节点
         int index = 1;
         for (auto child : tx->getChildren()) {
             string subTxid = txid + "_" + to_string(index);
             Vertex::Ptr childVertex = make_shared<Vertex>(this, subTxid, 1);
-            execTime += getCostandCascadeSet(child.transaction, childVertex, subTxid);
+            execTime += buildVertexs(child.transaction, childVertex, subTxid);
             if (child.dependency == minw::DependencyType::STRONG) {
                 strongChildren.push_back(childVertex);
             }
             index++;
         }
         
+        // 添加自己
+        vertex->cascadeVertices.insert(vertex);
+
         for (auto child : strongChildren) {
             child->m_cost = vertex->m_cost;
             child->cascadeVertices = vertex->cascadeVertices;
@@ -47,4 +50,5 @@ void HyperVertex::buildVertexs(Transaction::Ptr tx, Vertex::Ptr vertex, string t
     // 添加读写集
     vertex->readSet = tx->getReadRows();
     vertex->writeSet = tx->getUpdateRows();
+    return execTime;
 }

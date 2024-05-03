@@ -1,9 +1,9 @@
 #include "Vertex.h"
 
 
-Vertex::Vertex(std::shared_ptr<HyperVertex> hyperVertex, std::string id, bool isNested) : m_hyperVertex(hyperVertex), m_id(id), isNested(isNested = false) {
-    m_min_in = -1;
-    m_min_out = -1;
+Vertex::Vertex(std::shared_ptr<HyperVertex> hyperVertex, int hyperId, std::string id, bool isNested) : m_hyperVertex(hyperVertex), m_hyperId(hyperId), m_id(id), isNested(isNested = false) {
+    // m_min_in = -1;
+    // m_min_out = -1;
     m_degree = 0;
 }
 

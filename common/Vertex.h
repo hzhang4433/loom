@@ -15,7 +15,7 @@ class Vertex : public std::enable_shared_from_this<Vertex>
 
         struct VertexHash {
             std::size_t operator()(const Vertex::Ptr& v) const {
-                // 使用RollBackTx的地址作为哈希值
+                // 使用Vertex的地址作为哈希值
                 return std::hash<Vertex*>()(v.get());
             }
         };
@@ -31,7 +31,7 @@ class Vertex : public std::enable_shared_from_this<Vertex>
             minw::DependencyType dependency;
         };
 
-        Vertex(std::shared_ptr<HyperVertex> hyperVertex, std::string id, bool isNested = false);
+        Vertex(std::shared_ptr<HyperVertex> hyperVertex, int hyperId, std::string id, bool isNested = false);
 
         ~Vertex();
 
@@ -48,13 +48,14 @@ class Vertex : public std::enable_shared_from_this<Vertex>
 
     // 公共变量
         std::shared_ptr<HyperVertex> m_hyperVertex;                                                 // 记录节点对应的超节点
+        int m_hyperId;                                                                              // 记录节点对应的超节点id
         std::string m_id;                                                                           // 记录节点自身的id
         int m_min_in;                                                                               // 记录节点能被哪个最小id的节点到达
         int m_min_out;                                                                              // 记录节点能到达的最小id的节点
         double m_cost;                                                                              // 记录节点的执行代价 => 由执行时间正则化得到
         int m_degree;                                                                               // 记录节点的度
-        tbb::concurrent_unordered_map<Vertex::Ptr, int, VertexHash, VertexEqual> m_in_edges;        // 记录节点的入边, 格式：节点指针 => 可抵达最小id
-        tbb::concurrent_unordered_map<Vertex::Ptr, int, VertexHash, VertexEqual> m_out_edges;       // 记录节点的出边, 格式：节点指针 => 可到达最小id
+        tbb::concurrent_unordered_set<Vertex::Ptr> m_in_edges;        // 记录节点的入边, 格式：节点指针 => 可抵达最小id
+        tbb::concurrent_unordered_set<Vertex::Ptr> m_out_edges;       // 记录节点的出边, 格式：节点指针 => 可到达最小id
         tbb::concurrent_unordered_set<Vertex::Ptr> cascadeVertices;                                 // 记录级联回滚节点
         tbb::concurrent_unordered_set<std::string> readSet;                                         // 记录读集
         tbb::concurrent_unordered_set<std::string> writeSet;                                        // 记录写集

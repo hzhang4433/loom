@@ -41,8 +41,8 @@ class Transaction : public std::enable_shared_from_this<Transaction>
 
         ~Transaction() = default;
 
-        // 定义纯虚函数，生成事务
-        virtual Transaction::Ptr makeTransaction() = 0; 
+        // 定义虚函数，生成事务
+        virtual Transaction::Ptr makeTransaction() {}
 
         // 原子地增加计数器，并返回增加后的值 
         // 带测试？ 这个值不会每次初始化都是1吧？
@@ -283,7 +283,11 @@ class PaymentTransaction : public Transaction
             // 随机选择c_last或c_id
             int y = random.uniform_dist(1, 100);
             if (y <= 60) {
-                paymentTx->c_last = random.rand_last_name(random.non_uniform_distribution(255, 0, 999));
+                // 保证c_last对应的c_id不为空
+                do { 
+                    paymentTx->c_last = random.rand_last_name(random.non_uniform_distribution(255, 0, 999));
+                } while (c_last_to_c_id.at(paymentTx->c_last).size() == 0);
+                
                 paymentTx->c_id = -1;
             } else {
                 paymentTx->c_id = random.non_uniform_distribution(1023, 1, TPCC::n_customers);
@@ -372,7 +376,11 @@ class OrderStatusTransaction : public Transaction
             
             int y = random.uniform_dist(1, 100);
             if (y <= 60) {
-                orderStatusTx->c_last = random.rand_last_name(random.non_uniform_distribution(255, 0, 999));
+                // 保证c_last对应的c_id不为空
+                do { 
+                    orderStatusTx->c_last = random.rand_last_name(random.non_uniform_distribution(255, 0, 999));
+                } while (c_last_to_c_id.at(orderStatusTx->c_last).size() == 0);
+                orderStatusTx->c_id = -1;
             } else {
                 orderStatusTx->c_id = random.non_uniform_distribution(1023, 1, TPCC::n_customers);
             }

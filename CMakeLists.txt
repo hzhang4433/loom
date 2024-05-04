@@ -15,9 +15,12 @@ set(TBB_INCLUDE_DIRS /usr/include/tbb)
 set(TBB_LIBRARIES /usr/lib/x86_64-linux-gnu/libtbb.so)
 
 
-file(GLOB SRC_LIST "*.cpp")
-file(GLOB HEADERS "*.h")
+file(GLOB_RECURSE SRC_LIST "*.cpp")
+list(FILTER SRC_LIST EXCLUDE REGEX ".*/test/.*")
+list(FILTER SRC_LIST EXCLUDE REGEX ".*/build/.*")
+file(GLOB_RECURSE HEADERS "*.h" "*.hpp")
 
+# list(APPEND SRC_LIST "${CMAKE_SOURCE_DIR}/workload/tpcc/Transaction.cpp")
 
 add_executable(minWRollback ${SRC_LIST} ${HEADERS})
 target_link_libraries(minWRollback ${GTEST_LIBRARIES} ${TBB_LIBRARIES} pthread)

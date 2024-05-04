@@ -4,8 +4,8 @@
 
 HyperVertex::HyperVertex(int id) {
     this->m_hyperId = id;
-    this->m_min_in = UINT64_MAX;
-    this->m_min_out = UINT64_MAX;
+    this->m_min_in = INT_MAX;
+    this->m_min_out = INT_MAX;
 }
 
 HyperVertex::~HyperVertex() {}
@@ -28,7 +28,7 @@ void HyperVertex::recognizeCascades(Vertex::Ptr vertex) {
     }
 }
 
-double HyperVertex::buildVertexs(Transaction::Ptr tx, Vertex::Ptr vertex, string txid) {
+double HyperVertex::buildVertexs(const Transaction::Ptr& tx, HyperVertex::Ptr& hyperVertex, Vertex::Ptr& vertex, string& txid) {
     // 获取执行时间
     double execTime = 1;
     // double execTime = tx->getExecTime();
@@ -40,9 +40,9 @@ double HyperVertex::buildVertexs(Transaction::Ptr tx, Vertex::Ptr vertex, string
         auto& children = tx->getChildren();
         for (int i = 1; i <= children.size(); i++) {
             string subTxid = txid + "_" + to_string(i);
-            Vertex::Ptr childVertex = make_shared<Vertex>(this, this->m_hyperId, subTxid, true);
+            Vertex::Ptr childVertex = make_shared<Vertex>(hyperVertex, this->m_hyperId, subTxid, true);
             // 递归添加级联回滚代价
-            execTime += buildVertexs(children[i - 1].transaction, childVertex, subTxid);
+            execTime += buildVertexs(children[i - 1].transaction, hyperVertex, childVertex, subTxid);
             // 递归添加级联回滚节点
             vertex->cascadeVertices.insert(childVertex->cascadeVertices.begin(), childVertex->cascadeVertices.end());
             // 添加子节点

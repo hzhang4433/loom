@@ -16,7 +16,7 @@ class HyperVertex : public std::enable_shared_from_this<HyperVertex>
 
         ~HyperVertex();
 
-        double buildVertexs(Transaction::Ptr tx, Vertex::Ptr vertex, string txid);
+        double buildVertexs(const Transaction::Ptr& tx, HyperVertex::Ptr& hyperVertex, Vertex::Ptr& vertex, string& txid);
 
         void recognizeCascades(Vertex::Ptr vertex);
 
@@ -34,9 +34,9 @@ class HyperVertex : public std::enable_shared_from_this<HyperVertex>
         int m_hyperId;      // 超节点ID
         int m_min_in;     // 超节点的最小入度ID
         int m_min_out;    // 超节点的最小出度ID
-        tbb::concurrent_unordered_map<HyperVertex::Ptr, tbb::concurrent_unordered_set<Vertex::Ptr>, HyperVertexHash> m_out_edges;    // 记录超节点中所有出边
-        tbb::concurrent_unordered_map<HyperVertex::Ptr, tbb::concurrent_unordered_set<Vertex::Ptr>, HyperVertexHash> m_in_edges;     // 记录超节点中所有入边
-        tbb::concurrent_unordered_set<Vertex::Ptr> m_vertices;  // 记录所有节点
+        tbb::concurrent_unordered_map<HyperVertex::Ptr, tbb::concurrent_unordered_set<Vertex::Ptr, Vertex::VertexHash>, HyperVertexHash> m_out_edges;    // 记录超节点中所有出边
+        tbb::concurrent_unordered_map<HyperVertex::Ptr, tbb::concurrent_unordered_set<Vertex::Ptr, Vertex::VertexHash>, HyperVertexHash> m_in_edges;     // 记录超节点中所有入边
+        tbb::concurrent_unordered_set<Vertex::Ptr, Vertex::VertexHash> m_vertices;  // 记录所有节点
         Vertex::Ptr m_rootVertex;                               // 根节点
         
 };

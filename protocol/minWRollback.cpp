@@ -8,12 +8,13 @@ using namespace std;
         2. 判断执行完成的事务与其它执行完成事务间的rw依赖，构建rw依赖图
     /待测试.../
 */
-void minWRollback::execute(Transaction::Ptr tx) {
+void minWRollback::execute(const Transaction::Ptr& tx) {
     int txid = getId();
     HyperVertex::Ptr hyperVertex = make_shared<HyperVertex>(txid);
-    Vertex::Ptr rootVertex = make_shared<Vertex>(this, txid, to_string(txid));
+    Vertex::Ptr rootVertex = make_shared<Vertex>(hyperVertex, txid, to_string(txid));
     // 根据事务结构构建超节点
-    hyperVertex->buildVertexs(tx, rootVertex, to_string(txid));
+    string txid_str = to_string(txid);
+    hyperVertex->buildVertexs(tx, hyperVertex, rootVertex, txid_str);
     // 记录超节点包含的所有节点
     hyperVertex->m_vertices = rootVertex->cascadeVertices;
     // 根据子节点依赖更新回滚代价和级联子事务
@@ -42,7 +43,7 @@ void minWRollback::execute(Transaction::Ptr tx) {
                     3. 若更新失败，则返回
         2. 若与节点存在wr依赖（入边）
  */
-void minWRollback::buileGraph(tbb::concurrent_unordered_set<Vertex::Ptr>& vertices) {
+void minWRollback::buileGraph(tbb::concurrent_unordered_set<Vertex::Ptr, Vertex::VertexHash>& vertices) {
     for (auto& newV: vertices) {
         for (auto& oldV: m_vertices) {
             // 存在rw依赖
@@ -112,8 +113,16 @@ bool minWRollback::hasConflict(tbb::concurrent_unordered_set<std::string>& set1,
 }
 
 void minWRollback::recursiveUpdate(HyperVertex::Ptr hyperVertex, int min_value, minw::RecursiveType type) {
+    // 更新前需要把这个Hypervertex从原有m_min2HyperVertex中删除 (前提:他们都不是初始值)
+    if (hyperVertex->m_min_in != INT_MAX && hyperVertex->m_min_out != INT_MAX) {
+        m_min2HyperVertex[combine(hyperVertex->m_min_in, hyperVertex->m_min_out)].unsafe_erase(hyperVertex);
+    }
+    
     if (type == minw::RecursiveType::OUT) {
-        hyperVertex->m_min_out = min_value;
+        if (hyperVertex->m_min_in != UINT64_MAX) {
+            m_min2HyperVertex[combine(hyperVertex->m_min_in, min_value)].insert(hyperVertex);
+        }
+        hyperVertex->m_min_out = min_value;        
         // 若min_out更新成功，且hyperVertex的in_edges存在记录
         if (!hyperVertex->m_in_edges.empty()) {
             // 依次遍历其中的节点v_in
@@ -128,6 +137,9 @@ void minWRollback::recursiveUpdate(HyperVertex::Ptr hyperVertex, int min_value, 
             }
         }
     } else {
+        if (hyperVertex->m_min_out != UINT64_MAX) {
+            m_min2HyperVertex[combine(min_value, hyperVertex->m_min_out)].insert(hyperVertex);
+        }
         hyperVertex->m_min_in = min_value;
         // 若min_in更新成功，且hyperVertex的out_edges存在记录
         if (!hyperVertex->m_out_edges.empty()) {
@@ -143,6 +155,10 @@ void minWRollback::recursiveUpdate(HyperVertex::Ptr hyperVertex, int min_value, 
             }
         }
     }
+}
+
+long long minWRollback::combine(int a, int b) {
+    return a * 1000001LL + b;
 }
 
 /* 

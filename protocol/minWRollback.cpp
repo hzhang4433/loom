@@ -1,3 +1,4 @@
+#include <algorithm>
 #include "minWRollback.h"
 
 using namespace std;
@@ -41,7 +42,7 @@ void minWRollback::execute(const Transaction::Ptr& tx) {
                     1. 尝试更新v_out.m_min_in为min(v_out.m_min_in, min_in)
                     2. v_out.m_min_in更新成功，则尝试递归更新
                     3. 若更新失败，则返回
-        2. 若与节点存在wr依赖（入边）
+        2. 若与节点存在wr依赖（入边）与1相反
  */
 void minWRollback::buileGraph(tbb::concurrent_unordered_set<Vertex::Ptr, Vertex::VertexHash>& vertices) {
     for (auto& newV: vertices) {
@@ -50,53 +51,81 @@ void minWRollback::buileGraph(tbb::concurrent_unordered_set<Vertex::Ptr, Vertex:
             if (hasConflict(newV->readSet, oldV->writeSet)) {
                 // newV新增一条出边
                 newV->m_out_edges.insert(oldV);
+
                 // 更新newV对应的hyperVertex的out_edges
                 // 记录的啥 有待商榷
-                newV->m_hyperVertex->m_out_edges[oldV->m_hyperVertex].insert(newV);
+                auto& out_edges = newV->m_hyperVertex->m_out_edges[oldV->m_hyperVertex];
+                if (!std::any_of(out_edges.begin(), out_edges.end(), [&](const Vertex::Ptr& out_edge) {
+                    return isAncester(out_edge->m_id, newV->m_id);
+                })) {
+                    out_edges.insert(newV);
+                }
+                
                 // 更新依赖数
                 newV->m_degree++;
                 // 尝试更新newV对应的hyperVertex的min_out
                 int min_out = min(oldV->m_hyperVertex->m_min_out, oldV->m_hyperId);
                 if (min_out < newV->m_hyperVertex->m_min_out) {
-                    recursiveUpdate(newV->m_hyperVertex, min_out, minw::RecursiveType::OUT);
+                    recursiveUpdate(newV->m_hyperVertex, min_out, minw::EdgeType::OUT);
                 }
 
                 // oldV新增一条入边
                 oldV->m_in_edges.insert(newV);
+
                 // 更新oldV对应的hyperVertex的in_edges
-                oldV->m_hyperVertex->m_in_edges[newV->m_hyperVertex].insert(oldV);
+                auto& in_edges = oldV->m_hyperVertex->m_in_edges[newV->m_hyperVertex];
+                if (!std::any_of(in_edges.begin(), in_edges.end(), [&](const Vertex::Ptr& in_edge) {
+                    return isAncester(in_edge->m_id, oldV->m_id);
+                })) {
+                    in_edges.insert(oldV);
+                }
+
                 // 更新依赖数
                 oldV->m_degree++;
                 // 尝试更新oldV对应的hyperVertex的min_in
                 int min_in = min(newV->m_hyperVertex->m_min_in, newV->m_hyperId);
                 if (min_in < oldV->m_hyperVertex->m_min_in) {
-                    recursiveUpdate(oldV->m_hyperVertex, min_in, minw::RecursiveType::IN);
+                    recursiveUpdate(oldV->m_hyperVertex, min_in, minw::EdgeType::IN);
                 }
             
             // 存在wr依赖
             } else if (hasConflict(newV->writeSet, oldV->readSet)) {
                 // newV新增一条入边
                 newV->m_in_edges.insert(oldV);
+
                 // 更新newV对应的hyperVertex的in_edges
-                newV->m_hyperVertex->m_in_edges[oldV->m_hyperVertex].insert(newV);
+                auto& in_edges = newV->m_hyperVertex->m_in_edges[oldV->m_hyperVertex];
+                if (!std::any_of(in_edges.begin(), in_edges.end(), [&](const Vertex::Ptr& in_edge) {
+                    return isAncester(in_edge->m_id, newV->m_id);
+                })) {
+                    in_edges.insert(newV);
+                }
+
                 // 更新依赖数
                 newV->m_degree++;
                 // 尝试更新newV对应的hyperVertex的min_in
                 int min_in = min(oldV->m_hyperVertex->m_min_in, oldV->m_hyperId);
                 if (min_in < newV->m_hyperVertex->m_min_in) {
-                    recursiveUpdate(newV->m_hyperVertex, min_in, minw::RecursiveType::IN);
+                    recursiveUpdate(newV->m_hyperVertex, min_in, minw::EdgeType::IN);
                 }
 
                 // oldV新增一条出边                
                 oldV->m_out_edges.insert(newV);
+
                 // 更新oldV对应的hyperVertex的out_edges
-                oldV->m_hyperVertex->m_out_edges[newV->m_hyperVertex].insert(oldV);
+                auto& out_edges = oldV->m_hyperVertex->m_out_edges[newV->m_hyperVertex];
+                if (!std::any_of(out_edges.begin(), out_edges.end(), [&](const Vertex::Ptr& out_edge) {
+                    return isAncester(out_edge->m_id, oldV->m_id);
+                })) {
+                    out_edges.insert(oldV);
+                }
+
                 // 更新依赖数
                 oldV->m_degree++;
                 // 尝试更新oldV对应的hyperVertex的min_out
                 int min_out = min(newV->m_hyperVertex->m_min_out, newV->m_hyperId);
                 if (min_out < oldV->m_hyperVertex->m_min_out) {
-                    recursiveUpdate(oldV->m_hyperVertex, min_out, minw::RecursiveType::OUT);
+                    recursiveUpdate(oldV->m_hyperVertex, min_out, minw::EdgeType::OUT);
                 }
             }
         }
@@ -112,13 +141,21 @@ bool minWRollback::hasConflict(tbb::concurrent_unordered_set<std::string>& set1,
     return false;
 }
 
-void minWRollback::recursiveUpdate(HyperVertex::Ptr hyperVertex, int min_value, minw::RecursiveType type) {
+// 判断v1是否是v2的祖先
+bool minWRollback::isAncester(const string& v1, const string& v2) {
+    // 子孙节点id的前缀包含祖先节点id
+    return v2.find(v1) == 0;
+}
+
+void minWRollback::recursiveUpdate(HyperVertex::Ptr hyperVertex, int min_value, minw::EdgeType type) {
+    // 或者后续不在这里记录强连通分量，后续根据开销进行调整。。。
+    
     // 更新前需要把这个Hypervertex从原有m_min2HyperVertex中删除 (前提:他们都不是初始值)
     if (hyperVertex->m_min_in != INT_MAX && hyperVertex->m_min_out != INT_MAX) {
         m_min2HyperVertex[combine(hyperVertex->m_min_in, hyperVertex->m_min_out)].unsafe_erase(hyperVertex);
     }
     
-    if (type == minw::RecursiveType::OUT) {
+    if (type == minw::EdgeType::OUT) {
         if (hyperVertex->m_min_in != UINT64_MAX) {
             m_min2HyperVertex[combine(hyperVertex->m_min_in, min_value)].insert(hyperVertex);
         }
@@ -164,6 +201,149 @@ long long minWRollback::combine(int a, int b) {
 /* 
   确定性回滚: 从hyperGraph中找到最小的回滚子事务集合
 */
-void minWRollback::rollback() {
+tbb::concurrent_unordered_set<Vertex::Ptr, Vertex::VertexHash> minWRollback::rollback() {
+    tbb::concurrent_unordered_set<Vertex::Ptr, Vertex::VertexHash> result;
+    // 遍历所有强连通分量
+    for (auto scc : m_min2HyperVertex) {
+        // 定义优先队列，以hyperVertex.m_cost为key从小到大排序
+        priority_queue<HyperVertex::Ptr, vector<HyperVertex::Ptr>, cmp> pq;
 
+        // 遍历强连通分量中每个超节点，计算scc超节点间边权
+        calculateHyperVertexWeight(scc.second, pq);
+
+        // 贪心获取最小回滚代价的节点集
+        auto minWVs = GreedySelectVertex(scc.second, pq);
+        result.insert(minWVs.cbegin(), minWVs.cend()) ;
+    }
+    return result;
+}
+
+/* 计算强连通分量中每个超节点的回滚代价
+    1. 计算scc超节点间边权
+    2. 计算每个超节点的最小回滚代价
+    3. 将超节点放入优先队列
+*/
+void minWRollback::calculateHyperVertexWeight(tbb::concurrent_unordered_set<HyperVertex::Ptr, HyperVertex::HyperVertexHash>& scc, priority_queue<HyperVertex::Ptr, vector<HyperVertex::Ptr>, cmp>& pq) {
+    for (auto& hyperVertex : scc) {
+        // 遍历超节点的出边
+        for (auto out_edge : hyperVertex->m_out_edges) {
+            // 计算超节点间边权, 获得超节点出边回滚代价
+            hyperVertex->m_out_cost += calculateVertexWeight(hyperVertex, out_edge.first, minw::EdgeType::OUT);
+        }
+        // 遍历超节点的入边
+        for (auto in_edge : hyperVertex->m_in_edges) {
+            // 计算超节点间边权, 获得超节点入边回滚代价
+            hyperVertex->m_in_cost += calculateVertexWeight(hyperVertex, in_edge.first, minw::EdgeType::IN);
+        }
+        // 计算超节点的最小回滚代价
+        hyperVertex->m_cost = min(hyperVertex->m_in_cost, hyperVertex->m_out_cost);
+        pq.push(hyperVertex);
+    }
+}
+
+/* 计算超节点间边权
+    1. 计算hv1的回滚代价
+    2. 计算hv2的回滚代价
+    3. 设置边权为min(hv1回滚代价，hv2回滚代价)
+*/
+double minWRollback::calculateVertexWeight(HyperVertex::Ptr hv1, HyperVertex::Ptr hv2, minw::EdgeType type) {
+    double hv1_cost = 0, hv2_cost = 0;
+    int rollbackDegree1 = 0, rollbackDegree2 = 0;
+    tbb::concurrent_unordered_set<Vertex::Ptr, Vertex::VertexHash> rollbackVertex1, rollbackVertex2;
+    
+    if (type == minw::EdgeType::OUT) {
+        // 如果已经存在边权，则直接返回
+        if (hv1->m_out_weights.find(hv2) != hv1->m_out_weights.end()) {
+            return hv1->m_out_weights[hv2];
+        }
+        // 计算hv1的回滚代价
+// hv1->m_out_edges中记录的子节点不应该存在冗余
+        for (auto& v : hv1->m_out_edges[hv2]) {
+            rollbackVertex1.insert(v->cascadeVertices.cbegin(), v->cascadeVertices.cend());
+            hv1_cost += v->m_cost;
+        }
+        for (auto& v : rollbackVertex1) {
+            rollbackDegree1 += v->m_degree;
+        }
+        hv1_cost /= rollbackDegree1;
+
+        // 计算hv2的回滚代价
+        for (auto& v : hv2->m_in_edges[hv1]) {
+            rollbackVertex2.insert(v->cascadeVertices.cbegin(), v->cascadeVertices.cend());
+            hv2_cost += v->m_cost;
+        }
+        for (auto& v : rollbackVertex2) {
+            rollbackDegree2 += v->m_degree;
+        }
+        hv2_cost /= rollbackDegree2;
+
+        // 设置边权
+        double weight = min(hv1_cost, hv2_cost);
+        hv1->m_out_weights[hv2] = weight;
+        hv2->m_in_weights[hv1] = weight;
+        return weight;
+    } else {
+        // 如果已经存在边权，则直接返回
+        if (hv1->m_in_weights.find(hv2) != hv1->m_in_weights.end()) {
+            return hv1->m_in_weights[hv2];
+        }
+        // 计算hv1的回滚代价
+        for (auto& v : hv1->m_in_edges[hv2]) {
+            rollbackVertex1.insert(v->cascadeVertices.cbegin(), v->cascadeVertices.cend());
+            hv1_cost += v->m_cost;
+        }
+        for (auto& v : rollbackVertex1) {
+            rollbackDegree1 += v->m_degree;
+        }
+        hv1_cost /= rollbackDegree1;
+
+        // 计算hv2的回滚代价
+        for (auto& v : hv2->m_out_edges[hv1]) {
+            rollbackVertex2.insert(v->cascadeVertices.cbegin(), v->cascadeVertices.cend());
+            hv2_cost += v->m_cost;
+        }
+        for (auto& v : rollbackVertex2) {
+            rollbackDegree2 += v->m_degree;
+        }
+        hv2_cost /= rollbackDegree2;
+
+        // 设置边权
+        double weight = min(hv1_cost, hv2_cost);
+        hv1->m_in_weights[hv2] = weight;
+        hv2->m_out_weights[hv1] = weight;
+        return weight;
+    }
+}
+
+/* 回滚最小代价的超节点
+    1. 选择回滚代价最小的超节点
+    2. 更新scc中与它相邻的超节点的回滚代价
+    3. 若存在一条边只有出度或入度，则递归更新
+    4. 更新scc
+*/
+tbb::concurrent_unordered_set<Vertex::Ptr, Vertex::VertexHash> minWRollback::GreedySelectVertex
+            (tbb::concurrent_unordered_set<HyperVertex::Ptr, HyperVertex::HyperVertexHash>& scc, 
+            priority_queue<HyperVertex::Ptr, vector<HyperVertex::Ptr>, cmp>& pq) {
+    // 存储回滚节点集合
+    tbb::concurrent_unordered_set<Vertex::Ptr, Vertex::VertexHash> result;
+    
+    
+    /* 1. 选择回滚代价最小的超节点
+        
+    */
+
+
+    /* 2. 更新scc
+        2.1 拿出优先队列队头超节点rb，回滚该笔事务对应的（子）事务
+        2.2 遍历与该超节点直接依赖的超节点di并更新回滚代价
+            2.1 若它不存在出边或入边，则从scc中删除
+                2.2.1 递归更新相关超节点回滚代价
+            2.2 若它存在出边或入边，则更新回滚代价
+        2.3 从scc中删除该超节点rb
+    */
+    
+    if (scc.size() > 1) {
+        // 递归调用GreedySelectVertex获取回滚节点集合
+
+    }
 }

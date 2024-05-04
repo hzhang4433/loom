@@ -8,8 +8,9 @@ enum class DependencyType {
     WEAK
 };
 
-enum class RecursiveType {
+enum class EdgeType {
     IN,
     OUT
 };
+
 }

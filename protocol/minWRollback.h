@@ -18,13 +18,28 @@ class minWRollback
 
         void buileGraph(tbb::concurrent_unordered_set<Vertex::Ptr, Vertex::VertexHash>& vertices);
 
-        void rollback();
+        tbb::concurrent_unordered_set<Vertex::Ptr, Vertex::VertexHash> rollback();
 
         bool hasConflict(tbb::concurrent_unordered_set<std::string>& set1, tbb::concurrent_unordered_set<std::string>& set2);
 
-        void recursiveUpdate(HyperVertex::Ptr hyperVertex, int min_value, minw::RecursiveType type); // 递归更新
+        bool isAncester(const string& v1, const string& v2);
+
+        void recursiveUpdate(HyperVertex::Ptr hyperVertex, int min_value, minw::EdgeType type); // 递归更新
 
         long long combine(int a, int b);
+        
+        // 优先队列比较函数: 按照回滚代价从小到大排序
+        struct cmp {
+            bool operator()(const HyperVertex::Ptr& a, const HyperVertex::Ptr& b) const {
+                return a->m_cost < b->m_cost;
+            }
+        };
+
+        void calculateHyperVertexWeight(tbb::concurrent_unordered_set<HyperVertex::Ptr, HyperVertex::HyperVertexHash>& scc, priority_queue<HyperVertex::Ptr, vector<HyperVertex::Ptr>, cmp>& pq);
+
+        double calculateVertexWeight(HyperVertex::Ptr hv1, HyperVertex::Ptr hv2, minw::EdgeType type);
+
+        tbb::concurrent_unordered_set<Vertex::Ptr, Vertex::VertexHash> GreedySelectVertex(tbb::concurrent_unordered_set<HyperVertex::Ptr, HyperVertex::HyperVertexHash>& scc, priority_queue<HyperVertex::Ptr, vector<HyperVertex::Ptr>, cmp>& pq);
 
 
     private:

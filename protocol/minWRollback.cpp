@@ -54,13 +54,8 @@ void minWRollback::buileGraph(tbb::concurrent_unordered_set<Vertex::Ptr, Vertex:
 
                 // 更新newV对应的hyperVertex的out_edges
                 // 记录的啥 有待商榷
-                auto& out_edges = newV->m_hyperVertex->m_out_edges[oldV->m_hyperVertex];
-                if (!std::any_of(out_edges.begin(), out_edges.end(), [&](const Vertex::Ptr& out_edge) {
-                    return isAncester(out_edge->m_id, newV->m_id);
-                })) {
-                    out_edges.insert(newV);
-                }
-                
+                handleNewEdge(newV, newV->m_hyperVertex->m_out_edges[oldV->m_hyperVertex]);
+
                 // 更新依赖数
                 newV->m_degree++;
                 // 尝试更新newV对应的hyperVertex的min_out
@@ -73,12 +68,7 @@ void minWRollback::buileGraph(tbb::concurrent_unordered_set<Vertex::Ptr, Vertex:
                 oldV->m_in_edges.insert(newV);
 
                 // 更新oldV对应的hyperVertex的in_edges
-                auto& in_edges = oldV->m_hyperVertex->m_in_edges[newV->m_hyperVertex];
-                if (!std::any_of(in_edges.begin(), in_edges.end(), [&](const Vertex::Ptr& in_edge) {
-                    return isAncester(in_edge->m_id, oldV->m_id);
-                })) {
-                    in_edges.insert(oldV);
-                }
+                handleNewEdge(oldV, oldV->m_hyperVertex->m_in_edges[newV->m_hyperVertex]);
 
                 // 更新依赖数
                 oldV->m_degree++;
@@ -94,12 +84,7 @@ void minWRollback::buileGraph(tbb::concurrent_unordered_set<Vertex::Ptr, Vertex:
                 newV->m_in_edges.insert(oldV);
 
                 // 更新newV对应的hyperVertex的in_edges
-                auto& in_edges = newV->m_hyperVertex->m_in_edges[oldV->m_hyperVertex];
-                if (!std::any_of(in_edges.begin(), in_edges.end(), [&](const Vertex::Ptr& in_edge) {
-                    return isAncester(in_edge->m_id, newV->m_id);
-                })) {
-                    in_edges.insert(newV);
-                }
+                handleNewEdge(newV, newV->m_hyperVertex->m_in_edges[oldV->m_hyperVertex]);
 
                 // 更新依赖数
                 newV->m_degree++;
@@ -113,12 +98,7 @@ void minWRollback::buileGraph(tbb::concurrent_unordered_set<Vertex::Ptr, Vertex:
                 oldV->m_out_edges.insert(newV);
 
                 // 更新oldV对应的hyperVertex的out_edges
-                auto& out_edges = oldV->m_hyperVertex->m_out_edges[newV->m_hyperVertex];
-                if (!std::any_of(out_edges.begin(), out_edges.end(), [&](const Vertex::Ptr& out_edge) {
-                    return isAncester(out_edge->m_id, oldV->m_id);
-                })) {
-                    out_edges.insert(oldV);
-                }
+                handleNewEdge(oldV, oldV->m_hyperVertex->m_out_edges[newV->m_hyperVertex]);
 
                 // 更新依赖数
                 oldV->m_degree++;
@@ -132,6 +112,7 @@ void minWRollback::buileGraph(tbb::concurrent_unordered_set<Vertex::Ptr, Vertex:
     }
 }
 
+// 判断读写集是否冲突
 bool minWRollback::hasConflict(tbb::concurrent_unordered_set<std::string>& set1, tbb::concurrent_unordered_set<std::string>& set2) {
     for (auto item : set2) {
         if (set1.find(item) != set1.end()) {
@@ -141,14 +122,35 @@ bool minWRollback::hasConflict(tbb::concurrent_unordered_set<std::string>& set1,
     return false;
 }
 
+//
+void minWRollback::handleNewEdge(Vertex::Ptr& v, tbb::concurrent_unordered_set<Vertex::Ptr, Vertex::VertexHash>& edges) {
+    bool needInsert = true;
+    std::vector<Vertex::Ptr> to_erase;
+    
+    for (auto edge : edges) {
+        if (isAncester(v->m_id, edge->m_id)) {
+            to_erase.push_back(edge);
+        } else if (isAncester(edge->m_id, v->m_id)) {
+            needInsert = false;
+        }
+    }
+    for (auto edge : to_erase) {
+        edges.unsafe_erase(edge);
+    }
+    if (needInsert) {
+        edges.insert(v);
+    }
+}
+
 // 判断v1是否是v2的祖先
 bool minWRollback::isAncester(const string& v1, const string& v2) {
     // 子孙节点id的前缀包含祖先节点id
     return v2.find(v1) == 0;
 }
 
+// 递归更新超节点min_in和min_out
 void minWRollback::recursiveUpdate(HyperVertex::Ptr hyperVertex, int min_value, minw::EdgeType type) {
-    // 或者后续不在这里记录强连通分量，后续根据开销进行调整。。。
+// 或者后续不在这里记录强连通分量，后续根据开销进行调整。。。
     
     // 更新前需要把这个Hypervertex从原有m_min2HyperVertex中删除 (前提:他们都不是初始值)
     if (hyperVertex->m_min_in != INT_MAX && hyperVertex->m_min_out != INT_MAX) {
@@ -194,6 +196,7 @@ void minWRollback::recursiveUpdate(HyperVertex::Ptr hyperVertex, int min_value, 
     }
 }
 
+// 构建强连通分量的key，合并两个int为long long
 long long minWRollback::combine(int a, int b) {
     return a * 1000001LL + b;
 }
@@ -329,7 +332,7 @@ tbb::concurrent_unordered_set<Vertex::Ptr, Vertex::VertexHash> minWRollback::Gre
     
     
     /* 1. 选择回滚代价最小的超节点
-        
+        1.1 取出优先队列队头超节点rb
     */
 
 

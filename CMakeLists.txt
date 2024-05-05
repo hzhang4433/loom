@@ -24,4 +24,4 @@ file(GLOB_RECURSE HEADERS "*.h" "*.hpp")
 
 add_executable(minWRollback ${SRC_LIST} ${HEADERS})
 target_link_libraries(minWRollback ${GTEST_LIBRARIES} ${TBB_LIBRARIES} pthread)
-target_compile_options(minWRollback PRIVATE -Wpedantic -Wno-unused-variable -Wno-unused-parameter -Wno-comment -Wno-sign-compare -Wno-pedantic -Wno-return-type -Wno-uninitialized)
+target_compile_options(minWRollback PRIVATE -Wno-deprecated-declarations -Wpedantic -Wno-unused-variable -Wno-unused-parameter -Wno-comment -Wno-sign-compare -Wno-pedantic -Wno-return-type -Wno-uninitialized)

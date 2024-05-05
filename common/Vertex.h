@@ -2,6 +2,7 @@
 
 #include <memory>
 #include <string>
+#include <map>
 #include <tbb/concurrent_unordered_map.h>
 #include <tbb/concurrent_unordered_set.h>
 #include "common.h"
@@ -23,6 +24,20 @@ class Vertex : public std::enable_shared_from_this<Vertex>
         struct VertexEqual {
             bool operator()(const Vertex::Ptr& v1, const Vertex::Ptr& v2) const {
                 return v1->m_id == v2->m_id;
+            }
+        };
+
+        struct VertexCompare {
+            bool operator()(const Vertex::Ptr& a, const Vertex::Ptr& b) const {
+                return a->m_id < b->m_id;
+            }
+        };
+
+        struct MapCompare {
+            bool operator()(const std::map<Vertex::Ptr, Vertex::Ptr, Vertex::VertexCompare>& map1,
+                            const std::map<Vertex::Ptr, Vertex::Ptr, Vertex::VertexCompare>& map2) const {
+                // 比较两个 map 的第一个元素的key的id大小
+                return map1.begin()->first->m_id < map2.begin()->first->m_id;
             }
         };
 

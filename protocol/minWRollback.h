@@ -1,6 +1,7 @@
 #pragma once
 
 #include <atomic>
+#include <set>
 #include "../common/HyperVertex.h"
 
 class minWRollback
@@ -37,11 +38,13 @@ class minWRollback
             }
         };
 
-        void calculateHyperVertexWeight(tbb::concurrent_unordered_set<HyperVertex::Ptr, HyperVertex::HyperVertexHash>& scc, priority_queue<HyperVertex::Ptr, vector<HyperVertex::Ptr>, cmp>& pq);
+        void calculateHyperVertexWeight(tbb::concurrent_unordered_set<HyperVertex::Ptr, HyperVertex::HyperVertexHash>& scc, set<HyperVertex::Ptr, cmp>& pq);
 
         double calculateVertexWeight(HyperVertex::Ptr& hv1, HyperVertex::Ptr hv2, minw::EdgeType type);
 
-        tbb::concurrent_unordered_set<Vertex::Ptr, Vertex::VertexHash> GreedySelectVertex(tbb::concurrent_unordered_set<HyperVertex::Ptr, HyperVertex::HyperVertexHash>& scc, priority_queue<HyperVertex::Ptr, vector<HyperVertex::Ptr>, cmp>& pq);
+        tbb::concurrent_unordered_set<Vertex::Ptr, Vertex::VertexHash> GreedySelectVertex(tbb::concurrent_unordered_set<HyperVertex::Ptr, HyperVertex::HyperVertexHash>& scc, set<HyperVertex::Ptr, cmp>& pq);
+
+        void updateSCCandDependency(tbb::concurrent_unordered_set<HyperVertex::Ptr, HyperVertex::HyperVertexHash>& scc, const HyperVertex::Ptr& rb, set<HyperVertex::Ptr, cmp>& pq);
 
 
     private:

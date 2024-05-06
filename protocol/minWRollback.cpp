@@ -1,5 +1,6 @@
 #include <algorithm>
 #include <tbb/tbb.h>
+#include <boost/heap/fibonacci_heap.hpp>
 #include "minWRollback.h"
 
 using namespace std;
@@ -227,8 +228,8 @@ tbb::concurrent_unordered_set<Vertex::Ptr, Vertex::VertexHash> minWRollback::rol
     tbb::concurrent_unordered_set<Vertex::Ptr, Vertex::VertexHash> result;
     // 遍历所有强连通分量
     for (auto scc : m_min2HyperVertex) {
-        // 定义优先队列，以hyperVertex.m_cost为key从小到大排序
-        // priority_queue<HyperVertex::Ptr, vector<HyperVertex::Ptr>, cmp> pq;
+// 可尝试使用fibonacci堆优化更新效率，带测试，看效果
+        // 定义有序集合，以hyperVertex.m_cost为key从小到大排序
         set<HyperVertex::Ptr, cmp> pq;
 
         // 遍历强连通分量中每个超节点，计算scc超节点间边权

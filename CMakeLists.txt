@@ -14,14 +14,17 @@ include_directories(${GTEST_INCLUDE_DIRS})
 set(TBB_INCLUDE_DIRS /usr/include/tbb)
 set(TBB_LIBRARIES /usr/lib/x86_64-linux-gnu/libtbb.so)
 
+# 找boost
+find_package(Boost REQUIRED)
+include_directories(${Boost_INCLUDE_DIRS})
+
 
 file(GLOB_RECURSE SRC_LIST "*.cpp")
 list(FILTER SRC_LIST EXCLUDE REGEX ".*/test/.*")
 list(FILTER SRC_LIST EXCLUDE REGEX ".*/build/.*")
 file(GLOB_RECURSE HEADERS "*.h" "*.hpp")
 
-# list(APPEND SRC_LIST "${CMAKE_SOURCE_DIR}/workload/tpcc/Transaction.cpp")
 
 add_executable(minWRollback ${SRC_LIST} ${HEADERS})
-target_link_libraries(minWRollback ${GTEST_LIBRARIES} ${TBB_LIBRARIES} pthread)
+target_link_libraries(minWRollback ${GTEST_LIBRARIES} ${TBB_LIBRARIES} ${Boost_LIBRARIES} pthread)
 target_compile_options(minWRollback PRIVATE -Wno-deprecated-declarations -Wpedantic -Wno-unused-variable -Wno-unused-parameter -Wno-comment -Wno-sign-compare -Wno-pedantic -Wno-return-type -Wno-uninitialized)

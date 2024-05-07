@@ -1,7 +1,8 @@
+#include <iostream>
 #include "Vertex.h"
 
 
-Vertex::Vertex(std::shared_ptr<HyperVertex> hyperVertex, int hyperId, std::string id, bool isNested) : m_hyperVertex(hyperVertex), m_hyperId(hyperId), m_id(id), isNested(isNested = false) {
+Vertex::Vertex(shared_ptr<HyperVertex> hyperVertex, int hyperId, string id, bool isNested) : m_hyperVertex(hyperVertex), m_hyperId(hyperId), m_id(id), isNested(isNested) {
     // m_min_in = -1;
     // m_min_out = -1;
     m_degree = 0;
@@ -13,18 +14,51 @@ const tbb::concurrent_unordered_set<Vertex::ChildVertex, Vertex::ChildVertexHash
     return m_children; 
 }
 
+// const set<Vertex::ChildVertex, Vertex::ChildVertexCmp>& Vertex::getChildren() const { 
+//     return m_children; 
+// }
+
 void Vertex::addChild(Vertex::Ptr child, minw::DependencyType dependency) { 
     m_children.insert({child, dependency}); 
 }
 
-// minw::DependencyType Vertex::getDependencyType() const { 
-//     return m_dependencyType; 
-// }
+void Vertex::printVertex() {
+    cout << "VertexId: " << m_id;
+    cout << " Cost: " << m_cost;
+    cout << " IsNested: " << isNested << endl;
 
-// void Vertex::setDependencyType(minw::DependencyType type) { 
-//     m_dependencyType = type; 
-// }
+    cout << "ReadSet: ";
+    for (auto& read : readSet) {
+        cout << read << " ";
+    }
+    cout << endl;
 
-// int Vertex::mapToHyperId() const { 
-//     return m_hyperId; 
-// }
+    cout << "WriteSet: ";
+    for (auto& write : writeSet) {
+        cout << write << " ";
+    }
+    cout << endl;
+
+    cout << "CascadeVertices: ";
+    for (auto& cascade : cascadeVertices) {
+        cout << cascade->m_id << " ";
+    }
+    cout << endl;
+    
+    cout << "Children: " << endl;
+    for (auto& child : m_children) {
+        cout << "Dependency: " << DependencyTypeToString(child.dependency) << endl;
+        child.vertex->printVertex();
+    }
+}
+
+string Vertex::DependencyTypeToString(minw::DependencyType type) {
+    switch (type) {
+    case minw::DependencyType::STRONG:
+        return "STRONG";
+    case minw::DependencyType::WEAK:
+        return "WEAK";
+    default:
+        return "UNKNOWN";
+    }
+}

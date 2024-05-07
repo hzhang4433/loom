@@ -19,7 +19,7 @@ class minWRollback
 
         void buileGraph(tbb::concurrent_unordered_set<Vertex::Ptr, Vertex::VertexHash>& vertices);
 
-        tbb::concurrent_unordered_set<Vertex::Ptr, Vertex::VertexHash> rollback();
+        void rollback();
 
         bool hasConflict(tbb::concurrent_unordered_set<std::string>& set1, tbb::concurrent_unordered_set<std::string>& set2);
 
@@ -56,10 +56,10 @@ class minWRollback
 
 
     private:
-        //some type => rollbackTxs;
-
         std::atomic<int> id_counter;   // 分配事务ID
         // 存储超图中所有子事务节点
-        tbb::concurrent_unordered_set<Vertex::Ptr, Vertex::VertexHash> m_vertices;
+        tbb::concurrent_unordered_set<Vertex::Ptr, Vertex::VertexHash> m_vertices;  // 超图中所有事务节点
+        tbb::concurrent_unordered_set<HyperVertex::Ptr, HyperVertex::HyperVertexHash> m_hyperVertices; // 超图中所有超节点
         tbb::concurrent_unordered_map<long long, tbb::concurrent_unordered_set<HyperVertex::Ptr, HyperVertex::HyperVertexHash>> m_min2HyperVertex;
+        tbb::concurrent_unordered_set<Vertex::Ptr, Vertex::VertexHash> minWRollbackTxs;
 };

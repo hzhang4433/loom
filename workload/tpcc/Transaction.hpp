@@ -33,11 +33,7 @@ class Transaction : public std::enable_shared_from_this<Transaction>
             uint32_t ol_i_id;
         };
 
-        Transaction() {
-            for(auto& counter : order_counters) {
-                counter.store(1);
-            }
-        }
+        Transaction() {}
 
         ~Transaction() = default;
 
@@ -99,7 +95,7 @@ class Transaction : public std::enable_shared_from_this<Transaction>
 
     protected:
         Random random;                                          // random generator
-        // 静态变量 待测试...
+// 静态变量 待测试...
         static const std::array<std::string, 3000> c_lasts;     // const last name
         static const std::unordered_map<std::string, std::vector<int32_t>> c_last_to_c_id;      // last name to customer id
         static std::unordered_map<std::string, OrderInfo> wdc_latestOrder;                      // format: (w_id-d_id-c_id, {o_id, o_ol_cnt})

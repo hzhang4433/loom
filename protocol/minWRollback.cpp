@@ -9,7 +9,7 @@ using namespace std;
     详细算法流程: 
         1. 多线程并发执行所有事务，获得事务执行信息（读写集，事务结构，执行时间 => 随机生成）
         2. 判断执行完成的事务与其它执行完成事务间的rw依赖，构建rw依赖图
-    /待测试.../
+    状态: 待测试...
 */
 void minWRollback::execute(const Transaction::Ptr& tx) {
     int txid = getId();
@@ -23,10 +23,16 @@ void minWRollback::execute(const Transaction::Ptr& tx) {
     // 根据子节点依赖更新回滚代价和级联子事务
     hyperVertex->m_rootVertex = rootVertex;
     hyperVertex->recognizeCascades(rootVertex);
+    
+    // // for test print hyperVertex tree
+    // hyperVertex->printVertexTree();
+
     // 构建超图
     buileGraph(rootVertex->cascadeVertices);
-    // 更新图中现有节点
+    // 记录节点
     m_vertices.insert(rootVertex->cascadeVertices.begin(), rootVertex->cascadeVertices.end());
+    // 记录超节点
+    m_hyperVertices.insert(hyperVertex);
 }
 
 /*  构图算法（考虑多线程扩展性）: 将hyperVertex转化为hyperGraph
@@ -45,6 +51,7 @@ void minWRollback::execute(const Transaction::Ptr& tx) {
                     2. v_out.m_min_in更新成功，则尝试递归更新
                     3. 若更新失败，则返回
         2. 若与节点存在wr依赖（入边）与1相反
+    状态: 待测试...
  */
 void minWRollback::buileGraph(tbb::concurrent_unordered_set<Vertex::Ptr, Vertex::VertexHash>& vertices) {
     for (auto& newV: vertices) {
@@ -221,10 +228,10 @@ long long minWRollback::combine(int a, int b) {
     return a * 1000001LL + b;
 }
 
-/* 
-  确定性回滚: 从hyperGraph中找到最小的回滚子事务集合
+/* 确定性回滚: 从hyperGraph中找到最小的回滚子事务集合
+   状态: 待测试...
 */
-tbb::concurrent_unordered_set<Vertex::Ptr, Vertex::VertexHash> minWRollback::rollback() {
+void minWRollback::rollback() {
     tbb::concurrent_unordered_set<Vertex::Ptr, Vertex::VertexHash> result;
     // 遍历所有强连通分量
     for (auto scc : m_min2HyperVertex) {
@@ -237,9 +244,8 @@ tbb::concurrent_unordered_set<Vertex::Ptr, Vertex::VertexHash> minWRollback::rol
 
         // 贪心获取最小回滚代价的节点集
         auto minWVs = GreedySelectVertex(scc.second, pq);
-        result.insert(minWVs.cbegin(), minWVs.cend()) ;
+        minWRollbackTxs.insert(minWVs.cbegin(), minWVs.cend()) ;
     }
-    return result;
 }
 
 /* 计算强连通分量中每个超节点间回滚代价和回滚子事务集
@@ -484,6 +490,12 @@ tbb::concurrent_unordered_set<Vertex::Ptr, Vertex::VertexHash> minWRollback::Gre
     return result;
 }
 
+/*  递归更新scc超节点和scc中依赖节点状态
+        1. 从scc中删除rb
+        2. 遍历rb在scc中的出边节点，更新对应超节点的权重与依赖关系
+        3. 遍历rb在scc中的入边节点，更新对应超节点的权重与依赖关系
+    状态: 待测试...
+*/
 void minWRollback::updateSCCandDependency(tbb::concurrent_unordered_set<HyperVertex::Ptr, HyperVertex::HyperVertexHash>& scc, const HyperVertex::Ptr& rb, set<HyperVertex::Ptr, cmp>& pq) {
     // 从scc中删除rb
     scc.unsafe_erase(rb);

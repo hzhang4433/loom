@@ -1,6 +1,8 @@
 #include "HyperVertex.h"
 #include "Vertex.h"
+#include <iostream>
 
+using namespace std;
 
 HyperVertex::HyperVertex(int id) {
     this->m_hyperId = id;
@@ -33,6 +35,9 @@ double HyperVertex::buildVertexs(const Transaction::Ptr& tx, HyperVertex::Ptr& h
     double execTime = 1;
     // double execTime = tx->getExecTime();
 
+    // cout << "txid: " << txid << endl;
+    // cout << "child num: " << tx->getChildren().size() << endl;
+
     // 如果事务有子事务，则递归构建子节点
     if (!tx->getChildren().empty()) {
         vertex->isNested = true;
@@ -48,13 +53,23 @@ double HyperVertex::buildVertexs(const Transaction::Ptr& tx, HyperVertex::Ptr& h
             // 添加子节点
             vertex->addChild(childVertex, children[i - 1].dependency);
         }
-        // 添加自己
-        vertex->cascadeVertices.insert(vertex);
     }
+    // 添加自己
+    vertex->cascadeVertices.insert(vertex);
+    
     // 添加读写集
     vertex->readSet = tx->getReadRows();
     vertex->writeSet = tx->getUpdateRows();
     // 添加回滚代价
     vertex->m_cost = execTime;
+    // cout << "VertexId: " << vertex->m_id << " Cost: " << vertex->m_cost << endl;
     return execTime;
+}
+
+// 递归打印超节点结构树
+// m_rootVertex是根节点,从根节点开始递归打印
+void HyperVertex::printVertexTree() {
+    if (m_rootVertex) {
+        m_rootVertex->printVertex();
+    }
 }

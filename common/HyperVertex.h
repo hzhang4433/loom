@@ -22,8 +22,8 @@ class HyperVertex : public std::enable_shared_from_this<HyperVertex>
 
         void recognizeCascades(Vertex::Ptr vertex);
 
-
-        // Vertex::Ptr getVertexById(const std::string& id) const;
+        // 递归打印超节点结构树
+        void printVertexTree();
 
         struct HyperVertexHash {
             std::size_t operator()(const HyperVertex::Ptr& v) const {

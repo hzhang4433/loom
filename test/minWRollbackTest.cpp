@@ -1,4 +1,5 @@
 #include <gtest/gtest.h>
+#include <chrono>
 #include "../protocol/minWRollback.h"
 
 using namespace std;
@@ -198,10 +199,22 @@ TEST(minWRollbackTest, TestExecute) {
     txs.push_back(tx4);
     txs.push_back(tx5);
 
+    chrono::high_resolution_clock::time_point start, end;
     // 创建minWRollback实例，测试execute函数vertexs构建部分
     minWRollback minw;
-    for (int i = 0; i < 1; i++) {
-        // cout << "tx" << i + 1 << ": " << endl;
+    for (int i = 0; i < txNum; i++) {
+        // start = std::chrono::high_resolution_clock::now();
         minw.execute(txs[i]);
+        // end = std::chrono::high_resolution_clock::now();
+
+        // // print hyperGraph
+        // minw.printHyperGraph();
+
+        // print graph build time
+        // cout << "tx" << i + 1 << " execute + build time: " << chrono::duration_cast<chrono::microseconds>(end - start).count() << "us" << endl;
     }
+
+    minw.rollback();
+    minw.printRollbackTxs();
+    minw.printHyperGraph();
 }

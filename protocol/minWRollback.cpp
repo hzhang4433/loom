@@ -2,6 +2,8 @@
 #include <tbb/tbb.h>
 #include <boost/heap/fibonacci_heap.hpp>
 #include "minWRollback.h"
+#include <iostream>
+#include <chrono>
 
 using namespace std;
 
@@ -28,7 +30,11 @@ void minWRollback::execute(const Transaction::Ptr& tx) {
     // hyperVertex->printVertexTree();
 
     // 构建超图
-    buileGraph(rootVertex->cascadeVertices);
+    auto start = std::chrono::high_resolution_clock::now();
+    buildGraph(rootVertex->cascadeVertices);
+    auto end = std::chrono::high_resolution_clock::now();
+    cout << "tx" << txid << " build time: " << chrono::duration_cast<chrono::microseconds>(end - start).count() << "us" << endl;
+
     // 记录节点
     m_vertices.insert(rootVertex->cascadeVertices.begin(), rootVertex->cascadeVertices.end());
     // 记录超节点
@@ -53,7 +59,7 @@ void minWRollback::execute(const Transaction::Ptr& tx) {
         2. 若与节点存在wr依赖（入边）与1相反
     状态: 待测试...
  */
-void minWRollback::buileGraph(tbb::concurrent_unordered_set<Vertex::Ptr, Vertex::VertexHash>& vertices) {
+void minWRollback::buildGraph(tbb::concurrent_unordered_set<Vertex::Ptr, Vertex::VertexHash>& vertices) {
     for (auto& newV: vertices) {
         for (auto& oldV: m_vertices) {
             // 获取超节点
@@ -65,7 +71,7 @@ void minWRollback::buileGraph(tbb::concurrent_unordered_set<Vertex::Ptr, Vertex:
                 newV->m_out_edges.insert(oldV);
 
                 // 更新newV对应的hyperVertex的out_edges
-                newHyperVertex->m_out_edges[oldHyperVertex].insert(map<Vertex::Ptr, Vertex::Ptr, Vertex::VertexCompare>{{newV, oldV}});
+                handleNewEdge(newV, oldV, newHyperVertex->m_out_edges[oldHyperVertex]);
 
                 // 更新依赖数
                 newV->m_degree++;
@@ -79,7 +85,7 @@ void minWRollback::buileGraph(tbb::concurrent_unordered_set<Vertex::Ptr, Vertex:
                 oldV->m_in_edges.insert(newV);
 
                 // 更新oldV对应的hyperVertex的in_edges
-                oldHyperVertex->m_in_edges[newHyperVertex].insert(map<Vertex::Ptr, Vertex::Ptr, Vertex::VertexCompare>{{oldV, newV}});
+                handleNewEdge(oldV, newV, oldHyperVertex->m_in_edges[newHyperVertex]);
 
                 // 更新依赖数
                 oldV->m_degree++;
@@ -95,7 +101,7 @@ void minWRollback::buileGraph(tbb::concurrent_unordered_set<Vertex::Ptr, Vertex:
                 newV->m_in_edges.insert(oldV);
 
                 // 更新newV对应的hyperVertex的in_edges
-                newHyperVertex->m_in_edges[oldHyperVertex].insert(map<Vertex::Ptr, Vertex::Ptr, Vertex::VertexCompare>{{newV, oldV}});
+                handleNewEdge(newV, oldV, newHyperVertex->m_in_edges[oldHyperVertex]);
 
                 // 更新依赖数
                 newV->m_degree++;
@@ -109,7 +115,7 @@ void minWRollback::buileGraph(tbb::concurrent_unordered_set<Vertex::Ptr, Vertex:
                 oldV->m_out_edges.insert(newV);
 
                 // 更新oldV对应的hyperVertex的out_edges
-                oldHyperVertex->m_out_edges[newHyperVertex].insert(map<Vertex::Ptr, Vertex::Ptr, Vertex::VertexCompare>{{oldV, newV}});
+                handleNewEdge(oldV, newV, oldHyperVertex->m_out_edges[newHyperVertex]);
 
                 // 更新依赖数
                 oldV->m_degree++;
@@ -149,24 +155,42 @@ bool minWRollback::hasConflict(tbb::concurrent_unordered_set<std::string>& set1,
 */ 
 }
 
-// 处理新边 - 已废弃
-void minWRollback::handleNewEdge(Vertex::Ptr& v, tbb::concurrent_unordered_set<Vertex::Ptr, Vertex::VertexHash>& edges) {
+// 处理新边, 尝试将v2插入到v1为起点的边中
+void minWRollback::handleNewEdge(Vertex::Ptr& v1, Vertex::Ptr& v2, tbb::concurrent_unordered_map<Vertex::Ptr, tbb::concurrent_unordered_set<Vertex::Ptr, Vertex::VertexHash>, Vertex::VertexHash>& edges) {
+    
+    // if (edges.count(v1)) {
+    //     edges.at(v1).insert(v2);
+    // } else {
+    //     edges.insert({v1, tbb::concurrent_unordered_set<Vertex::Ptr, Vertex::VertexHash>{v2}});
+    // }
+
+// /*
     bool needInsert = true;
     std::vector<Vertex::Ptr> to_erase;
     
-    for (auto edge : edges) {
-        if (isAncester(v->m_id, edge->m_id)) {
-            to_erase.push_back(edge);
-        } else if (isAncester(edge->m_id, v->m_id)) {
-            needInsert = false;
+    if (edges.count(v1)) {
+        for (auto& v: edges.at(v1)) {
+            if (isAncester(v->m_id, v2->m_id)) { 
+                // 已经存在要插入节点的祖先，则不插入
+                needInsert = false;
+                break;
+            } else if (isAncester(v2->m_id, v->m_id)) {
+                // 要插入的节点是已经存在的祖先，则删除已经存在的节点
+                to_erase.push_back(v);
+            }
         }
+    } else {
+        edges.emplace(v1, tbb::concurrent_unordered_set<Vertex::Ptr, Vertex::VertexHash>());
     }
+
     for (auto edge : to_erase) {
-        edges.unsafe_erase(edge);
+        edges.at(v1).unsafe_erase(edge);
     }
+
     if (needInsert) {
-        edges.insert(v);
+        edges.at(v1).insert(v2);
     }
+// */
 }
 
 // 判断v1是否是v2的祖先
@@ -232,7 +256,6 @@ long long minWRollback::combine(int a, int b) {
    状态: 待测试...
 */
 void minWRollback::rollback() {
-    tbb::concurrent_unordered_set<Vertex::Ptr, Vertex::VertexHash> result;
     // 遍历所有强连通分量
     for (auto scc : m_min2HyperVertex) {
 // 可尝试使用fibonacci堆优化更新效率，带测试，看效果
@@ -243,8 +266,8 @@ void minWRollback::rollback() {
         calculateHyperVertexWeight(scc.second, pq);
 
         // 贪心获取最小回滚代价的节点集
-        auto minWVs = GreedySelectVertex(scc.second, pq);
-        minWRollbackTxs.insert(minWVs.cbegin(), minWVs.cend()) ;
+        // auto minWVs = GreedySelectVertex(scc.second, pq);
+        // minWRollbackTxs.insert(minWVs.cbegin(), minWVs.cend()) ;
     }
 }
 
@@ -283,6 +306,12 @@ void minWRollback::calculateHyperVertexWeight(tbb::concurrent_unordered_set<Hype
         pq.insert(hyperVertex);
     }
 }
+
+/* 由于节点的度数发生更新，尝试更新相关超节点回滚代价
+*/
+// void minWRollback::updateHyperVertexWeight(HyperVertex::Ptr hyperVertex, set<HyperVertex::Ptr, cmp>& pq) {
+
+// }
 
 /* 计算超节点间一条依赖的回滚代价，即节点权重
     1. 判断边类型
@@ -345,7 +374,7 @@ double minWRollback::calculateVertexWeight(HyperVertex::Ptr& hv1, HyperVertex::P
     4. 记录回滚子事务
     5. 利用总回滚代价和度，计算总边权
 */
-void minWRollback::calculateEdgeWeight(std::set<map<Vertex::Ptr, Vertex::Ptr, Vertex::VertexCompare>, Vertex::MapCompare>& edges, double& weight, 
+void minWRollback::calculateEdgeWeight(tbb::concurrent_unordered_map<Vertex::Ptr, tbb::concurrent_unordered_set<Vertex::Ptr, Vertex::VertexHash>, Vertex::VertexHash>& edges, double& weight, 
                                         tbb::concurrent_unordered_set<Vertex::Ptr, Vertex::VertexHash>& rollbackVertex) {
     // 记录全局回滚代价和度
     double total_cost = 0;
@@ -353,18 +382,16 @@ void minWRollback::calculateEdgeWeight(std::set<map<Vertex::Ptr, Vertex::Ptr, Ve
 
     // 遍历每条边
     for (auto& edge : edges) {
-        // 判断边起点和终点是否已经在回滚子事务集中
-        if (rollbackVertex.find(edge.begin()->first) != rollbackVertex.cend() || 
-            rollbackVertex.find(edge.begin()->second) != rollbackVertex.cend()) {
-            continue;
-        }
-
         // 初始化边起点和终点的回滚代价和度
         double tailV_cost = 0, headV_cost = 0, tailV_weight = 0, headV_weight = 0;
         int tailV_degree = 0, headV_degree = 0;
 
-        // 获取边起点
-        auto tailV = edge.begin()->first;
+        // 起点节点
+        auto tailV = edge.first;
+        if (rollbackVertex.find(tailV) != rollbackVertex.cend()) {
+            continue;
+        }
+
         // 获取边起点tailV的回滚代价
         tailV_cost = tailV->m_cost;
         // 统计边起点tailV的度
@@ -373,34 +400,45 @@ void minWRollback::calculateEdgeWeight(std::set<map<Vertex::Ptr, Vertex::Ptr, Ve
         for (auto& v : vertexs) {
             tailV_degree += v->m_degree;
         }
-
-/* 效率有提高吗？待测试 
-        // 并行计算边起点tailV的度
-        tailV_degree = tbb::parallel_reduce(
-            tbb::blocked_range<size_t>(0, vertexs.size()), 0,
-            [&](const tbb::blocked_range<size_t>& r, int init) -> int {
-                for (size_t i = r.begin(); i != r.end(); ++i) {
-                    auto it = vertexs.begin();
-                    std::advance(it, i);
-                    init += (*it)->m_degree;
-                }
-                return init;
-            },
-            std::plus<int>()
-        );
-*/
+    /* 效率有提高吗？待测试 
+            // 并行计算边起点tailV的度
+            tailV_degree = tbb::parallel_reduce(
+                tbb::blocked_range<size_t>(0, vertexs.size()), 0,
+                [&](const tbb::blocked_range<size_t>& r, int init) -> int {
+                    for (size_t i = r.begin(); i != r.end(); ++i) {
+                        auto it = vertexs.begin();
+                        std::advance(it, i);
+                        init += (*it)->m_degree;
+                    }
+                    return init;
+                },
+                std::plus<int>()
+            );
+    */
 
         // 计算边起点tailV的回滚权重
         tailV_weight = tailV_cost / tailV_degree;
 
-        // 获取边终点
-        auto headV = edge.begin()->second;
-        // 计算边终点headV的回滚代价
-        headV_cost = headV->m_cost;
-        // 统计边终点headV的度
-        for (auto& v : headV->cascadeVertices) {
+
+        // 尾部节点s
+        auto headVs = edge.second;
+        tbb::concurrent_unordered_set<Vertex::Ptr, Vertex::VertexHash> headVSet;
+        for (auto& headV : headVs) {
+            // 判断边起点和终点是否已经在回滚子事务集中
+            if (rollbackVertex.find(headV) != rollbackVertex.cend()) {
+                continue;
+            }
+
+            headVSet.insert(headV->cascadeVertices.cbegin(), headV->cascadeVertices.cend());            
+        }
+        
+        for (auto& v : headVSet) {
+            // 计算边终点headV的回滚代价
+            headV_cost += v->m_self_cost;
+            // 统计边终点headV的度
             headV_degree += v->m_degree;
         }
+
         // 计算边终点headV的回滚权重
         headV_weight = headV_cost / headV_degree;
         
@@ -416,12 +454,13 @@ void minWRollback::calculateEdgeWeight(std::set<map<Vertex::Ptr, Vertex::Ptr, Ve
             total_cost += headV_cost;
             total_degree += headV_degree;
             // 记录回滚子事务
-            rollbackVertex.insert(headV->cascadeVertices.cbegin(), headV->cascadeVertices.cend());
+            rollbackVertex.insert(headVSet.cbegin(), headVSet.cend());
         }
+        
+        // 计算边权
+        weight = total_cost / total_degree;
     }
-    
-    // 计算边权
-    weight = total_cost / total_degree;
+        
 }
 
 // 计算两个集合的差集
@@ -578,4 +617,86 @@ void minWRollback::updateSCCandDependency(tbb::concurrent_unordered_set<HyperVer
         }
     }
 
+}
+
+// 打印超图
+void minWRollback::printHyperGraph() {
+    cout << "====================HyperGraph now====================" << endl;
+    for (auto& hyperVertex : m_hyperVertices) {
+        // 输出超节点回滚代价
+        cout << "HyperVertex: " << hyperVertex->m_hyperId << " min_in: " << hyperVertex->m_min_in << " min_out: " << hyperVertex->m_min_out << endl;
+        // 输出超节点包含的所有节点
+        cout << "Vertexs: ";
+        for (auto& vertex : hyperVertex->m_vertices) {
+            cout << vertex->m_id << " ";
+        }
+        cout << endl;
+        // 输出超节点的出边和入边
+        cout << "==========Edges==========" << endl;
+        for (auto& out_edge : hyperVertex->m_out_edges) {
+            cout << "OutEdge: " << out_edge.first->m_hyperId << " ";
+            for (auto& edge : out_edge.second) {
+                for (auto& out_edge : edge.second) {
+                    cout << edge.first->m_id << " -> " << out_edge->m_id << " ";
+                }
+            }
+            cout << endl;
+        }
+        for (auto& in_edge : hyperVertex->m_in_edges) {
+            cout << "InEdge: " << in_edge.first->m_hyperId << " ";
+            for (auto& edge : in_edge.second) {
+                for (auto& in_edge : edge.second) {
+                    cout << edge.first->m_id << " -> " << in_edge->m_id << " ";
+                }
+            }
+            cout << endl;
+        }
+        // 输出超节点的出边和入边权重
+        cout << "==========Weights==========" << endl;
+        cout << "m_cost: " << hyperVertex->m_cost << " m_out_cost: " << hyperVertex->m_out_cost << " m_in_cost: " << hyperVertex->m_in_cost << endl; 
+        for (auto& out_weight : hyperVertex->m_out_weights) {
+            cout << "OutWeight: " << out_weight.first->m_hyperId << " " << out_weight.second << endl;
+        }
+        for (auto& in_weight : hyperVertex->m_in_weights) {
+            cout << "InWeight: " << in_weight.first->m_hyperId << " " << in_weight.second << endl;
+        }
+        // 输出超节点的出边和入边回滚子事务
+        cout << "==========Rollback==========" << endl;
+        for (auto& out_rollback : hyperVertex->m_out_rollback) {
+            cout << "OutRollback: " << out_rollback.first->m_hyperId << " ";
+            for (auto& rollback : out_rollback.second) {
+                cout << rollback->m_id << " ";
+            }
+            cout << endl;
+        }
+        for (auto& in_rollback : hyperVertex->m_in_rollback) {
+            cout << "InRollback: " << in_rollback.first->m_hyperId << " ";
+            for (auto& rollback : in_rollback.second) {
+                cout << rollback->m_id << " ";
+            }
+            cout << endl;
+        }
+        // 输出超节点的所有出边和入边回滚子事务
+        cout << "==========AllRollback==========" << endl;
+        cout << "OutAllRollback: ";
+        for (auto& rollback : hyperVertex->m_out_allRB) {
+            cout << rollback->m_id << " ";
+        }
+        cout << endl;
+        cout << "InAllRollback: ";
+        for (auto& rollback : hyperVertex->m_in_allRB) {
+            cout << rollback->m_id << " ";
+        }
+        cout << endl;
+        cout << "========================== end =========================" << endl;
+    }
+}
+
+// 输出回滚子事务
+void minWRollback::printRollbackTxs() {
+    cout << "====================Rollback Transactions====================" << endl;
+    for (auto& tx : minWRollbackTxs) {
+        cout << tx->m_id << " ";
+    }
+    cout << endl;
 }

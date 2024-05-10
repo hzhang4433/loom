@@ -44,12 +44,13 @@ class HyperVertex : public std::enable_shared_from_this<HyperVertex>
         tbb::concurrent_unordered_map<HyperVertex::Ptr, tbb::concurrent_unordered_set<Vertex::Ptr, Vertex::VertexHash>, HyperVertexHash> m_in_rollback;  // 记录入边的级联回滚子事务
         tbb::concurrent_unordered_map<HyperVertex::Ptr, tbb::concurrent_unordered_set<Vertex::Ptr, Vertex::VertexHash>, HyperVertexHash> m_out_rollback; // 记录出边的级联回滚子事务
 // 哪种好，带测试
-        // 想排序用下面这个
-        tbb::concurrent_unordered_map<HyperVertex::Ptr, set<map<Vertex::Ptr, Vertex::Ptr, Vertex::VertexCompare>, Vertex::MapCompare>, HyperVertexHash> m_out_edges;    // 记录超节点中所有出边, 格式：hyperVertex => {<v1, v2>, <v1, v2>, ...}
-        tbb::concurrent_unordered_map<HyperVertex::Ptr, set<map<Vertex::Ptr, Vertex::Ptr ,Vertex::VertexCompare>, Vertex::MapCompare>, HyperVertexHash> m_in_edges;     // 记录超节点中所有入边
+        // // 想排序用下面这个
+        // tbb::concurrent_unordered_map<HyperVertex::Ptr, map<Vertex::Ptr, set<Vertex::Ptr, Vertex::VertexCompare>, Vertex::VertexCompare>, HyperVertexHash> m_out_edges;    // 记录超节点中所有出边, 格式：hyperVertex => {<v1, {vi..vn}>, <v2, {vi...vn}>, ...}
+        // tbb::concurrent_unordered_map<HyperVertex::Ptr, map<Vertex::Ptr, set<Vertex::Ptr, Vertex::VertexCompare>,Vertex::VertexCompare>, HyperVertexHash> m_in_edges;     // 记录超节点中所有入边
+        
         // 想并发用下面这个
-        // tbb::concurrent_unordered_map<HyperVertex::Ptr, tbb::concurrent_unordered_set<tbb::concurrent_unordered_map<Vertex::Ptr, Vertex::Ptr, Vertex::VertexHash>>, HyperVertexHash> m_out_edges;    // 记录超节点中所有出边, 格式：hyperVertex => {<v1, v2>, <v1, v2>, ...}
-        // tbb::concurrent_unordered_map<HyperVertex::Ptr, tbb::concurrent_unordered_set<tbb::concurrent_unordered_map<Vertex::Ptr, Vertex::Ptr ,Vertex::VertexHash>>, HyperVertexHash> m_in_edges;     // 记录超节点中所有入边
+        tbb::concurrent_unordered_map<HyperVertex::Ptr, tbb::concurrent_unordered_map<Vertex::Ptr, tbb::concurrent_unordered_set<Vertex::Ptr, Vertex::VertexHash>, Vertex::VertexHash>, HyperVertexHash> m_out_edges;    // 记录超节点中所有出边, 格式：hyperVertex => {<v1, v2>, <v1, v2>, ...}
+        tbb::concurrent_unordered_map<HyperVertex::Ptr, tbb::concurrent_unordered_map<Vertex::Ptr, tbb::concurrent_unordered_set<Vertex::Ptr ,Vertex::VertexHash>, Vertex::VertexHash>, HyperVertexHash> m_in_edges;     // 记录超节点中所有入边
         tbb::concurrent_unordered_map<HyperVertex::Ptr, double, HyperVertexHash> m_out_weights; //记录出边边权
         tbb::concurrent_unordered_map<HyperVertex::Ptr, double, HyperVertexHash> m_in_weights;  //记录入边边权
         minw::EdgeType m_rollback_type; // 边类型

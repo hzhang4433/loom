@@ -34,6 +34,7 @@ double HyperVertex::buildVertexs(const Transaction::Ptr& tx, HyperVertex::Ptr& h
     // 获取执行时间
     double execTime = 1;
     // double execTime = tx->getExecTime();
+    vertex->m_self_cost = execTime;
 
     // cout << "txid: " << txid << endl;
     // cout << "child num: " << tx->getChildren().size() << endl;

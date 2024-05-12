@@ -11,6 +11,12 @@ namespace TPCC {
         STOCK_LEVEL
     };
 
+    enum TimeType {
+        HIGH = 100,
+        MEDIUM = 70,
+        LOW = 40,
+    };
+
     constexpr int n_warehouses = 1;
     constexpr int n_districts = 10;
     constexpr int n_customers = 3000;

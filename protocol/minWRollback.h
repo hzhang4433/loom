@@ -44,7 +44,7 @@ class minWRollback
         void calculateHyperVertexWeight(tbb::concurrent_unordered_set<HyperVertex::Ptr, HyperVertex::HyperVertexHash>& scc, set<HyperVertex::Ptr, cmp>& pq);
 
         // 计算超节点间一条依赖的回滚代价
-        double calculateVertexWeight(HyperVertex::Ptr& hv1, HyperVertex::Ptr hv2, minw::EdgeType type);
+        void calculateVertexWeight(HyperVertex::Ptr& hv1, HyperVertex::Ptr hv2, minw::EdgeType type);
         
         // 计算边权重
         void calculateEdgeWeight(tbb::concurrent_unordered_map<Vertex::Ptr, tbb::concurrent_unordered_set<Vertex::Ptr, Vertex::VertexHash>, Vertex::VertexHash>& edges, double& weight, tbb::concurrent_unordered_set<Vertex::Ptr, Vertex::VertexHash>& rollbackVertex);
@@ -63,6 +63,7 @@ class minWRollback
         void printRollbackTxs();
 
     private:
+        bool testFlag = true;
         std::atomic<int> id_counter;   // 分配事务ID
         // 存储超图中所有子事务节点
         tbb::concurrent_unordered_set<Vertex::Ptr, Vertex::VertexHash> m_vertices;  // 超图中所有事务节点

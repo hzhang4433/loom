@@ -215,6 +215,6 @@ TEST(minWRollbackTest, TestExecute) {
     }
 
     minw.rollback();
-    minw.printRollbackTxs();
-    minw.printHyperGraph();
+    // minw.printRollbackTxs();
+    // minw.printHyperGraph();
 }

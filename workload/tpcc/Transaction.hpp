@@ -102,12 +102,14 @@ class Transaction : public std::enable_shared_from_this<Transaction>
         static std::unordered_map<std::string, std::queue<OrderInfo>> wd_oldestNewOrder;        // format: (w_id-d_id, {o_id, o_c_id, o_ol_cnt})
         static std::unordered_map<std::string, std::vector<OrderLineInfo>> d_latestOrderLines;  // format: (d_id, [{o_id, ol_i_id}, ...])
         static uint64_t orderLineCounter;                                                       // orderLine counter
+        
         // tx operations
         tbb::concurrent_unordered_set<std::string> readRows;               // read rows
         tbb::concurrent_unordered_set<std::string> updateRows;             // update rows
         // tx structure
         std::vector<ChildTransaction> children;                 // child transactions
         std::vector<Transaction::Ptr> siblings;                 // sibling transactions
+        int executionTime;                                      // execution time
 };
 
 class NewOrderTransaction : public Transaction

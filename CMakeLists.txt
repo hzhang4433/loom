@@ -24,7 +24,9 @@ list(FILTER SRC_LIST EXCLUDE REGEX ".*/test/.*")
 list(FILTER SRC_LIST EXCLUDE REGEX ".*/build/.*")
 file(GLOB_RECURSE HEADERS "*.h" "*.hpp")
 
+# 禁止tbb的deprecated警告
+add_definitions(-DTBB_SUPPRESS_DEPRECATED_MESSAGES=1)
 
 add_executable(minWRollback ${SRC_LIST} ${HEADERS})
 target_link_libraries(minWRollback ${GTEST_LIBRARIES} ${TBB_LIBRARIES} ${Boost_LIBRARIES} pthread)
-target_compile_options(minWRollback PRIVATE -Wno-deprecated-declarations -Wpedantic -Wno-unused-variable -Wno-unused-parameter -Wno-comment -Wno-sign-compare -Wno-pedantic -Wno-return-type -Wno-uninitialized)
+target_compile_options(minWRollback PRIVATE -Wno-deprecated -Wpedantic -Wno-unused-variable -Wno-unused-parameter -Wno-comment -Wno-sign-compare -Wno-pedantic -Wno-return-type -Wno-uninitialized)

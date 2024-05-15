@@ -155,6 +155,31 @@ bool minWRollback::hasConflict(tbb::concurrent_unordered_set<std::string>& set1,
 */ 
 }
 
+// 判断两个set是否有交集
+template <typename T, typename Hash>
+bool hasIntersection(const tbb::concurrent_unordered_set<T, Hash>& set1, const tbb::concurrent_unordered_set<T, Hash>& set2) {
+    // for (const auto& item : set1) {
+    //     if (set2.find(item) != set2.end()) {
+    //         return true;
+    //     }
+    // }
+    // return false;
+
+    std::atomic<bool> found(false);
+
+    tbb::parallel_for(tbb::blocked_range<size_t>(0, set2.size()), [&](const tbb::blocked_range<size_t>& r) {
+        for (size_t i = r.begin(); i != r.end() && !found; ++i) {
+            auto it = set2.begin();
+            std::advance(it, i);
+            if (set1.find(*it) != set1.end()) {
+                found = true;
+            }
+        }
+    });
+
+    return found;
+}
+
 // 处理新边, 尝试将v2插入到v1为起点的边中
 void minWRollback::handleNewEdge(Vertex::Ptr& v1, Vertex::Ptr& v2, tbb::concurrent_unordered_map<Vertex::Ptr, tbb::concurrent_unordered_set<Vertex::Ptr, Vertex::VertexHash>, Vertex::VertexHash>& edges) {
     
@@ -278,8 +303,7 @@ void minWRollback::rollback() {
         }
 
         // 贪心获取最小回滚代价的节点集
-        auto minWVs = GreedySelectVertex(scc.second, pq);
-        minWRollbackTxs.insert(minWVs.cbegin(), minWVs.cend()) ;
+        GreedySelectVertex(scc.second, pq, minWRollbackTxs);
     }
 }
 
@@ -295,7 +319,7 @@ void minWRollback::calculateHyperVertexWeight(tbb::concurrent_unordered_set<Hype
             // 同属于一个scc
             if (scc.find(out_edge.first) != scc.cend()) {
                 // 计算超节点间边权, 获得超节点出边回滚代价
-                calculateVertexWeight(hyperVertex, out_edge.first, minw::EdgeType::OUT);
+                calculateVertexRollback(hyperVertex, out_edge.first, minw::EdgeType::OUT);
             }
         }
         // 计算m_out_cost
@@ -310,7 +334,7 @@ void minWRollback::calculateHyperVertexWeight(tbb::concurrent_unordered_set<Hype
             // 同属于一个scc
             if (scc.find(in_edge.first) != scc.cend()) {
                 // 计算超节点间边权, 获得超节点入边回滚代价
-                calculateVertexWeight(hyperVertex, in_edge.first, minw::EdgeType::IN); 
+                calculateVertexRollback(hyperVertex, in_edge.first, minw::EdgeType::IN); 
             }
         }
         // 计算m_in_cost
@@ -333,21 +357,14 @@ void minWRollback::calculateHyperVertexWeight(tbb::concurrent_unordered_set<Hype
     }
 }
 
-/* 由于节点的度数发生更新，尝试更新相关超节点回滚代价
-*/
-// void minWRollback::updateHyperVertexWeight(HyperVertex::Ptr hyperVertex, set<HyperVertex::Ptr, cmp>& pq) {
-
-// }
-
-/* 计算超节点间一条依赖的回滚代价，即节点权重
+/* 计算两个超节点间的总回滚子事务集
     1. 判断边类型
-    2. 判断是否已经存在边权
+    2. 判断是否已经存在回滚集
         2.1 若存在则直接返回
-    3. 若不存在则计算超节点边权
-    4. 记录边权和回滚子事务集
-    
+    3. 若不存在则统计超节点间回滚子事务集
+    4. 记录节点间回滚子事务集
 */
-void minWRollback::calculateVertexWeight(HyperVertex::Ptr& hv1, HyperVertex::Ptr hv2, minw::EdgeType type) {
+void minWRollback::calculateVertexRollback(HyperVertex::Ptr& hv1, HyperVertex::Ptr hv2, minw::EdgeType type) {
     double min_cost = 0;
     tbb::concurrent_unordered_set<Vertex::Ptr, Vertex::VertexHash> rollbackVertexs;
     
@@ -357,8 +374,8 @@ void minWRollback::calculateVertexWeight(HyperVertex::Ptr& hv1, HyperVertex::Ptr
             return;
         }
 
-        // 逐边判断两个超节点hv1和hv2间的最小回滚代价 => 获取最终回滚代价和回滚子事务集
-        calculateEdgeWeight(hv1->m_out_edges[hv2], min_cost, rollbackVertexs);
+        // 逐边判断两个超节点hv1和hv2间的最小回滚代价 => 获取最终回滚子事务集
+        calculateEdgeRollback(hv1->m_out_edges[hv2], min_cost, rollbackVertexs);
 
         // // 记录边权
         // hv1->m_out_weights[hv2] = min_cost;
@@ -377,7 +394,7 @@ void minWRollback::calculateVertexWeight(HyperVertex::Ptr& hv1, HyperVertex::Ptr
         }
         
         // 逐边判断两个超节点hv1和hv2间的最小回滚代价 => 获取最终回滚代价和回滚子事务集
-        calculateEdgeWeight(hv1->m_in_edges[hv2], min_cost, rollbackVertexs);
+        calculateEdgeRollback(hv1->m_in_edges[hv2], min_cost, rollbackVertexs);
 
         // // 记录边权
         // hv1->m_in_weights[hv2] = min_cost;
@@ -391,14 +408,92 @@ void minWRollback::calculateVertexWeight(HyperVertex::Ptr& hv1, HyperVertex::Ptr
     }
 }
 
-/* 遍历边集，计算超节点边权
+/* 遍历边集，统计两超节点间一条边的回滚子事务集
     1. 计算边起点tailV的回滚权重
     2. 计算边终点headV的回滚权重
     3. 获取min(tailV回滚权重，headV回滚权重), 并更新总回滚代价和度
     4. 记录回滚子事务
-    5. 利用总回滚代价和度，计算总边权
 */
-void minWRollback::calculateEdgeWeight(tbb::concurrent_unordered_map<Vertex::Ptr, tbb::concurrent_unordered_set<Vertex::Ptr, Vertex::VertexHash>, Vertex::VertexHash>& edges, double& weight, 
+void minWRollback::calculateEdgeRollback(tbb::concurrent_unordered_map<Vertex::Ptr, tbb::concurrent_unordered_set<Vertex::Ptr, Vertex::VertexHash>, Vertex::VertexHash>& edges,
+                                        tbb::concurrent_unordered_set<Vertex::Ptr, Vertex::VertexHash>& rollbackVertex) {
+    // 遍历每条边
+    for (auto& edge : edges) {
+        // 初始化边起点和终点的回滚代价和度
+        double tailV_weight = 0, headV_weight = 0;
+        int tailV_degree = 0, headV_degree = 0;
+
+        // 起点节点tailV
+        auto tailV = edge.first;
+        if (rollbackVertex.find(tailV) != rollbackVertex.cend()) {
+            continue;
+        }
+
+        // 统计边起点tailV的度
+// 可对比差集版本，需测试看效率，后续版本优化
+        auto vertexs = tailV->cascadeVertices;
+        for (auto& v : vertexs) {
+            tailV_degree += v->m_degree;
+        }
+/* 效率有提高吗？待测试 
+        // 并行计算边起点tailV的度
+        tailV_degree = tbb::parallel_reduce(
+            tbb::blocked_range<size_t>(0, vertexs.size()), 0,
+            [&](const tbb::blocked_range<size_t>& r, int init) -> int {
+                for (size_t i = r.begin(); i != r.end(); ++i) {
+                    auto it = vertexs.begin();
+                    std::advance(it, i);
+                    init += (*it)->m_degree;
+                }
+                return init;
+            },
+            std::plus<int>()
+        );
+*/
+
+        // 计算边起点tailV的回滚权重
+        tailV_weight = tailV->m_cost / tailV_degree;
+
+        // 尾部节点s
+        auto headVs = edge.second;
+        tbb::concurrent_unordered_set<Vertex::Ptr, Vertex::VertexHash> headVSet;
+        for (auto& headV : headVs) {
+            // 判断边起点和终点是否已经在回滚子事务集中
+            if (rollbackVertex.find(headV) != rollbackVertex.cend()) {
+                continue;
+            }
+
+            headVSet.insert(headV->cascadeVertices.cbegin(), headV->cascadeVertices.cend());            
+        }
+        
+        // 尾部节点都在回滚子事务集中
+        if (headVSet.empty()) {
+            continue;
+        }
+
+        for (auto& v : headVSet) {
+            // 计算边终点headV的回滚代价
+            headV_weight += v->m_self_cost;
+            // 统计边终点headV的度
+            headV_degree += v->m_degree;
+        }
+
+        // 计算边终点headV的回滚权重
+        headV_weight /= headV_degree;
+        
+        // 比较tailV回滚代价和headV回滚代价
+        if (tailV_weight < headV_weight) {
+            // 记录回滚子事务
+            rollbackVertex.insert(tailV->cascadeVertices.cbegin(), tailV->cascadeVertices.cend());
+        } else {
+            // 记录回滚子事务
+            rollbackVertex.insert(headVSet.cbegin(), headVSet.cend());
+        }
+    }
+}
+
+/* old version of calculateEdgeRollback
+*/
+void minWRollback::calculateEdgeRollback(tbb::concurrent_unordered_map<Vertex::Ptr, tbb::concurrent_unordered_set<Vertex::Ptr, Vertex::VertexHash>, Vertex::VertexHash>& edges, double& weight, 
                                         tbb::concurrent_unordered_set<Vertex::Ptr, Vertex::VertexHash>& rollbackVertex) {
     // 记录全局回滚代价和度
     double total_cost = 0;
@@ -486,11 +581,11 @@ void minWRollback::calculateEdgeWeight(tbb::concurrent_unordered_map<Vertex::Ptr
             rollbackVertex.insert(headVSet.cbegin(), headVSet.cend());
         }
         
-        // // 计算边权
-        // weight = total_cost / total_degree;
+        // 计算边权
+        weight = total_cost / total_degree;
     }
-        
 }
+
 
 // 计算两个集合的差集
 tbb::concurrent_unordered_set<Vertex::Ptr, Vertex::VertexHash> minWRollback::diff(
@@ -516,13 +611,8 @@ tbb::concurrent_unordered_set<Vertex::Ptr, Vertex::VertexHash> minWRollback::dif
     3. 若存在一条边只有出度或入度，则递归更新
     4. 更新scc
 */
-tbb::concurrent_unordered_set<Vertex::Ptr, Vertex::VertexHash> minWRollback::GreedySelectVertex
-            (tbb::concurrent_unordered_set<HyperVertex::Ptr, HyperVertex::HyperVertexHash>& scc, 
-             set<HyperVertex::Ptr, cmp>& pq) {
-    // 存储回滚节点集合
-    tbb::concurrent_unordered_set<Vertex::Ptr, Vertex::VertexHash> result;
-    
-    
+void minWRollback::GreedySelectVertex(tbb::concurrent_unordered_set<HyperVertex::Ptr, HyperVertex::HyperVertexHash>& scc, 
+                                      set<HyperVertex::Ptr, cmp>& pq, tbb::concurrent_unordered_set<Vertex::Ptr, Vertex::VertexHash>& result) {
     /* 1. 选择回滚代价最小的超节点
         1.1 取出优先队列队头超节点rb
         1.2 判断是否在scc中
@@ -546,16 +636,14 @@ tbb::concurrent_unordered_set<Vertex::Ptr, Vertex::VertexHash> minWRollback::Gre
         result.insert(rb->m_in_allRB.begin(), rb->m_in_allRB.end());
     }
     // 递归更新scc超节点和scc中依赖节点状态
-    updateSCCandDependency(scc, rb, pq);
+    updateSCCandDependency(scc, rb, pq, result);
 
     /* 3. 递归贪心回滚节点
     */
     if (scc.size() > 1) {
         // 递归调用GreedySelectVertex获取回滚节点集合
-        auto minWVs = GreedySelectVertex(scc, pq);
-        result.insert(minWVs.cbegin(), minWVs.cend());
+        GreedySelectVertex(scc, pq, result);
     }
-    return result;
 }
 
 /*  递归更新scc超节点和scc中依赖节点状态
@@ -564,7 +652,8 @@ tbb::concurrent_unordered_set<Vertex::Ptr, Vertex::VertexHash> minWRollback::Gre
         3. 遍历rb在scc中的入边节点，更新对应超节点的权重与依赖关系
     状态: 待测试...
 */
-void minWRollback::updateSCCandDependency(tbb::concurrent_unordered_set<HyperVertex::Ptr, HyperVertex::HyperVertexHash>& scc, const HyperVertex::Ptr& rb, set<HyperVertex::Ptr, cmp>& pq) {
+void minWRollback::updateSCCandDependency(tbb::concurrent_unordered_set<HyperVertex::Ptr, HyperVertex::HyperVertexHash>& scc, const HyperVertex::Ptr& rb, 
+                                            set<HyperVertex::Ptr, cmp>& pq, const tbb::concurrent_unordered_set<Vertex::Ptr, Vertex::VertexHash>& rbVertexs) {
     cout << "delete: " << rb->m_hyperId << endl;
     // 从scc中删除rb
     scc.unsafe_erase(rb);
@@ -574,11 +663,15 @@ void minWRollback::updateSCCandDependency(tbb::concurrent_unordered_set<HyperVer
     }
     pq.erase(rb);
 
+    // 记录遍历过的超节点
+    tbb::concurrent_unordered_set<HyperVertex::Ptr, HyperVertex::HyperVertexHash> visited;
+
     // 遍历rb在scc中的出边节点，更新对应超节点的权重与依赖关系
     for (auto out_edge : rb->m_out_edges) {
         // 记录出边超节点
-        auto& out_vertex = out_edge.first;
-        if (scc.find(out_vertex) != scc.cend()) {
+        auto out_vertex = out_edge.first;
+        // 没有遍历过且在scc中
+        if (visited.find(out_vertex) == visited.cend() && scc.find(out_vertex) != scc.cend()) {
             // 标记是否更新过后不存在入边
             bool canDelete = true;
             // 遍历目标超节点的所有入边
@@ -587,7 +680,32 @@ void minWRollback::updateSCCandDependency(tbb::concurrent_unordered_set<HyperVer
                 // 记录出边超节点的入边超节点
                 auto& in_vertex = in_edge.first;
                 // 仍然存在入边，则更新超节点信息
-                if (scc.find(in_vertex) != scc.cend()) { 
+                if (scc.find(in_vertex) != scc.cend()) {
+                    // 更新超节点入边回滚子事务
+                    out_vertex->m_in_allRB.unsafe_erase(rb->m_out_rollback[out_vertex].begin(), rb->m_out_rollback[out_vertex].end());
+                    // 并尝试更新超节点出边回滚子事务 -- 可能为空 会报错吗？
+                    out_vertex->m_out_allRB.unsafe_erase(out_vertex->m_out_rollback[rb].begin(), out_vertex->m_out_rollback[rb].end());
+                    
+                    // 遍历并记录这个超节点out_vertex与rb存在依赖的子事务udVertexs，更新子事务的度
+                    tbb::concurrent_unordered_set<Vertex::Ptr, Vertex::VertexHash> udVertexs;
+                    for (auto& out_edges : rb->m_out_edges[out_vertex]) {
+                        for (auto& udVertex : out_edges.second) {
+                            udVertex->m_degree--;
+                            udVertexs.insert(udVertex);
+                        }
+                    }
+                    // 尝试遍历rb到out_vertex的入边   可能不存在
+                    for (auto& in_edges : rb->m_in_edges[out_vertex]) {
+                        for (auto& udVertex : in_edges.second) {
+                            udVertex->m_degree--;
+                            udVertexs.insert(udVertex);
+                        }
+                    }
+
+                    // 更新超节点权重与回滚子事务集合
+                    updateHyperVertexWeight(scc, out_vertex, udVertexs, rbVertexs);
+                    
+                    /*
                     // 更新超节点入边回滚代价
                     out_vertex->m_in_cost -= out_vertex->m_in_weights[rb];
                     // 更新超节点入边回滚子事务
@@ -600,7 +718,7 @@ void minWRollback::updateSCCandDependency(tbb::concurrent_unordered_set<HyperVer
                         // 更新pq优先级
                         pq.erase(out_vertex);
                         pq.insert(out_vertex);
-                    }
+                    }*/
                     // 标记
                     canDelete = false;
                     break;
@@ -610,15 +728,18 @@ void minWRollback::updateSCCandDependency(tbb::concurrent_unordered_set<HyperVer
             if (canDelete) {
                 cout << "out can delete: " << out_vertex->m_hyperId << endl;
                 // 递归更新
-                updateSCCandDependency(scc, out_vertex, pq);
+                updateSCCandDependency(scc, out_vertex, pq, rbVertexs);
             }
         }
+        // 标记遍历过的超节点
+        visited.insert(out_vertex);
     }
     // 遍历rb在scc中的入边节点，更新对应超节点的权重与依赖关系
     for (auto in_edge : rb->m_in_edges) {
         // 记录入边超节点
-        auto& in_vertex = in_edge.first;
-        if (scc.find(in_vertex) != scc.cend()) {
+        auto in_vertex = in_edge.first;
+        // 没有遍历过且在scc中
+        if (visited.find(in_vertex) == visited.cend() && scc.find(in_vertex) != scc.cend()) {
             // 标记是否更新过后不存在出边
             bool canDelete = true;
             // 遍历目标超节点的所有出边
@@ -628,6 +749,33 @@ void minWRollback::updateSCCandDependency(tbb::concurrent_unordered_set<HyperVer
                 auto& out_vertex = out_edge.first;
                 // 仍然存在出边，则更新超节点信息
                 if (scc.find(out_vertex) != scc.cend()) {
+                    // 更新超节点出边回滚子事务
+                    in_vertex->m_out_allRB.unsafe_erase(rb->m_in_rollback[in_vertex].begin(), rb->m_in_rollback[in_vertex].end());
+                    // 尝试更新超节点入边回滚子事务 -- 不需要，因为如果存在入边，那么之前就被遍历过了
+                    // in_vertex->m_in_allRB.unsafe_erase(in_vertex->m_in_rollback[rb].begin(), in_vertex->m_in_rollback[rb].end());
+
+                    // 遍历并记录这个超节点in_vertex与rb存在依赖的子事务udVertexs，更新子事务的度
+                    tbb::concurrent_unordered_set<Vertex::Ptr, Vertex::VertexHash> udVertexs;
+                    for (auto& in_edges : rb->m_in_edges[in_vertex]) {
+                        for (auto& udVertex : in_edges.second) {
+                            udVertex->m_degree--;
+                            udVertexs.insert(udVertex);
+                        }
+                    }
+                    
+                    /* 尝试遍历rb到in_vertex的出边 —— 不需要，因为如果存在入边，那么之前就被遍历过了
+                    for (auto& out_edges : rb->m_out_edges[in_vertex]) {
+                        for (auto& udVertex : out_edges.second) {
+                            udVertex->m_degree--;
+                            udVertexs.insert(udVertex);
+                        }
+                    }
+                    */
+
+                    // 更新超节点权重与回滚子事务集合
+                    updateHyperVertexWeight(scc, in_vertex, udVertexs, rbVertexs);
+
+                    /*
                     // 更新超节点出边回滚代价
                     in_vertex->m_out_cost -= in_vertex->m_out_weights[rb];
                     // 更新超节点出边回滚子事务
@@ -640,7 +788,7 @@ void minWRollback::updateSCCandDependency(tbb::concurrent_unordered_set<HyperVer
                         // 更新pq优先级
                         pq.erase(in_vertex);
                         pq.insert(in_vertex);
-                    }
+                    }*/
                     // 标记
                     canDelete = false;
                     break;
@@ -650,15 +798,269 @@ void minWRollback::updateSCCandDependency(tbb::concurrent_unordered_set<HyperVer
             if (canDelete) {
                 cout << "in can delete: " << in_vertex->m_hyperId << endl;
                 // 递归更新
-                updateSCCandDependency(scc, in_vertex, pq);
+                updateSCCandDependency(scc, in_vertex, pq, rbVertexs);
             }
         }
+        // 标记遍历过的超节点 —— 没必要加，visited是为了out_vertex遍历的超节点在in_vertex遍历时不再遍历
+        // visited.insert(in_vertex);
     }
 
     // 遍历pq
     cout << "now pq: " << endl;
     for (auto v : pq) {
         cout << "hyperId: " << v->m_hyperId << " cost: " << v->m_cost << " in_cost: " << v->m_in_cost << " out_cost: " << v->m_out_cost << endl;
+    }
+}
+
+/* 由于超节点中某些子事务的度数发生更新，尝试更新相关超节点回滚代价
+    遍历超节点与其它在scc中的超节点间的回滚子事务集
+    若与udVertexs有交集，则尝试更新这两个超节点间的回滚代价
+    边回滚集合要更新，总回滚集合要更新，超节点回滚代价要更新, 存在原本需要回滚的已经回滚了的现象
+*/
+void minWRollback::updateHyperVertexWeight(const tbb::concurrent_unordered_set<HyperVertex::Ptr, HyperVertex::HyperVertexHash>& scc, HyperVertex::Ptr& hyperVertex, 
+                                            const tbb::concurrent_unordered_set<Vertex::Ptr, Vertex::VertexHash>& udVertexs, const tbb::concurrent_unordered_set<Vertex::Ptr, Vertex::VertexHash>& rbVertexs) {
+    // 记录更新过的超节点
+    tbb::concurrent_unordered_set<HyperVertex::Ptr, HyperVertex::HyperVertexHash> updated;
+    
+    // 遍历回滚出边需要回滚的子事务
+    for (auto& rollbackSet : hyperVertex->m_out_rollback) {
+        // 判断是否在scc中
+        if (scc.find(rollbackSet.first) == scc.cend()) {
+            continue;
+        }
+        // 判断是否与udVertexs有交集
+        if (hasIntersection(rollbackSet.second, udVertexs)) {
+            // 更新超节点间边权
+            if(updateVertexRollback(hyperVertex, rollbackSet.first, rbVertexs, minw::EdgeType::OUT)) {
+                updated.insert(rollbackSet.first);
+            }
+        }
+    }
+    
+    // 遍历回滚入边需要回滚的子事务
+    for (auto& rollbackSet : hyperVertex->m_in_rollback) {
+        // 判断是否在scc中
+        if (scc.find(rollbackSet.first) == scc.cend()) {
+            continue;
+        }
+        // 判断是否与udVertexs有交集
+        if (hasIntersection(rollbackSet.second, udVertexs)) {
+            // 更新超节点间边权
+            if(updateVertexRollback(hyperVertex, rollbackSet.first, rbVertexs, minw::EdgeType::IN)) {
+                updated.insert(rollbackSet.first);
+            }
+        }
+    }
+    if (updated.size() > 0) {
+        updated.insert(hyperVertex);
+        // // 更新节点权重
+        // for (auto& v : updated) {
+        //     calculateWeight(v);
+        // }
+
+        // updated较小时这个方法可能并不比串行方法快
+        tbb::parallel_for_each(updated.begin(), updated.end(),
+            [&](HyperVertex::Ptr& vertex) {
+                calculateWeight(vertex);
+            }
+        );
+    }
+}
+
+// 计算超节点权重m_cost
+void minWRollback::calculateWeight(HyperVertex::Ptr& hyperVertex) {
+    // 计算m_out_cost
+    int out_degree = 0;
+    for (auto v : hyperVertex->m_out_allRB) {
+        hyperVertex->m_out_cost += v->m_self_cost;
+        out_degree += v->m_degree;
+    }
+    hyperVertex->m_out_cost /= out_degree;
+    // 计算m_in_cost
+    int in_degree = 0;
+    for (auto v : hyperVertex->m_in_allRB) {
+        hyperVertex->m_in_cost += v->m_self_cost;
+        in_degree += v->m_degree;
+    }
+    hyperVertex->m_in_cost /= in_degree;
+    // 计算超节点的最小回滚代价
+    if (hyperVertex->m_in_cost < hyperVertex->m_out_cost) {
+        hyperVertex->m_rollback_type = minw::EdgeType::IN;
+        hyperVertex->m_cost = hyperVertex->m_in_cost;
+    } else {
+        hyperVertex->m_rollback_type = minw::EdgeType::OUT;
+        hyperVertex->m_cost = hyperVertex->m_out_cost;
+    }
+}
+
+// 比较两个concurrent_unordered_set是否相等
+bool areEqual(const tbb::concurrent_unordered_set<Vertex::Ptr, Vertex::VertexHash>& set1,
+              const tbb::concurrent_unordered_set<Vertex::Ptr, Vertex::VertexHash>& set2) {
+    if (set1.size() != set2.size()) {
+        return false;
+    }
+
+    tbb::atomic<bool> result = true;
+
+    tbb::parallel_for_each(set1.begin(), set1.end(),
+        [&](const Vertex::Ptr& vertex) {
+            if (set2.find(vertex) == set2.end()) {
+                result = false;
+            }
+        }
+    );
+
+    return result;
+}
+
+/* 尝试更新超节点间回滚事务集
+    1. 判断边类型
+    2. 判断是否需要更新
+    3. 更新回滚事务集
+        3.1 先删除allRB中的原有值
+        3.2 再更新边回滚集合
+        3.3 再向allRB中添加新值
+*/
+bool minWRollback::updateVertexRollback(HyperVertex::Ptr& hv1, HyperVertex::Ptr hv2, const tbb::concurrent_unordered_set<Vertex::Ptr, Vertex::VertexHash>& rbVertexs, minw::EdgeType type) {
+    double min_cost = 0;
+    tbb::concurrent_unordered_set<Vertex::Ptr, Vertex::VertexHash> rollbackVertexs;
+    
+    if (type == minw::EdgeType::OUT) {
+        // 尝试更新两个超节点hv1和hv2间的最小回滚代价 => 获取最终回滚子事务集
+        updateEdgeRollback(hv1->m_out_edges[hv2], rollbackVertexs, rbVertexs);
+
+        // 如果rollbackVertexs和原来的回滚子事务集合相等，则不更新
+        if (areEqual(rollbackVertexs, hv1->m_out_rollback[hv2])) {
+            return false;
+        }
+
+        // 更新回滚子事务
+        // 先删除
+        hv1->m_out_allRB.unsafe_erase(hv1->m_out_rollback[hv2].begin(), hv1->m_out_rollback[hv2].end());
+        // 再更新
+        hv1->m_out_rollback[hv2] = rollbackVertexs;
+        // 再添加
+        hv1->m_out_allRB.insert(rollbackVertexs.cbegin(), rollbackVertexs.cend());
+        
+        // 一样的操作
+        hv2->m_in_allRB.unsafe_erase(hv2->m_in_rollback[hv1].begin(), hv2->m_in_rollback[hv1].end());
+        hv2->m_in_rollback[hv1] = rollbackVertexs;
+        hv2->m_in_allRB.insert(rollbackVertexs.cbegin(), rollbackVertexs.cend());
+    } else {
+        // 尝试更新两个超节点hv1和hv2间的最小回滚代价 => 获取最终回滚代价和回滚子事务集
+        updateEdgeRollback(hv1->m_in_edges[hv2], rollbackVertexs, rbVertexs);
+
+        // 如果rollbackVertexs和原来的回滚子事务集合相等，则不更新
+        if (areEqual(rollbackVertexs, hv1->m_in_rollback[hv2])) {
+            return false;
+        }
+
+        // 更新回滚子事务
+        hv1->m_in_allRB.unsafe_erase(hv1->m_in_rollback[hv2].begin(), hv1->m_in_rollback[hv2].end());
+        hv1->m_in_rollback[hv2] = rollbackVertexs;
+        hv1->m_in_allRB.insert(rollbackVertexs.cbegin(), rollbackVertexs.cend());
+        
+        hv2->m_out_allRB.unsafe_erase(hv2->m_out_rollback[hv1].begin(), hv2->m_out_rollback[hv1].end());
+        hv2->m_out_rollback[hv1] = rollbackVertexs;
+        hv2->m_out_allRB.insert(rollbackVertexs.cbegin(), rollbackVertexs.cend());
+    }
+    return true;
+}
+
+/* 更新两超节点间一条边的回滚子事务集
+*/
+void minWRollback::updateEdgeRollback(tbb::concurrent_unordered_map<Vertex::Ptr, tbb::concurrent_unordered_set<Vertex::Ptr, Vertex::VertexHash>, Vertex::VertexHash>& edges,
+                                      tbb::concurrent_unordered_set<Vertex::Ptr, Vertex::VertexHash>& rollbackVertex, const tbb::concurrent_unordered_set<Vertex::Ptr, Vertex::VertexHash>& rollbacked) {
+    // 遍历每条边
+    for (auto& edge : edges) {
+        // 初始化边起点和终点的回滚代价和度
+        double tailV_weight = 0, headV_weight = 0;
+        int tailV_degree = 0, headV_degree = 0;
+
+        // 起点节点tailV
+        auto tailV = edge.first;
+        // 判断边起点是否已经在回滚子事务集中或者已经被回滚！
+        if (rollbacked.find(tailV) != rollbacked.cend() || rollbackVertex.find(tailV) != rollbackVertex.cend()) {
+            continue;
+        }
+
+        // 统计边起点tailV的度
+        auto vertexs = tailV->cascadeVertices;
+        // for (auto& v : vertexs) {
+        //     if (rollbacked.find(v) != rollbacked.cend()) {
+        //         continue;
+        //     }
+        //     tailV_weight += v->m_self_cost;
+        //     tailV_degree += v->m_degree;
+        // }
+
+        tbb::combinable<double> tailV_weight_comb;
+        tbb::combinable<int> tailV_degree_comb;
+
+        tbb::parallel_for_each(vertexs.begin(), vertexs.end(), [&](const Vertex::Ptr& v) {
+            if (rollbacked.find(v) == rollbacked.cend()) {
+                tailV_weight_comb.local() += v->m_self_cost;
+                tailV_degree_comb.local() += v->m_degree;
+            }
+        });
+
+        tailV_weight = tailV_weight_comb.combine(std::plus<double>());
+        tailV_degree = tailV_degree_comb.combine(std::plus<int>());
+
+        // 计算边起点tailV的回滚权重
+        tailV_weight /= tailV_degree;
+
+        // 尾部节点s
+        auto headVs = edge.second;
+        tbb::concurrent_unordered_set<Vertex::Ptr, Vertex::VertexHash> headVSet;
+        for (auto& headV : headVs) {
+            // 判断边起点和终点是否已经在回滚子事务集中
+            if (rollbacked.find(headV) != rollbacked.cend() || rollbackVertex.find(headV) != rollbackVertex.cend()) {
+                continue;
+            }
+
+            headVSet.insert(headV->cascadeVertices.cbegin(), headV->cascadeVertices.cend());            
+        }
+        
+        // 尾部节点都在回滚子事务集中
+        if (headVSet.empty()) {
+            continue;
+        }
+
+        // for (auto& v : headVSet) {
+        //     if (rollbacked.find(v) != rollbacked.cend()) {
+        //         continue;
+        //     }
+        //     // 计算边终点headV的回滚代价
+        //     headV_weight += v->m_self_cost;
+        //     // 统计边终点headV的度
+        //     headV_degree += v->m_degree;
+        // }
+        
+        tbb::combinable<double> headV_weight_comb;
+        tbb::combinable<int> headV_degree_comb;
+
+        tbb::parallel_for_each(headVSet.begin(), headVSet.end(), [&](const Vertex::Ptr& v) {
+            if (rollbacked.find(v) == rollbacked.cend()) {
+                headV_weight_comb.local() += v->m_self_cost;
+                headV_degree_comb.local() += v->m_degree;
+            }
+        });
+
+        headV_weight = headV_weight_comb.combine(std::plus<double>());
+        headV_degree = headV_degree_comb.combine(std::plus<int>());
+
+        // 计算边终点headV的回滚权重
+        headV_weight /= headV_degree;
+        
+        // 比较tailV回滚代价和headV回滚代价
+        if (tailV_weight < headV_weight) {
+            // 记录回滚子事务
+            rollbackVertex.insert(tailV->cascadeVertices.cbegin(), tailV->cascadeVertices.cend());
+        } else {
+            // 记录回滚子事务
+            rollbackVertex.insert(headVSet.cbegin(), headVSet.cend());
+        }
     }
 }
 

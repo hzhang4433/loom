@@ -109,7 +109,7 @@ class Transaction : public std::enable_shared_from_this<Transaction>
         // tx structure
         std::vector<ChildTransaction> children;                 // child transactions
         std::vector<Transaction::Ptr> siblings;                 // sibling transactions
-        int executionTime;                                      // execution time
+        int executionTime = TPCC::ConsumptionType::MEDIUM;      // execution time
 };
 
 class NewOrderTransaction : public Transaction

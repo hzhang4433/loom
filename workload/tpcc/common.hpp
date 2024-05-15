@@ -10,8 +10,8 @@ namespace TPCC {
         DELIVERY,
         STOCK_LEVEL
     };
-
-    enum TimeType {
+ 
+    enum ConsumptionType {
         HIGH = 100,
         MEDIUM = 70,
         LOW = 40,

@@ -214,7 +214,11 @@ TEST(minWRollbackTest, TestExecute) {
         // cout << "tx" << i + 1 << " execute + build time: " << chrono::duration_cast<chrono::microseconds>(end - start).count() << "us" << endl;
     }
 
+    start = std::chrono::high_resolution_clock::now();
     minw.rollback();
+    end = std::chrono::high_resolution_clock::now();
+    cout << "rollback time: " << chrono::duration_cast<chrono::microseconds>(end - start).count() << "us" << endl;
+
     minw.printRollbackTxs();
     // minw.printHyperGraph();
 }

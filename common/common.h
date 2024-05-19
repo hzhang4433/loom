@@ -10,7 +10,8 @@ enum class DependencyType {
 
 enum class EdgeType {
     IN,
-    OUT
+    OUT,
+    BOTH
 };
 
 }

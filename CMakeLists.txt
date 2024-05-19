@@ -19,6 +19,8 @@ find_package(Boost REQUIRED)
 include_directories(${Boost_INCLUDE_DIRS})
 
 
+include_directories(${CMAKE_SOURCE_DIR})
+
 file(GLOB_RECURSE SRC_LIST "*.cpp")
 list(FILTER SRC_LIST EXCLUDE REGEX ".*/test/.*")
 list(FILTER SRC_LIST EXCLUDE REGEX ".*/build/.*")

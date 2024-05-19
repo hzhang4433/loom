@@ -26,19 +26,19 @@ void minWRollback::execute(const Transaction::Ptr& tx) {
     hyperVertex->m_rootVertex = rootVertex;
     hyperVertex->recognizeCascades(rootVertex);
     
-    // // for test print hyperVertex tree
-    // hyperVertex->printVertexTree();
+    // for test print hyperVertex tree
+    hyperVertex->printVertexTree();
 
-    // 构建超图
-    auto start = std::chrono::high_resolution_clock::now();
-    buildGraph(rootVertex->cascadeVertices);
-    auto end = std::chrono::high_resolution_clock::now();
-    cout << "tx" << txid << " build time: " << chrono::duration_cast<chrono::microseconds>(end - start).count() << "us" << endl;
+    // // 构建超图
+    // auto start = std::chrono::high_resolution_clock::now();
+    // buildGraph(rootVertex->cascadeVertices);
+    // auto end = std::chrono::high_resolution_clock::now();
+    // cout << "tx" << txid << " build time: " << chrono::duration_cast<chrono::microseconds>(end - start).count() << "us" << endl;
 
-    // 记录节点
-    m_vertices.insert(rootVertex->cascadeVertices.begin(), rootVertex->cascadeVertices.end());
-    // 记录超节点
-    m_hyperVertices.insert(hyperVertex);
+    // // 记录节点
+    // m_vertices.insert(rootVertex->cascadeVertices.begin(), rootVertex->cascadeVertices.end());
+    // // 记录超节点
+    // m_hyperVertices.insert(hyperVertex);
 }
 
 /*  构图算法（考虑多线程扩展性）: 将hyperVertex转化为hyperGraph

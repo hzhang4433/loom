@@ -2,7 +2,7 @@
 
 #include <atomic>
 #include <set>
-#include "../common/HyperVertex.h"
+#include "common/HyperVertex.h"
 
 class minWRollback
 {

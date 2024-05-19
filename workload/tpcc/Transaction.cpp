@@ -58,4 +58,4 @@ static auto _ = [] {
     return 0;
 }();
 
-uint64_t Transaction::orderLineCounter = 0;
+uint64_t Transaction::orderLineCounters[10];

@@ -12,10 +12,6 @@ HyperVertex::HyperVertex(int id) {
 
 HyperVertex::~HyperVertex() {}
 
-// Vertex::Ptr HyperVertex::getVertexById(const std::string& id) const {
-//     auto it = m_vertices.find(id);
-//     return it != m_vertices.end() ? it->second : nullptr;
-// }
 
 void HyperVertex::recognizeCascades(Vertex::Ptr vertex) {
     // 递归识别并更新级联子事务
@@ -30,10 +26,10 @@ void HyperVertex::recognizeCascades(Vertex::Ptr vertex) {
     }
 }
 
-double HyperVertex::buildVertexs(const Transaction::Ptr& tx, HyperVertex::Ptr& hyperVertex, Vertex::Ptr& vertex, string& txid) {
+int HyperVertex::buildVertexs(const Transaction::Ptr& tx, HyperVertex::Ptr& hyperVertex, Vertex::Ptr& vertex, string& txid) {
     // 获取执行时间
-    double execTime = 1;
-    // double execTime = tx->getExecTime();
+    // double execTime = 1;
+    int execTime = tx->getExecutionTime();
     vertex->m_self_cost = execTime;
 
     // cout << "txid: " << txid << endl;

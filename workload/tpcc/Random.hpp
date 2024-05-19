@@ -2,7 +2,7 @@
 
 #include <string>
 #include <vector>
-#include "../../common/Random.hpp"
+#include "common/Random.hpp"
 
 
 class Random : public minw::Random {

@@ -4,13 +4,14 @@
 #include <atomic>
 #include <ctime>
 #include <memory>
-// #include <unordered_set>
 #include <unordered_map>
 #include <tbb/concurrent_unordered_set.h>
 #include <queue>
 #include "Random.hpp"
 #include "common.hpp"
 
+#include <iostream>
+using namespace std;
 
 class Transaction : public std::enable_shared_from_this<Transaction>
 {
@@ -33,6 +34,9 @@ class Transaction : public std::enable_shared_from_this<Transaction>
             uint32_t ol_i_id;
         };
 
+        // 随机
+        // Transaction(): random(reinterpret_cast<uint64_t>(this)) {}
+        // 不随机
         Transaction() {}
 
         ~Transaction() = default;
@@ -49,6 +53,11 @@ class Transaction : public std::enable_shared_from_this<Transaction>
         // 获取当前计数器的值
         uint64_t get_order(int idx = 0) {
             return order_counters[idx].load(std::memory_order_relaxed);
+        }
+
+        // 获取交易执行时间
+        int getExecutionTime() {
+            return executionTime;
         }
 
         // add child transaction
@@ -101,7 +110,7 @@ class Transaction : public std::enable_shared_from_this<Transaction>
         static std::unordered_map<std::string, OrderInfo> wdc_latestOrder;                      // format: (w_id-d_id-c_id, {o_id, o_ol_cnt})
         static std::unordered_map<std::string, std::queue<OrderInfo>> wd_oldestNewOrder;        // format: (w_id-d_id, {o_id, o_c_id, o_ol_cnt})
         static std::unordered_map<std::string, std::vector<OrderLineInfo>> d_latestOrderLines;  // format: (d_id, [{o_id, ol_i_id}, ...])
-        static uint64_t orderLineCounter;                                                       // orderLine counter
+        static uint64_t orderLineCounters[10];                                                  // orderLine counter
         
         // tx operations
         tbb::concurrent_unordered_set<std::string> readRows;               // read rows
@@ -119,7 +128,7 @@ class NewOrderTransaction : public Transaction
         NewOrderTransaction() = default;
         ~NewOrderTransaction() = default;
 
-        // 构造NewOrder事务
+        // 构造NewOrder事务生成所需参数
         NewOrderTransaction::Ptr makeNewOrder() {
             NewOrderTransaction::Ptr newOrderTx = std::make_shared<NewOrderTransaction>();
             // NewOrder主键ID
@@ -134,13 +143,14 @@ class NewOrderTransaction : public Transaction
 
                 do {
                     retry = false;
-                    newOrderTx->orderLines[i].ol_i_id = random.non_uniform_distribution(8191, 1, 100000);
+                    uint32_t random_id = random.non_uniform_distribution(8191, 1, 100000);
                     for (int k = 0; k < i; k++) {
-                        if (newOrderTx->orderLines[i].ol_i_id == newOrderTx->orderLines[k].ol_i_id) {
+                        if (random_id == newOrderTx->orderLines[k].ol_i_id) {
                             retry = true;
                             break;
                         }
                     }
+                    newOrderTx->orderLines[i].ol_i_id = random_id;
                 } while (retry);
 
                 newOrderTx->orderLines[i].ol_supply_w_id = newOrderTx->w_id;
@@ -180,7 +190,9 @@ class NewOrderTransaction : public Transaction
             dAccess->addUpdateRow(std::to_string(newOrderTx->w_id) + "-" + std::to_string(newOrderTx->d_id));
 
 // o_id这个冲突需要表达吗？
-            uint64_t next_o_id = increment_order(newOrderTx->d_id);
+            uint64_t next_o_id = increment_order(newOrderTx->d_id - 1);
+            std::cout << "In NewOrderTransaction, d_id: " << newOrderTx->d_id << " next_o_id: " 
+                      << next_o_id << " ol_cnt: " << newOrderTx->o_ol_cnt << " c_id: " << newOrderTx->c_id << std::endl;
             
             // newOrder子事务
             Transaction::Ptr noAccess = std::make_shared<Transaction>();
@@ -215,15 +227,15 @@ class NewOrderTransaction : public Transaction
 
                 /* 更新d_latestOrderLines，d_latestOrderLines中只存储最近的20条orderLine记录
                    判断是否超过20条：
-                    若没超超过20条，则直接添加
+                    若没超过20条，则直接添加
                     若超过20条，则删除最旧的一条 => 覆盖最旧的一条 
                 */
-                if (orderLineCounter < 20) {
+                if (orderLineCounters[newOrderTx->d_id - 1] < 20) {
                     d_latestOrderLines[std::to_string(newOrderTx->d_id)].push_back({next_o_id, newOrderTx->orderLines[i].ol_i_id});
                 } else {
-                    d_latestOrderLines[std::to_string(newOrderTx->d_id)][orderLineCounter % 20] = {next_o_id, newOrderTx->orderLines[i].ol_i_id};
+                    d_latestOrderLines[std::to_string(newOrderTx->d_id)][orderLineCounters[newOrderTx->d_id - 1] % 20] = {next_o_id, newOrderTx->orderLines[i].ol_i_id};
                 }
-                orderLineCounter++;
+                orderLineCounters[newOrderTx->d_id - 1]++;
 
                 // items子事务添加依赖
                 itemsAccess->addChild(olAccess, minw::DependencyType::STRONG);

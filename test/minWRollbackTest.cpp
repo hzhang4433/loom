@@ -1,6 +1,6 @@
 #include <gtest/gtest.h>
 #include <chrono>
-#include "../protocol/minWRollback.h"
+#include "protocol/minW/minWRollback.h"
 
 using namespace std;
 

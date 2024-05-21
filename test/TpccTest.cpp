@@ -1,4 +1,5 @@
 #include <gtest/gtest.h>
+#include <chrono>
 #include "workload/tpcc/Workload.hpp"
 #include "protocol/minW/minWRollback.h"
 
@@ -13,24 +14,100 @@ TEST(TpccTest, NewOrderTransaction) {
         
         // 创建minWRollback实例，测试execute函数vertexs构建部分
         // minWRollback minw;
+        // auto start = chrono::high_resolution_clock::now();
         // minw.execute(tx);
+        // auto end = chrono::high_resolution_clock::now();
+        // cout << "Execute time: " << chrono::duration_cast<chrono::microseconds>(end - start).count() << "us" << endl;
     }
 }
 
 TEST(TpccTest, PaymentTransaction) {
-   
+    Transaction::Ptr txGenerator;
+    minWRollback minw;
+    txGenerator = std::make_shared<PaymentTransaction>();
+    chrono::high_resolution_clock::time_point start, end;
+
+    for (int i = 0; i < 10; i++) {
+        Transaction::Ptr tx = txGenerator->makeTransaction();
+        
+        // 创建minWRollback实例，测试execute函数vertexs构建部分
+        start = chrono::high_resolution_clock::now();
+        minw.execute(tx);
+        end = chrono::high_resolution_clock::now();
+        cout << "Execute time: " << chrono::duration_cast<chrono::microseconds>(end - start).count() << "us" << endl;
+    }
 }
 
 TEST(TpccTest, OrderStatusTransaction) {
-   
+    Transaction::Ptr txGenerator;
+    minWRollback minw;
+    chrono::high_resolution_clock::time_point start, end;
+
+    // 先生成一批newOrder事务
+    txGenerator = std::make_shared<NewOrderTransaction>();
+    for (int i = 0; i < 43; i++) {
+        Transaction::Ptr tx = txGenerator->makeTransaction();
+    }
+
+    txGenerator = std::make_shared<OrderStatusTransaction>();
+    for (int i = 0; i < 3; i++) {
+        Transaction::Ptr tx = txGenerator->makeTransaction();
+        
+        // 创建minWRollback实例，测试execute函数vertexs构建部分
+        start = chrono::high_resolution_clock::now();
+        minw.execute(tx);
+        end = chrono::high_resolution_clock::now();
+        cout << "Execute time: " << chrono::duration_cast<chrono::microseconds>(end - start).count() << "us" << endl;
+    }
 }
 
 TEST(TpccTest, DeliveryTransaction) {
-   
+    Transaction::Ptr txGenerator;
+    minWRollback minw;
+    chrono::high_resolution_clock::time_point start, end;
+
+    // 先生成一批newOrder事务
+    txGenerator = std::make_shared<NewOrderTransaction>();
+    for (int i = 0; i < 43; i++) {
+        Transaction::Ptr tx = txGenerator->makeTransaction();
+    }
+
+    txGenerator = std::make_shared<DeliveryTransaction>();
+    for (int i = 0; i < 3; i++) {
+        Transaction::Ptr tx = txGenerator->makeTransaction();
+        
+        // 创建minWRollback实例，测试execute函数vertexs构建部分
+        start = chrono::high_resolution_clock::now();
+        minw.execute(tx);
+        end = chrono::high_resolution_clock::now();
+        cout << "Execute time: " << chrono::duration_cast<chrono::microseconds>(end - start).count() << "us" << endl;
+    }
 }
 
 TEST(TpccTest, StockLevelTransaction) {
-   
+    Transaction::Ptr txGenerator;
+    minWRollback minw;
+    chrono::high_resolution_clock::time_point start, end;
+
+    // 先生成一批newOrder事务
+    txGenerator = std::make_shared<NewOrderTransaction>();
+    for (int i = 0; i < 43; i++) {
+        Transaction::Ptr tx = txGenerator->makeTransaction();
+    }
+
+    txGenerator = std::make_shared<StockLevelTransaction>();
+    for (int i = 0; i < 3; i++) {
+        Transaction::Ptr tx = txGenerator->makeTransaction();
+        if (tx == nullptr) {
+            cout << "tx is nullptr" << endl;
+            continue;
+        }
+        // 创建minWRollback实例，测试execute函数vertexs构建部分
+        start = chrono::high_resolution_clock::now();
+        minw.execute(tx, true);
+        end = chrono::high_resolution_clock::now();
+        cout << "Execute time: " << chrono::duration_cast<chrono::microseconds>(end - start).count() << "us" << endl;
+    }
 }
 
 /* 测试Workload类
@@ -38,5 +115,21 @@ TEST(TpccTest, StockLevelTransaction) {
 */
 TEST(TpccTest, WorkloadTEST) {
     Workload workload;
-    Transaction::Ptr tx = workload.NextTransaction();
+    minWRollback minw;
+    Transaction::Ptr tx;
+    chrono::high_resolution_clock::time_point start, end;
+
+    for (int i = 0; i < 20; i++) {
+        tx = workload.NextTransaction();
+        if (tx == nullptr) {
+            cout << "tx is nullptr" << endl;
+            continue;
+        }
+        // 创建minWRollback实例，测试execute函数vertexs构建部分
+        // start = chrono::high_resolution_clock::now();
+        // minw.execute(tx);
+        // end = chrono::high_resolution_clock::now();
+        // cout << "Execute time: " << chrono::duration_cast<chrono::microseconds>(end - start).count() << "us" << endl;
+    }
+    
 }

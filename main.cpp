@@ -10,7 +10,7 @@ int main(int argc, char** argv) {
     /* 启用gtest测试 */
     testing::InitGoogleTest(&argc, argv);
     // ::testing::GTEST_FLAG(filter) = "minWRollbackTest.TestExecute";
-    ::testing::GTEST_FLAG(filter) = "TpccTest.NewOrderTransaction";
+    ::testing::GTEST_FLAG(filter) = "TpccTest.WorkloadTEST";
     int result = RUN_ALL_TESTS();
 
     if (result == 0) {

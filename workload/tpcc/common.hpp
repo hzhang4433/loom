@@ -13,8 +13,8 @@ namespace TPCC {
  
     enum ConsumptionType {
         HIGH = 100,
-        MEDIUM = 70,
-        LOW = 40,
+        MEDIUM = 60,
+        LOW = 20,
     };
 
     constexpr int n_warehouses = 1;

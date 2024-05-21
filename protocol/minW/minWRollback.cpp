@@ -13,18 +13,28 @@ using namespace std;
         2. 判断执行完成的事务与其它执行完成事务间的rw依赖，构建rw依赖图
     状态: 待测试...
 */
-void minWRollback::execute(const Transaction::Ptr& tx) {
+void minWRollback::execute(const Transaction::Ptr& tx, bool isNest) {
     int txid = getId();
     HyperVertex::Ptr hyperVertex = make_shared<HyperVertex>(txid);
     Vertex::Ptr rootVertex = make_shared<Vertex>(hyperVertex, txid, to_string(txid));
     // 根据事务结构构建超节点
     string txid_str = to_string(txid);
-    hyperVertex->buildVertexs(tx, hyperVertex, rootVertex, txid_str);
-    // 记录超节点包含的所有节点
-    hyperVertex->m_vertices = rootVertex->cascadeVertices;
-    // 根据子节点依赖更新回滚代价和级联子事务
-    hyperVertex->m_rootVertex = rootVertex;
-    hyperVertex->recognizeCascades(rootVertex);
+    
+    if (isNest) {
+        hyperVertex->buildVertexs(tx, hyperVertex, rootVertex, txid_str);
+        // 记录超节点包含的所有节点
+        hyperVertex->m_vertices = rootVertex->cascadeVertices;
+        // 根据子节点依赖更新回滚代价和级联子事务
+        hyperVertex->m_rootVertex = rootVertex;
+        hyperVertex->recognizeCascades(rootVertex);
+    } else {
+        hyperVertex->buildVertexs(tx, rootVertex);
+        // 添加回滚代价
+        rootVertex->m_cost = rootVertex->m_self_cost;
+
+        hyperVertex->m_vertices.insert(rootVertex);
+        hyperVertex->m_rootVertex = rootVertex;
+    }
     
     // for test print hyperVertex tree
     hyperVertex->printVertexTree();

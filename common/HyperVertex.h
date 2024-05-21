@@ -18,6 +18,8 @@ class HyperVertex : public std::enable_shared_from_this<HyperVertex>
 
         int buildVertexs(const Transaction::Ptr& tx, HyperVertex::Ptr& hyperVertex, Vertex::Ptr& vertex, string& txid);
 
+        void buildVertexs(const Transaction::Ptr& tx, Vertex::Ptr& vertex);
+
         void recognizeCascades(Vertex::Ptr vertex);
 
         // 递归打印超节点结构树

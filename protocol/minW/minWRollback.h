@@ -15,7 +15,7 @@ class minWRollback
             return id_counter.fetch_add(1, std::memory_order_relaxed) + 1;
         }
 
-        void execute(const Transaction::Ptr& tx);
+        void execute(const Transaction::Ptr& tx, bool isNest = true);
 
         void buildGraph(tbb::concurrent_unordered_set<Vertex::Ptr, Vertex::VertexHash>& vertices);
 

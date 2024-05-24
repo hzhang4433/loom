@@ -7,21 +7,23 @@ class Workload {
     public:
         Workload() : random(reinterpret_cast<uint64_t>(this)) {}
         
+        Workload(uint64_t seed) : random(seed) {};
+        
         ~Workload() = default;
         
         // 随机生成封装好的五类事务
         Transaction::Ptr NextTransaction() {
             uint64_t option = random.uniform_dist(1, 100);
             if (option <= 45) {         // 生成由newOrder构成的负载
-                txGenerator = std::make_shared<NewOrderTransaction>();
+                txGenerator = std::make_shared<NewOrderTransaction>(random);
             } else if (option <= 88) {  // 生成由payment构成的负载
-                txGenerator = std::make_shared<PaymentTransaction>();
+                txGenerator = std::make_shared<PaymentTransaction>(random);
             } else if (option <= 92) {  // 生成由orderStatus构成的负载
-                txGenerator = std::make_shared<OrderStatusTransaction>();
+                txGenerator = std::make_shared<OrderStatusTransaction>(random);
             } else if (option <= 96) {  // 生成由delivery构成的负载
-                txGenerator = std::make_shared<DeliveryTransaction>();
+                txGenerator = std::make_shared<DeliveryTransaction>(random);
             } else {                    // 生成由stockLevel构成的负载
-                txGenerator = std::make_shared<StockLevelTransaction>();
+                txGenerator = std::make_shared<StockLevelTransaction>(random);
             }
             return txGenerator->makeTransaction();
         }

@@ -1,6 +1,7 @@
 #include <gtest/gtest.h>
 #include <chrono>
 #include "protocol/minW/minWRollback.h"
+#include "workload/tpcc/Workload.hpp"
 
 using namespace std;
 
@@ -224,5 +225,116 @@ TEST(minWRollbackTest, TestExecute) {
 }
 
 TEST(minWRollbackTest, TestPerformance) {
+    Workload workload(uint64_t(43));
+    minWRollback minw;
+    Random random;
+    Transaction::Ptr tx = std::make_shared<NewOrderTransaction>();
+    chrono::high_resolution_clock::time_point start, end;
+
+    // 先生成一笔newOrder事务
+    auto newOrder = tx->makeTransaction();
+    // minw.execute(newOrder);
+    for (int i = 0; i < 50; i++) {
+        tx = workload.NextTransaction();
+        if (tx == nullptr) {
+            cout << "=== tx is nullptr ===" << endl;
+            continue;
+        }
+
+        // start = chrono::high_resolution_clock::now();
+        // if (random.uniform_dist(1, 10) <= 5) {
+        //     minw.execute(tx, false);
+        // } else {
+        //     minw.execute(tx);
+        // }
+        minw.execute(tx);
+        // end = chrono::high_resolution_clock::now();
+        // cout << "Execute time: " << chrono::duration_cast<chrono::microseconds>(end - start).count() << "us" << endl;
+    }
     
+    start = std::chrono::high_resolution_clock::now();
+    minw.build();
+    end = std::chrono::high_resolution_clock::now();
+    cout << "build time: " << chrono::duration_cast<chrono::milliseconds>(end - start).count() << "ms" << endl;
+
+
+    start = std::chrono::high_resolution_clock::now();
+    minw.rollback();
+    end = std::chrono::high_resolution_clock::now();
+    cout << "rollback time: " << chrono::duration_cast<chrono::milliseconds>(end - start).count() << "ms" << endl;
+
+    minw.printRollbackTxs();
+}
+
+TEST(minWRollbackTest, TestCombine) {
+    int in = 14;
+    int out = 2;
+    minWRollback minw;
+    cout << minw.combine(in, out) << endl;
+}
+
+TEST(minWRollbackTest, TestSCC) {
+    Workload workload;
+    minWRollback minw;
+    Transaction::Ptr tx = std::make_shared<NewOrderTransaction>();
+    chrono::high_resolution_clock::time_point start, end;
+
+    // 先生成一笔newOrder事务
+    // auto newOrder = tx->makeTransaction();
+    // minw.execute(newOrder);
+    for (int i = 1; i < 20; i++) {
+        tx = workload.NextTransaction();
+        if (tx == nullptr) {
+            cout << "=== tx is nullptr ===" << endl;
+            continue;
+        }
+        minw.execute(tx);
+    }
+
+    start = std::chrono::high_resolution_clock::now();
+    minw.build();
+    end = std::chrono::high_resolution_clock::now();
+    cout << "build time: " << chrono::duration_cast<chrono::milliseconds>(end - start).count() << "ms" << endl;
+
+    for (auto hyperVertexs : minw.m_min2HyperVertex) {
+        cout << "hyperVertexs: " << hyperVertexs.first << ", size = " << hyperVertexs.second.size() << endl;
+        for (auto hv : hyperVertexs.second) {
+            cout << hv->m_hyperId << " ";
+        }
+        cout << endl;
+        if (hyperVertexs.second.size() <= 1) {
+            continue;
+        }
+
+        vector<tbb::concurrent_unordered_set<HyperVertex::Ptr, HyperVertex::HyperVertexHash>> sccs;
+        if (!minw.recognizeSCC(hyperVertexs.second, sccs)) {
+            cout << "这个不行" << endl;
+            continue;
+        }
+
+        for (auto scc : sccs) {
+            cout << "===== 输出这个scc中的每一个元素的详细信息 =====" << endl;
+            
+            cout << "size = " << scc.size() << ", all vertexs:"; 
+            for (auto hv : scc) {
+                cout << hv->m_hyperId << " ";
+            }
+            cout << endl;
+
+            for (auto hv : scc) {
+                cout << "hyperId: " << hv->m_hyperId << endl;
+                cout << "outEdges: ";
+                for (auto edge : hv->m_out_edges) {
+                    cout << edge.first->m_hyperId << " ";
+                }
+                cout << endl << "inEdges: ";
+                for (auto edge: hv->m_in_edges) {
+                    cout << edge.first->m_hyperId << " ";
+                }
+                cout << endl;
+            }
+            cout << endl;
+        }
+    }
+
 }

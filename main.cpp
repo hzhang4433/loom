@@ -9,8 +9,9 @@ using namespace std;
 int main(int argc, char** argv) {
     /* 启用gtest测试 */
     testing::InitGoogleTest(&argc, argv);
-    // ::testing::GTEST_FLAG(filter) = "minWRollbackTest.TestExecute";
-    ::testing::GTEST_FLAG(filter) = "TpccTest.WorkloadTEST";
+    ::testing::GTEST_FLAG(filter) = "minWRollbackTest.TestPerformance";
+    // ::testing::GTEST_FLAG(filter) = "minWRollbackTest.TestSCC";
+    // ::testing::GTEST_FLAG(filter) = "TpccTest.WorkloadTEST";
     int result = RUN_ALL_TESTS();
 
     if (result == 0) {

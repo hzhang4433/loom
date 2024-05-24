@@ -116,20 +116,22 @@ TEST(TpccTest, StockLevelTransaction) {
 TEST(TpccTest, WorkloadTEST) {
     Workload workload;
     minWRollback minw;
-    Transaction::Ptr tx;
+    Transaction::Ptr tx = std::make_shared<NewOrderTransaction>();
     chrono::high_resolution_clock::time_point start, end;
-
-    for (int i = 0; i < 20; i++) {
+    
+    // 先生成一笔newOrder事务
+    tx->makeTransaction();
+    for (int i = 0; i < 6; i++) {
         tx = workload.NextTransaction();
         if (tx == nullptr) {
             cout << "tx is nullptr" << endl;
             continue;
         }
         // 创建minWRollback实例，测试execute函数vertexs构建部分
-        // start = chrono::high_resolution_clock::now();
-        // minw.execute(tx);
-        // end = chrono::high_resolution_clock::now();
-        // cout << "Execute time: " << chrono::duration_cast<chrono::microseconds>(end - start).count() << "us" << endl;
+        start = chrono::high_resolution_clock::now();
+        minw.execute(tx);
+        end = chrono::high_resolution_clock::now();
+        cout << "Execute time: " << chrono::duration_cast<chrono::microseconds>(end - start).count() << "us" << endl;
     }
     
 }

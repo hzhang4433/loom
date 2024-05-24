@@ -29,8 +29,8 @@ void HyperVertex::recognizeCascades(Vertex::Ptr vertex) {
 // 构建嵌套事务超节点
 int HyperVertex::buildVertexs(const Transaction::Ptr& tx, HyperVertex::Ptr& hyperVertex, Vertex::Ptr& vertex, string& txid) {
     // 获取执行时间
-    int execTime = 1;
-    // int execTime = tx->getExecutionTime();
+    // int execTime = 1;
+    int execTime = tx->getExecutionTime();
     vertex->m_self_cost = execTime;
 
     // cout << "txid: " << txid << endl;
@@ -67,8 +67,8 @@ int HyperVertex::buildVertexs(const Transaction::Ptr& tx, HyperVertex::Ptr& hype
 // 构建普通事务节点
 void HyperVertex::buildVertexs(const Transaction::Ptr& tx, Vertex::Ptr& vertex) {
     // 获取执行时间
-    int execTime = 1;
-    // int execTime = tx->getExecutionTime();
+    // int execTime = 1;
+    int execTime = tx->getExecutionTime();
     vertex->m_self_cost += execTime;
 
     // 添加读写集

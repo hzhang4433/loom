@@ -109,6 +109,37 @@ class Transaction : public std::enable_shared_from_this<Transaction>
 
         static std::array<std::atomic<uint64_t>, 10> order_counters;   // order counter
 
+        void resetStatic() {
+            // wdc_latestOrder
+            wdc_latestOrder.clear();
+            wd_oldestNewOrder.clear();
+            d_latestOrderLines.clear();
+            for(auto& counter : Transaction::order_counters) {
+                counter.store(1);
+            }
+            // orderLineCounters
+            for (int i = 0; i < 10; i++) {
+                orderLineCounters[i] = 0;
+            }
+        }
+
+        void printCustomerInfo() {
+            cout << "c_lasts: ";
+            for (int i = 0; i < 3000; i++) {
+                cout << Transaction::c_lasts[i] << " ";
+            }
+            cout << endl;
+            
+            // cout << "c_last_to_c_id: " << endl;
+            // for (auto& pair : Transaction::c_last_to_c_id) {
+            //     cout << pair.first << ": ";
+            //     for (auto& id : pair.second) {
+            //         cout << id << " ";
+            //     }
+            //     cout << endl;
+            // }
+        }
+
     protected:
         Random random;                                          // random generator
 // 静态变量 待测试...

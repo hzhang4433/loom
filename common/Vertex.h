@@ -36,6 +36,15 @@ class Vertex : public std::enable_shared_from_this<Vertex>
             }
         };
 
+        struct VertexCmpCycle {
+            bool operator()(const Vertex::Ptr& a, const Vertex::Ptr& b) const {
+                if (a->m_cycle_num == b->m_cycle_num) {
+                    return a->m_id < b->m_id;
+                }
+                return a->m_cycle_num < b->m_cycle_num;
+            }
+        };
+
         struct MapCompare {
             bool operator()(const std::map<Vertex::Ptr, Vertex::Ptr, Vertex::VertexCompare>& map1,
                             const std::map<Vertex::Ptr, Vertex::Ptr, Vertex::VertexCompare>& map2) const {
@@ -96,6 +105,7 @@ class Vertex : public std::enable_shared_from_this<Vertex>
         int m_cost;                                                                              // 记录节点的执行代价 => 由执行时间正则化得到
         int m_self_cost;                                                                         // 记录节点自身的执行代价
         int m_degree;                                                                            // 记录节点的度
+        int m_cycle_num;                                                                         // 记录节点所在环路数
         tbb::concurrent_unordered_set<Vertex::Ptr, VertexHash> m_in_edges;                       // 记录节点的入边, 格式：节点指针 => 可抵达最小id
         tbb::concurrent_unordered_set<Vertex::Ptr, VertexHash> m_out_edges;                      // 记录节点的出边, 格式：节点指针 => 可到达最小id
         tbb::concurrent_unordered_set<Vertex::Ptr, VertexHash> cascadeVertices;                  // 记录级联回滚节点

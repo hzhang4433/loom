@@ -7,7 +7,12 @@ class Workload {
     public:
         Workload() : random(reinterpret_cast<uint64_t>(this)) {}
         
-        Workload(uint64_t seed) : random(seed) {};
+        Workload(uint64_t seed) : random(seed) {
+            // 重置静态变量的值
+            txGenerator->resetStatic();
+            txGenerator = std::make_shared<NewOrderTransaction>(random);
+            txGenerator->makeTransaction();
+        };
         
         ~Workload() = default;
         
@@ -28,6 +33,18 @@ class Workload {
             return txGenerator->makeTransaction();
         }
         
+        uint64_t get_seed() {
+            return random.get_seed();
+        }
+
+        void set_seed(uint64_t seed) {
+            // 重置静态变量的值
+            txGenerator->resetStatic();
+            random.set_seed(seed);
+            txGenerator = std::make_shared<NewOrderTransaction>(random);
+            txGenerator->makeTransaction();
+        }
+
     private:
         Random random;
         Transaction::Ptr txGenerator;

@@ -5,12 +5,12 @@
 #include <stack>
 #include "common/HyperVertex.h"
 
-class minWRollback
+class MinWRollback
 {
     public:
-        minWRollback() : id_counter(0) {}
+        MinWRollback() : id_counter(0) {}
 
-        ~minWRollback() = default;
+        ~MinWRollback() = default;
 
         int getId() {
             return id_counter.fetch_add(1, std::memory_order_relaxed) + 1;
@@ -69,9 +69,17 @@ class minWRollback
 
         void updateSCCandDependency(tbb::concurrent_unordered_set<HyperVertex::Ptr, HyperVertex::HyperVertexHash>& scc, const HyperVertex::Ptr& rb, set<HyperVertex::Ptr, cmp>& pq, const tbb::concurrent_unordered_set<Vertex::Ptr, Vertex::VertexHash>& rbVertexs, tbb::concurrent_unordered_set<HyperVertex::Ptr, HyperVertex::HyperVertexHash>& calculated);
 
+        void updateSCCandDependency(tbb::concurrent_unordered_set<HyperVertex::Ptr, HyperVertex::HyperVertexHash>& scc, const HyperVertex::Ptr& rb, set<HyperVertex::Ptr, cmp>& pq, const tbb::concurrent_unordered_set<Vertex::Ptr, Vertex::VertexHash>& rbVertexs);
+
+        void recursiveDelete(tbb::concurrent_unordered_set<HyperVertex::Ptr, HyperVertex::HyperVertexHash>& scc, set<HyperVertex::Ptr, cmp>& pq, const HyperVertex::Ptr& rb,
+                            const tbb::concurrent_unordered_set<Vertex::Ptr, Vertex::VertexHash>& rbVertexs, tbb::concurrent_unordered_set<HyperVertex::Ptr, HyperVertex::HyperVertexHash>& deletedVertexs, tbb::concurrent_unordered_map<HyperVertex::Ptr, minw::EdgeType, HyperVertex::HyperVertexHash>& waitToUpdate);
+
+
+
         void updateHyperVertexWeight(const tbb::concurrent_unordered_set<HyperVertex::Ptr, HyperVertex::HyperVertexHash>& scc, HyperVertex::Ptr& hyperVertex, const HyperVertex::Ptr& rb, set<HyperVertex::Ptr, cmp>& pq, const tbb::concurrent_unordered_set<Vertex::Ptr, Vertex::VertexHash>& udVertexs, 
                                      const tbb::concurrent_unordered_set<Vertex::Ptr, Vertex::VertexHash>& rbVertexs, tbb::concurrent_unordered_set<HyperVertex::Ptr, HyperVertex::HyperVertexHash>& calculated);
 
+        
         void calculateWeight(HyperVertex::Ptr& hyperVertex, minw::EdgeType& type);
         
         bool updateVertexRollback(HyperVertex::Ptr& hv1, HyperVertex::Ptr hv2, const tbb::concurrent_unordered_set<Vertex::Ptr, Vertex::VertexHash>& rbVertexs, minw::EdgeType type);
@@ -82,17 +90,22 @@ class minWRollback
         void printHyperGraph();
 
         // 打印回滚事务
-        void printRollbackTxs();
+        int printRollbackTxs();
 
         void printEdgeRollBack(HyperVertex::Ptr& hyperVertex, const tbb::concurrent_unordered_set<HyperVertex::Ptr, HyperVertex::HyperVertexHash>& scc);
 
 
     public:
-        bool testFlag = true;
-        std::atomic<int> id_counter;   // 分配事务ID
-        // 存储超图中所有子事务节点
-        tbb::concurrent_unordered_set<Vertex::Ptr, Vertex::VertexHash> m_vertices;  // 超图中所有事务节点
-        tbb::concurrent_unordered_set<HyperVertex::Ptr, HyperVertex::HyperVertexHash> m_hyperVertices; // 超图中所有超节点
+        // 测试标志
+        bool testFlag = true;   
+        // 分配事务ID
+        std::atomic<int> id_counter;   
+        // 超图中所有事务节点
+        tbb::concurrent_unordered_set<Vertex::Ptr, Vertex::VertexHash> m_vertices; 
+        // 超图中所有超节点
+        tbb::concurrent_unordered_set<HyperVertex::Ptr, HyperVertex::HyperVertexHash> m_hyperVertices; 
+        // 记录所有可能的scc
         tbb::concurrent_unordered_map<long long, tbb::concurrent_unordered_set<HyperVertex::Ptr, HyperVertex::HyperVertexHash>> m_min2HyperVertex;
-        tbb::concurrent_unordered_set<Vertex::Ptr, Vertex::VertexHash> minWRollbackTxs;
+        // 记录所有回滚事务
+        tbb::concurrent_unordered_set<Vertex::Ptr, Vertex::VertexHash> m_rollbackTxs;
 };

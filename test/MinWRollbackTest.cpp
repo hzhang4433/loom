@@ -1,6 +1,6 @@
 #include <gtest/gtest.h>
 #include <chrono>
-#include "protocol/minW/minWRollback.h"
+#include "protocol/minW/MinWRollback.h"
 #include "workload/tpcc/Workload.hpp"
 
 using namespace std;
@@ -174,7 +174,7 @@ Transaction::Ptr makeTx3() {
     return tx3;
 }
 
-TEST(minWRollbackTest, TestExecute) {
+TEST(MinWRollbackTest, TestExecute) {
     // 自定义构建Transaction
     int txNum = 5;
     vector<Transaction::Ptr> txs;
@@ -201,8 +201,8 @@ TEST(minWRollbackTest, TestExecute) {
     txs.push_back(tx5);
 
     chrono::high_resolution_clock::time_point start, end;
-    // 创建minWRollback实例，测试execute函数vertexs构建部分
-    minWRollback minw;
+    // 创建MinWRollback实例，测试execute函数vertexs构建部分
+    MinWRollback minw;
     for (int i = 0; i < txNum; i++) {
         // start = std::chrono::high_resolution_clock::now();
         minw.execute(txs[i]);
@@ -224,9 +224,9 @@ TEST(minWRollbackTest, TestExecute) {
     // minw.printHyperGraph();
 }
 
-TEST(minWRollbackTest, TestPerformance) {
-    Workload workload(uint64_t(43));
-    minWRollback minw;
+TEST(MinWRollbackTest, TestPerformance) {
+    Workload workload(uint64_t(0));
+    MinWRollback minw;
     Random random;
     Transaction::Ptr tx = std::make_shared<NewOrderTransaction>();
     chrono::high_resolution_clock::time_point start, end;
@@ -266,16 +266,16 @@ TEST(minWRollbackTest, TestPerformance) {
     minw.printRollbackTxs();
 }
 
-TEST(minWRollbackTest, TestCombine) {
+TEST(MinWRollbackTest, TestCombine) {
     int in = 14;
     int out = 2;
-    minWRollback minw;
+    MinWRollback minw;
     cout << minw.combine(in, out) << endl;
 }
 
-TEST(minWRollbackTest, TestSCC) {
+TEST(MinWRollbackTest, TestSCC) {
     Workload workload;
-    minWRollback minw;
+    MinWRollback minw;
     Transaction::Ptr tx = std::make_shared<NewOrderTransaction>();
     chrono::high_resolution_clock::time_point start, end;
 
@@ -337,4 +337,50 @@ TEST(minWRollbackTest, TestSCC) {
         }
     }
 
+}
+
+TEST(MinWRollbackTest, TestLoopPerformance) {
+    Workload workload;
+    chrono::high_resolution_clock::time_point start, end;
+    Transaction::Ptr tx;
+
+    uint64_t seed = workload.get_seed();
+    cout << "seed = " << seed << endl;
+
+    for (int i = 0; i < 2; i++) {        
+        MinWRollback minw;
+
+        // workload.set_seed(uint64_t(140719991741917));
+        workload.set_seed(seed);
+
+        for (int i = 0; i < 50; i++) {
+            tx = workload.NextTransaction();
+            if (tx == nullptr) {
+                cout << "=== tx is nullptr ===" << endl;
+                continue;
+            }
+            minw.execute(tx);
+            // // 输出minw中的m_hyperVertices
+            // for (auto& hv : minw.m_hyperVertices) {
+            //     cout << "hv: " << hv->m_hyperId << " " 
+            //          << "hyperVertex->m_rootVertex " << hv->m_rootVertex->m_id << " "
+            //          << "hyperVertex->cost " << hv->m_rootVertex->m_cost << endl;
+            // }
+        }
+        
+        start = std::chrono::high_resolution_clock::now();
+        minw.build();
+        end = std::chrono::high_resolution_clock::now();
+        cout << "build time: " << chrono::duration_cast<chrono::milliseconds>(end - start).count() << "ms" << endl;
+
+        start = std::chrono::high_resolution_clock::now();
+        minw.rollback();
+        end = std::chrono::high_resolution_clock::now();
+        cout << "rollback time: " << chrono::duration_cast<chrono::milliseconds>(end - start).count() << "ms" << endl;
+
+        // minw.printHyperGraph();
+
+        minw.printRollbackTxs();
+    }
+    
 }

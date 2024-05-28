@@ -30,6 +30,33 @@ namespace protocol {
         return found;
     }
 
+    // 判断两个set是否有交集-无hash版（读写集是否冲突）
+    template <typename T>
+    bool hasConflict(tbb::concurrent_unordered_set<T>& set1, tbb::concurrent_unordered_set<T>& set2) {
+        for (auto item : set2) {
+            if (set1.find(item) != set1.end()) {
+                return true;
+            }
+        }
+        return false;
+        
+        /* 并行化冲突检测，带测试，对比效率 
+            std::atomic<bool> found(false);
+
+            tbb::parallel_for(tbb::blocked_range<size_t>(0, set2.size()), [&](const tbb::blocked_range<size_t>& r) {
+                for (size_t i = r.begin(); i != r.end() && !found; ++i) {
+                    auto it = set2.begin();
+                    std::advance(it, i);
+                    if (set1.find(*it) != set1.end()) {
+                        found = true;
+                    }
+                }
+            });
+
+            return found;
+        */ 
+    }
+
     // 判断set1是否包含set2
     template <typename T, typename Hash>
     bool hasContain(const tbb::concurrent_unordered_set<T, Hash>& set1, const tbb::concurrent_unordered_set<T, Hash>& set2) {
@@ -39,6 +66,21 @@ namespace protocol {
 
         for (const auto& item : set2) {
             if (set1.find(item) == set1.end()) {
+                return false;
+            }
+        }
+        return true;
+    }
+
+    // 判断set1是否包含map2的key
+    template <typename T, typename Hash, typename U>
+    bool hasContain(const tbb::concurrent_unordered_set<T, Hash>& set1, const tbb::concurrent_unordered_map<T, U, Hash>& map2) {
+        if (set1.size() < map2.size()) {
+            return false;
+        }
+
+        for (const auto& pair : map2) {
+            if (set1.find(pair.first) == set1.end()) {
                 return false;
             }
         }
@@ -82,5 +124,4 @@ namespace protocol {
         });
         return diff;
     }
-
 }

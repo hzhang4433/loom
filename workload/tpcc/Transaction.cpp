@@ -47,7 +47,7 @@ const std::unordered_map<std::string, std::vector<int32_t>> Transaction::c_last_
 // 定义静态变量
 std::unordered_map<std::string, Transaction::OrderInfo> Transaction::wdc_latestOrder;
 std::unordered_map<std::string, std::queue<Transaction::OrderInfo>> Transaction::wd_oldestNewOrder;
-std::unordered_map<std::string, std::vector<Transaction::OrderLineInfo>> Transaction::d_latestOrderLines;
+std::unordered_map<std::string, std::vector<Transaction::OrderLineInfo>> Transaction::wd_latestOrderLines;
 
 // 定义并初始化order_counters的每个元素
 std::array<std::atomic<uint64_t>, 10> Transaction::order_counters;
@@ -58,4 +58,6 @@ static auto _ = [] {
     return 0;
 }();
 
-uint64_t Transaction::orderLineCounters[10];
+uint64_t Transaction::wd_orderLineCounters[TPCC::n_warehouses][TPCC::n_districts];
+
+std::map<size_t, int> Transaction::ol_i_id_num;

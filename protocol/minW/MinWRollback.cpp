@@ -61,8 +61,8 @@ void MinWRollback::execute(const Transaction::Ptr& tx, bool isNest) {
 void MinWRollback::build() {
     for (auto& hyperVertex : m_hyperVertices) {
         auto rootVertex = hyperVertex->m_rootVertex;
-        cout << "tx" << hyperVertex->m_hyperId << " start build, m_vertices size: " << m_vertices.size() 
-             << " cascadeVertices size: " << rootVertex->cascadeVertices.size() << endl;
+        // cout << "tx" << hyperVertex->m_hyperId << " start build, m_vertices size: " << m_vertices.size() 
+        //      << " cascadeVertices size: " << rootVertex->cascadeVertices.size() << endl;
         
         auto start = std::chrono::high_resolution_clock::now();
         buildGraph(rootVertex->cascadeVertices);
@@ -73,7 +73,7 @@ void MinWRollback::build() {
         
         // cout <<" build time: " << chrono::duration_cast<chrono::microseconds>(end - start).count() << "us" << endl;
     }
- 
+
     return;
 }
 
@@ -268,7 +268,7 @@ long long MinWRollback::combine(int a, int b) {
 /* 确定性回滚: 从hyperGraph中找到最小的回滚子事务集合
    状态: 测试完成，待优化...
 */
-void MinWRollback::rollback() {
+void MinWRollback::rollback(int mode) {
     // 遍历所有强连通分量
     for (auto hyperVertexs : m_min2HyperVertex) {
         
@@ -293,6 +293,10 @@ void MinWRollback::rollback() {
             }
             cout << endl;
 
+
+            // 统计每个scc rollback耗时
+            auto start = std::chrono::high_resolution_clock::now();
+
     // 可尝试使用fibonacci堆优化更新效率，带测试，看效果
             // 定义有序集合，以hyperVertex.m_cost为key从小到大排序
             set<HyperVertex::Ptr, cmp> pq;
@@ -300,14 +304,17 @@ void MinWRollback::rollback() {
             // 遍历强连通分量中每个超节点，计算scc超节点间边权
             calculateHyperVertexWeight(scc, pq);
 
-            // 输出pq
-            cout << "init pq: " << endl;
-            for (auto v : pq) {
-                cout << "hyperId: " << v->m_hyperId << " cost: " << v->m_cost << " in_cost: " << v->m_in_cost << " out_cost: " << v->m_out_cost << endl;
-            }
+            // // 输出pq
+            // cout << "init pq: " << endl;
+            // for (auto v : pq) {
+            //     cout << "hyperId: " << v->m_hyperId << " cost: " << v->m_cost << " in_cost: " << v->m_in_cost << " out_cost: " << v->m_out_cost << endl;
+            // }
 
             // 贪心获取最小回滚代价的节点集
-            GreedySelectVertex(scc, pq, m_rollbackTxs);
+            GreedySelectVertex(scc, pq, m_rollbackTxs, mode);
+            auto end = std::chrono::high_resolution_clock::now();
+            cout << "scc rollback time: " << chrono::duration_cast<chrono::microseconds>(end - start).count() << "us" << endl;
+        
         }
     }
 }
@@ -738,7 +745,8 @@ void MinWRollback::calculateEdgeRollback(tbb::concurrent_unordered_map<Vertex::P
     4. 更新scc
 */
 void MinWRollback::GreedySelectVertex(tbb::concurrent_unordered_set<HyperVertex::Ptr, HyperVertex::HyperVertexHash>& scc, 
-                                      set<HyperVertex::Ptr, cmp>& pq, tbb::concurrent_unordered_set<Vertex::Ptr, Vertex::VertexHash>& result) {
+                                      set<HyperVertex::Ptr, cmp>& pq, tbb::concurrent_unordered_set<Vertex::Ptr, Vertex::VertexHash>& result
+                                      , int mode) {
     /* 1. 选择回滚代价最小的超节点
         1.1 取出优先队列队头超节点rb
         1.2 判断是否在scc中
@@ -780,15 +788,19 @@ void MinWRollback::GreedySelectVertex(tbb::concurrent_unordered_set<HyperVertex:
     // }
     // cout << endl;
 
-    // 定义变量记录更新过的超节点间的边
-    tbb::concurrent_unordered_set<HyperVertex::Ptr, HyperVertex::HyperVertexHash> calculated;
-    // 递归更新scc超节点和scc中依赖节点状态
-    updateSCCandDependency(scc, rb, pq, result, calculated);
+    if (mode == 0) {
+        // 定义变量记录更新过的超节点间的边
+        tbb::concurrent_unordered_set<HyperVertex::Ptr, HyperVertex::HyperVertexHash> calculated;
+        // 递归更新scc超节点和scc中依赖节点状态
+        updateSCCandDependency(scc, rb, pq, result, calculated);      // old version
+    } else if (mode == 1) {
+        updateSCCandDependency(scc, rb, pq, result);                    // new version
+    }
     
     // 若scc中只剩下一个超节点，则无需回滚
     if (scc.size() > 1) {
         // 递归调用GreedySelectVertex获取回滚节点集合
-        GreedySelectVertex(scc, pq, result);
+        GreedySelectVertex(scc, pq, result, mode);
     }
 }
 
@@ -1102,11 +1114,11 @@ void MinWRollback::updateSCCandDependency(tbb::concurrent_unordered_set<HyperVer
         }
     }
     
-    // 遍历并输出更新过后的pq
-    cout << "now pq: " << endl;
-    for (auto v : pq) {
-        cout << "hyperId: " << v->m_hyperId << " cost: " << v->m_cost << " in_cost: " << v->m_in_cost << " out_cost: " << v->m_out_cost << endl;
-    }
+    // // 遍历并输出更新过后的pq
+    // cout << "now pq: " << endl;
+    // for (auto v : pq) {
+    //     cout << "hyperId: " << v->m_hyperId << " cost: " << v->m_cost << " in_cost: " << v->m_in_cost << " out_cost: " << v->m_out_cost << endl;
+    // }
 }
 
 /* 递归删除scc中可删除的节点 */
@@ -1798,44 +1810,48 @@ void MinWRollback::printHyperGraph() {
             }
             cout << endl;
         }
-        // 输出超节点的出边和入边权重
-        cout << "==========Weights==========" << endl;
-        cout << "m_cost: " << hyperVertex->m_cost << " m_out_cost: " << hyperVertex->m_out_cost << " m_in_cost: " << hyperVertex->m_in_cost << endl; 
-        for (auto& out_weight : hyperVertex->m_out_weights) {
-            cout << "OutWeight: " << out_weight.first->m_hyperId << " " << out_weight.second << endl;
+        // // 输出超节点的出边和入边权重
+        // cout << "==========Weights==========" << endl;
+        // cout << "m_cost: " << hyperVertex->m_cost << " m_out_cost: " << hyperVertex->m_out_cost << " m_in_cost: " << hyperVertex->m_in_cost << endl; 
+        // for (auto& out_weight : hyperVertex->m_out_weights) {
+        //     cout << "OutWeight: " << out_weight.first->m_hyperId << " " << out_weight.second << endl;
+        // }
+        // for (auto& in_weight : hyperVertex->m_in_weights) {
+        //     cout << "InWeight: " << in_weight.first->m_hyperId << " " << in_weight.second << endl;
+        // }
+        // // 输出超节点的出边和入边回滚子事务
+        // cout << "==========Rollback==========" << endl;
+        // for (auto& out_rollback : hyperVertex->m_out_rollback) {
+        //     cout << "OutRollback: " << out_rollback.first->m_hyperId << " ";
+        //     for (auto& rollback : out_rollback.second) {
+        //         cout << rollback->m_id << " ";
+        //     }
+        //     cout << endl;
+        // }
+        // for (auto& in_rollback : hyperVertex->m_in_rollback) {
+        //     cout << "InRollback: " << in_rollback.first->m_hyperId << " ";
+        //     for (auto& rollback : in_rollback.second) {
+        //         cout << rollback->m_id << " ";
+        //     }
+        //     cout << endl;
+        // }
+        // // 输出超节点的所有出边和入边回滚子事务
+        // cout << "==========AllRollback==========" << endl;
+        // cout << "OutAllRollback: ";
+        // for (auto& rollback : hyperVertex->m_out_allRB) {
+        //     cout << rollback.first->m_id << " ";
+        // }
+        // cout << endl;
+        // cout << "InAllRollback: ";
+        // for (auto& rollback : hyperVertex->m_in_allRB) {
+        //     cout << rollback.first->m_id << " ";
+        // }
+        // cout << endl;
+        // cout << "========================== end =========================" << endl;
+    
+        if (hyperVertex->m_hyperId == 5 || hyperVertex->m_hyperId == 8) {
+            hyperVertex->printVertexTree();
         }
-        for (auto& in_weight : hyperVertex->m_in_weights) {
-            cout << "InWeight: " << in_weight.first->m_hyperId << " " << in_weight.second << endl;
-        }
-        // 输出超节点的出边和入边回滚子事务
-        cout << "==========Rollback==========" << endl;
-        for (auto& out_rollback : hyperVertex->m_out_rollback) {
-            cout << "OutRollback: " << out_rollback.first->m_hyperId << " ";
-            for (auto& rollback : out_rollback.second) {
-                cout << rollback->m_id << " ";
-            }
-            cout << endl;
-        }
-        for (auto& in_rollback : hyperVertex->m_in_rollback) {
-            cout << "InRollback: " << in_rollback.first->m_hyperId << " ";
-            for (auto& rollback : in_rollback.second) {
-                cout << rollback->m_id << " ";
-            }
-            cout << endl;
-        }
-        // 输出超节点的所有出边和入边回滚子事务
-        cout << "==========AllRollback==========" << endl;
-        cout << "OutAllRollback: ";
-        for (auto& rollback : hyperVertex->m_out_allRB) {
-            cout << rollback.first->m_id << " ";
-        }
-        cout << endl;
-        cout << "InAllRollback: ";
-        for (auto& rollback : hyperVertex->m_in_allRB) {
-            cout << rollback.first->m_id << " ";
-        }
-        cout << endl;
-        cout << "========================== end =========================" << endl;
     }
     cout << endl;
 }
@@ -1854,8 +1870,9 @@ int MinWRollback::printRollbackTxs() {
     return totalRollbackCost;
 }
 
+// 输出超节点每条边对应回滚子事务集
 void MinWRollback::printEdgeRollBack(HyperVertex::Ptr& hyperVertex, const tbb::concurrent_unordered_set<HyperVertex::Ptr, HyperVertex::HyperVertexHash>& scc) {
-    // 输出8的每条出边回滚子事务集
+    // 输出每条出边回滚子事务集
     cout << "========== Now print " << hyperVertex->m_hyperId << "'s out rollback ==========" << endl;
     // 输出每条边以及对应的回滚事务集
     for (auto& edge : hyperVertex->m_out_edges) {

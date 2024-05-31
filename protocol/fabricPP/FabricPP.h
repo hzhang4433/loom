@@ -22,15 +22,17 @@ class FabricPP {
                            unordered_map<Vertex::Ptr, int>& lowLinkMap, unordered_map<Vertex::Ptr, bool>& onStackMap,
                            vector<tbb::concurrent_unordered_set<Vertex::Ptr, Vertex::VertexHash>>& components);
         
-        void Johnson(tbb::concurrent_unordered_set<Vertex::Ptr, Vertex::VertexHash>& scc, vector<tbb::concurrent_unordered_set<Vertex::Ptr, Vertex::VertexHash>>& cycles);
+        void Johnson(tbb::concurrent_unordered_set<Vertex::Ptr, Vertex::VertexHash>& scc, vector<set<Vertex::Ptr, Vertex::VertexCompare>>& cycles);
+        
+        void findCycles(Vertex::Ptr& start, Vertex::Ptr& v, vector<Vertex::Ptr>& stack, tbb::concurrent_unordered_map<Vertex::Ptr, bool, Vertex::VertexHash>& blockedMap, tbb::concurrent_unordered_map<Vertex::Ptr, tbb::concurrent_unordered_set<Vertex::Ptr, Vertex::VertexHash>, Vertex::VertexHash>& blockedSet, vector<set<Vertex::Ptr, Vertex::VertexCompare>>& cycles, const tbb::concurrent_unordered_set<Vertex::Ptr, Vertex::VertexHash>& scc);
 
-        bool findCycles(Vertex::Ptr& start, Vertex::Ptr& v, vector<Vertex::Ptr>& stack, tbb::concurrent_unordered_map<Vertex::Ptr, int, Vertex::VertexHash>& blockedMap, tbb::concurrent_unordered_map<Vertex::Ptr, tbb::concurrent_unordered_set<Vertex::Ptr, Vertex::VertexHash>, Vertex::VertexHash>& blockedSet, vector<tbb::concurrent_unordered_set<Vertex::Ptr, Vertex::VertexHash>>& cycles);
-
-        void unblock(Vertex::Ptr& u, tbb::concurrent_unordered_map<Vertex::Ptr, int, Vertex::VertexHash>& blockedMap, tbb::concurrent_unordered_map<Vertex::Ptr, tbb::concurrent_unordered_set<Vertex::Ptr, Vertex::VertexHash>, Vertex::VertexHash>& blockedSet);
+        void unblock(Vertex::Ptr& v, tbb::concurrent_unordered_map<Vertex::Ptr, bool, Vertex::VertexHash>& blockedMap, tbb::concurrent_unordered_map<Vertex::Ptr, tbb::concurrent_unordered_set<Vertex::Ptr, Vertex::VertexHash>, Vertex::VertexHash>& blockedSet);
 
         int getId();
 
         int printRollbackTxs();
+
+        void printGraph();
         
     private:
         // 分配事务ID
@@ -44,5 +46,6 @@ class FabricPP {
         // 记录所有回滚事务
         tbb::concurrent_unordered_set<Vertex::Ptr, Vertex::VertexHash> m_rollbackTxs;
         // 记录所有环路
-        vector<tbb::concurrent_unordered_set<Vertex::Ptr, Vertex::VertexHash>> m_cycles;    
+        vector<set<Vertex::Ptr, Vertex::VertexCompare>> m_cycles;   
+        int testCounter = 0; 
 };

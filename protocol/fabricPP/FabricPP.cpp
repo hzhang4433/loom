@@ -74,13 +74,14 @@ void FabricPP::rollback() {
 
     for (auto& scc : sccs) {
         // 输出scc信息
-        cout << "get one scc, size: " << scc.size() << endl;
+        cout << "===== 输出scc中的每一个元素的详细信息 =====" << endl;
+        cout << "size = " << scc.size() << ", all vertexs:"; 
         for (auto& v : scc) {
             cout << v->m_id << " ";
         }
         cout << endl;
 
-        vector<tbb::concurrent_unordered_set<Vertex::Ptr, Vertex::VertexHash>> cycles;
+        vector<set<Vertex::Ptr, Vertex::VertexCompare>> cycles;
         Johnson(scc, cycles);
         
         // 记录每个vertex所处环路数
@@ -103,13 +104,13 @@ void FabricPP::rollback() {
 
     // 输出所有环路信息
     cout << "get all cycles, size: " << m_cycles.size() << endl;
-    for (auto& cycle : m_cycles) {
-        cout << "cycle size: " << cycle.size() << endl;
-        for (auto& v : cycle) {
-            cout << v->m_id << " ";
-        }
-        cout << endl;
-    }
+    // for (auto& cycle : m_cycles) {
+    //     cout << "cycle size: " << cycle.size() << endl;
+    //     for (auto& v : cycle) {
+    //         cout << v->m_id << " ";
+    //     }
+    //     cout << endl;
+    // }
     
     // 3. 从环路数最大，id最小的vertex开始回滚
     while (!m_cycles.empty()) {
@@ -120,7 +121,7 @@ void FabricPP::rollback() {
         m_rollbackTxs.insert(v);
         // 3.3 删除对应环路
         m_cycles.erase(std::remove_if(m_cycles.begin(), m_cycles.end(),
-        [&v, &pq](tbb::concurrent_unordered_set<Vertex::Ptr, Vertex::VertexHash>& cycle) {
+        [&v, &pq](set<Vertex::Ptr, Vertex::VertexCompare>& cycle) {
             if (cycle.find(v) != cycle.end()) {
                 for (auto& w : cycle) {
                     // 更新优先队列
@@ -204,60 +205,50 @@ void FabricPP::strongConnect(Vertex::Ptr& v, int& index, stack<Vertex::Ptr>& s, 
     }
 }
 
-void FabricPP::Johnson(tbb::concurrent_unordered_set<Vertex::Ptr, Vertex::VertexHash>& scc, vector<tbb::concurrent_unordered_set<Vertex::Ptr, Vertex::VertexHash>>& cycles) {
+void FabricPP::Johnson(tbb::concurrent_unordered_set<Vertex::Ptr, Vertex::VertexHash>& scc, vector<set<Vertex::Ptr, Vertex::VertexCompare>>& cycles) {
+    // cout << "in johnson" << endl;
     // 初始化
-    tbb::concurrent_unordered_map<Vertex::Ptr, int, Vertex::VertexHash> blockedMap;
+    tbb::concurrent_unordered_map<Vertex::Ptr, bool, Vertex::VertexHash> blockedMap;
     tbb::concurrent_unordered_map<Vertex::Ptr, tbb::concurrent_unordered_set<Vertex::Ptr, Vertex::VertexHash>, Vertex::VertexHash> blockedSet;
     vector<Vertex::Ptr> stack;
-    // 记录所有环路
-    for (auto& v : scc) {
-        blockedMap[v] = false;
-        blockedSet[v] = tbb::concurrent_unordered_set<Vertex::Ptr, Vertex::VertexHash>();
-    }
 
     // 从每个节点开始寻找环路
     for (auto& start : scc) {
-        stack.push_back(start);
-        blockedMap[start] = true;
-        findCycles(start, start, stack, blockedMap, blockedSet, cycles);
-        stack.pop_back();
+        for (auto& v : scc) {
+            blockedMap[v] = false;
+            blockedSet[v].clear();
+        }
+        findCycles(start, start, stack, blockedMap, blockedSet, cycles, scc);
     }
 }
 
-bool FabricPP::findCycles(Vertex::Ptr& start, Vertex::Ptr& v, vector<Vertex::Ptr>& stack, tbb::concurrent_unordered_map<Vertex::Ptr, int, Vertex::VertexHash>& blockedMap, tbb::concurrent_unordered_map<Vertex::Ptr, tbb::concurrent_unordered_set<Vertex::Ptr, Vertex::VertexHash>, Vertex::VertexHash>& blockedSet, vector<tbb::concurrent_unordered_set<Vertex::Ptr, Vertex::VertexHash>>& cycles) {
-    bool foundCycle = false;
+void FabricPP::findCycles(Vertex::Ptr& start, Vertex::Ptr& v, vector<Vertex::Ptr>& stack, tbb::concurrent_unordered_map<Vertex::Ptr, bool, Vertex::VertexHash>& blockedMap,
+                          tbb::concurrent_unordered_map<Vertex::Ptr, tbb::concurrent_unordered_set<Vertex::Ptr, Vertex::VertexHash>, Vertex::VertexHash>& blockedSet, 
+                          vector<set<Vertex::Ptr, Vertex::VertexCompare>>& cycles, const tbb::concurrent_unordered_set<Vertex::Ptr, Vertex::VertexHash>& scc) {
+
+    blockedMap[v] = true;
+    stack.push_back(v);
     
     for (auto& w : v->m_out_edges) {
+        // 若不属于，直接跳过
+        if (scc.find(w) == scc.end()) {
+            continue;
+        }
+
         if (w == start) {
-            foundCycle = true;
-            cycles.push_back(tbb::concurrent_unordered_set<Vertex::Ptr, Vertex::VertexHash>(stack.begin(), stack.end()));
+            // cout << "get cycle: " << testCounter++ << endl;
+            cycles.push_back(set<Vertex::Ptr, Vertex::VertexCompare>(stack.begin(), stack.end()));
         } else if (!blockedMap[w]) {
-            stack.push_back(w);
-            blockedMap[w] = true;
-            if (findCycles(start, w, stack, blockedMap, blockedSet, cycles)) {
-                foundCycle = true;
-            }
-            stack.pop_back();
+            findCycles(start, w, stack, blockedMap, blockedSet, cycles, scc);
         }
     }
 
-    if (foundCycle) {
-        unblock(v, blockedMap, blockedSet);
-    } else {
-        for (auto& w : v->m_out_edges) {
-            blockedSet[w].insert(v);
-        }
-    }
-}
+    stack.pop_back();
+    blockedMap[v] = false;
 
-void FabricPP::unblock(Vertex::Ptr& u, tbb::concurrent_unordered_map<Vertex::Ptr, int, Vertex::VertexHash>& blockedMap, tbb::concurrent_unordered_map<Vertex::Ptr, tbb::concurrent_unordered_set<Vertex::Ptr, Vertex::VertexHash>, Vertex::VertexHash>& blockedSet) {
-    blockedMap[u] = false;
-    auto& set = blockedSet[u];
-    while (!set.empty()) {
-        Vertex::Ptr unblockNode = *set.begin();
-        set.unsafe_erase(unblockNode);
-        if (blockedMap[unblockNode]) {
-            unblock(unblockNode, blockedMap, blockedSet);
+    for (auto& w : blockedSet[v]) {
+        if (!blockedMap[w]) {
+            findCycles(start, w, stack, blockedMap, blockedSet, cycles, scc);
         }
     }
 }
@@ -272,9 +263,31 @@ int FabricPP::printRollbackTxs() {
     int totalRollbackCost = 0;
     for (auto& tx : m_rollbackTxs) {
         totalRollbackCost += tx->m_self_cost;
-        cout << tx->m_id << endl;
+        // cout << tx->m_id << endl;
     }
     cout << "rollback cost: " << totalRollbackCost << endl;
     cout << "=============================================================" << endl;
     return totalRollbackCost;
+}
+
+// 打印图
+void FabricPP::printGraph() {
+    cout << "====================Graph now====================" << endl;
+    for (auto& hyperVertex : m_hyperVertices) {
+        auto& rootVertex = hyperVertex->m_rootVertex;
+        cout << "vertex id: " << rootVertex->m_id << endl;
+        // 输出节点的出边和入边
+        cout << "OutEdge: " ;
+        for (auto& out_edge : rootVertex->m_out_edges) {
+            cout << out_edge->m_hyperId << " ";            
+        }
+        cout << endl;
+        cout << "InEdge: " ;
+        for (auto& in_edge : rootVertex->m_in_edges) {
+            cout << in_edge->m_hyperId << " ";
+        }
+        cout << endl;
+        cout << "========================== end =========================" << endl;
+    }
+    cout << endl;
 }

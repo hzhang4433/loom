@@ -208,7 +208,7 @@ class NewOrderTransaction : public Transaction
 
         // 生成嵌套事务
         Transaction::Ptr makeTransaction() override {
-            cout << "======= making new order transaction =======" << endl;
+            // cout << "======= making new order transaction =======" << endl;
 
             auto newOrderTx = makeNewOrder();
             /* 事务逻辑：
@@ -251,15 +251,15 @@ class NewOrderTransaction : public Transaction
 
             // 获取下一个订单号
             uint64_t next_o_id = increment_order(newOrderTx->d_id - 1);
-            cout << "In NewOrderTransaction, d_id: " << newOrderTx->d_id 
-                 << " next_o_id: " << next_o_id 
-                 << " ol_cnt: " << newOrderTx->o_ol_cnt 
-                 << " c_id: " << newOrderTx->c_id << endl;
-            cout << "order lines: ";
-            for (auto i = 0; i < newOrderTx->o_ol_cnt; i++) {
-                cout << newOrderTx->orderLines[i].ol_i_id << " ";
-            }
-            cout << endl;
+            // cout << "In NewOrderTransaction, d_id: " << newOrderTx->d_id 
+            //      << " next_o_id: " << next_o_id 
+            //      << " ol_cnt: " << newOrderTx->o_ol_cnt 
+            //      << " c_id: " << newOrderTx->c_id << endl;
+            // cout << "order lines: ";
+            // for (auto i = 0; i < newOrderTx->o_ol_cnt; i++) {
+            //     cout << newOrderTx->orderLines[i].ol_i_id << " ";
+            // }
+            // cout << endl;
             
             // newOrder子事务
             Transaction::Ptr noAccess = std::make_shared<Transaction>(random);
@@ -544,7 +544,7 @@ class OrderStatusTransaction : public Transaction
                 }
 
                 orderStatusTx->c_id = c_ids[(c_ids.size() - 1) / 2];
-                cout << "now have orderStatusTx->c_id: " << orderStatusTx->c_id << endl;
+                // cout << "now have orderStatusTx->c_id: " << orderStatusTx->c_id << endl;
 
                 // 设置customer子事务执行时间
                 cAccess->setExecutionTime(TPCC::ConsumptionType::HIGH);

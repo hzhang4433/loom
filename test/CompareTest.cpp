@@ -13,10 +13,10 @@ TEST(CompareTest, TestRollback) {
     Transaction::Ptr tx;
     chrono::high_resolution_clock::time_point start, end;
 
-    workload.set_seed(uint64_t(140707099143341));
-    // cout << workload.get_seed() << endl;
+    // workload.set_seed(uint64_t(140707099143341));
+    cout << workload.get_seed() << endl;
 
-    for (int i = 0; i < 10; i++) {
+    for (int i = 0; i < 500; i++) {
         tx = workload.NextTransaction();
         // fabricPP执行
         start = chrono::high_resolution_clock::now();

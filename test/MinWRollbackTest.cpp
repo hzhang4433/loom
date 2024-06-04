@@ -389,13 +389,14 @@ TEST(MinWRollbackTest, TestOptCompare) {
     Transaction::Ptr tx;
 
     uint64_t seed = workload.get_seed();
+    // uint64_t seed = uint64_t(140708231432333);
     cout << "seed = " << seed << endl;
 
     for (int i = 0; i < 2; i++) {        
         MinWRollback minw;
         workload.set_seed(seed);
 
-        for (int i = 0; i < 50; i++) {
+        for (int i = 0; i < 500; i++) {
             tx = workload.NextTransaction();
             if (tx == nullptr) {
                 cout << "=== tx is nullptr ===" << endl;

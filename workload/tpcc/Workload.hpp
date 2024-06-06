@@ -42,8 +42,8 @@ class Workload {
             txGenerator->resetStatic();
             random.set_seed(seed);
             tx_random.set_seed(seed);
-            // txGenerator = std::make_shared<NewOrderTransaction>(tx_random);
-            // txGenerator->makeTransaction();
+            txGenerator = std::make_shared<NewOrderTransaction>(tx_random);
+            txGenerator->makeTransaction();
         }
 
     private:

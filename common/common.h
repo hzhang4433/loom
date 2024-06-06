@@ -10,6 +10,7 @@ enum class DependencyType {
 };
 
 enum class EdgeType {
+    NONE,
     IN,
     OUT,
     BOTH

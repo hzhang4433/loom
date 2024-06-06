@@ -18,9 +18,15 @@ class MinWRollback
 
         void execute(const Transaction::Ptr& tx, bool isNest = true);
 
-        void buildGraph(tbb::concurrent_unordered_set<Vertex::Ptr, Vertex::VertexHash>& vertices);
+        void build(tbb::concurrent_unordered_set<Vertex::Ptr, Vertex::VertexHash>& vertices);
 
-        void build();
+        void build2(tbb::concurrent_unordered_set<Vertex::Ptr, Vertex::VertexHash>& vertices);
+
+        void build(Vertex::Ptr& rootVertex);
+
+        void buildGraph();
+
+        void buildGraph2();
 
         void rollback(int mode);
 

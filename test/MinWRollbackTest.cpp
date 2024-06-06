@@ -1,5 +1,6 @@
 #include <gtest/gtest.h>
 #include <chrono>
+
 #include "protocol/minW/MinWRollback.h"
 #include "workload/tpcc/Workload.hpp"
 
@@ -250,7 +251,7 @@ TEST(MinWRollbackTest, TestPerformance) {
     }
     
     start = std::chrono::high_resolution_clock::now();
-    minw.build();
+    minw.buildGraph();
     end = std::chrono::high_resolution_clock::now();
     cout << "build time: " << chrono::duration_cast<chrono::milliseconds>(end - start).count() << "ms" << endl;
 
@@ -290,7 +291,7 @@ TEST(MinWRollbackTest, TestSCC) {
     }
 
     start = std::chrono::high_resolution_clock::now();
-    minw.build();
+    minw.buildGraph();
     end = std::chrono::high_resolution_clock::now();
     cout << "build time: " << chrono::duration_cast<chrono::milliseconds>(end - start).count() << "ms" << endl;
 
@@ -367,7 +368,7 @@ TEST(MinWRollbackTest, TestLoopPerformance) {
         }
         
         start = std::chrono::high_resolution_clock::now();
-        minw.build();
+        minw.buildGraph();
         end = std::chrono::high_resolution_clock::now();
         cout << "build time: " << chrono::duration_cast<chrono::milliseconds>(end - start).count() << "ms" << endl;
 
@@ -389,14 +390,16 @@ TEST(MinWRollbackTest, TestOptCompare) {
     Transaction::Ptr tx;
 
     uint64_t seed = workload.get_seed();
-    // uint64_t seed = uint64_t(140708231432333);
+    // uint64_t seed = uint64_t(140711476888349);
+    // 140716750994125: 50-8ms
+    // 140707595429853: 5-6ms
     cout << "seed = " << seed << endl;
 
     for (int i = 0; i < 2; i++) {        
         MinWRollback minw;
         workload.set_seed(seed);
 
-        for (int i = 0; i < 500; i++) {
+        for (int i = 0; i < 50; i++) {
             tx = workload.NextTransaction();
             if (tx == nullptr) {
                 cout << "=== tx is nullptr ===" << endl;
@@ -407,16 +410,61 @@ TEST(MinWRollbackTest, TestOptCompare) {
         cout << "transaction generate done" << endl;
         
         start = std::chrono::high_resolution_clock::now();
-        minw.build();
+        minw.buildGraph();
         end = std::chrono::high_resolution_clock::now();
-        cout << "build time: " << chrono::duration_cast<chrono::milliseconds>(end - start).count() << "ms" << endl;
+        cout << "build time: " << (double)chrono::duration_cast<chrono::microseconds>(end - start).count() / 1000 << "ms" << endl;
 
         cout << "mode: " << i << " rollback" << endl;
         start = std::chrono::high_resolution_clock::now();
         minw.rollback(i);
         end = std::chrono::high_resolution_clock::now();
-        cout << "rollback time: " << chrono::duration_cast<chrono::milliseconds>(end - start).count() << "ms" << endl;
+        cout << "rollback time: " << (double)chrono::duration_cast<chrono::microseconds>(end - start).count() / 1000 << "ms" << endl;
 
         minw.printRollbackTxs();
     }
+}
+
+TEST(MinWRollbackTest, TestBuildGraph) {
+    Workload workload;
+    chrono::high_resolution_clock::time_point start, end;
+    Transaction::Ptr tx;
+    int counter = 0;
+
+    for (int j = 0; j < 10; j++) {
+        MinWRollback minw1, minw2;
+        // 用当前时间设置随机种子
+        workload.set_seed(uint64_t(chrono::high_resolution_clock::now().time_since_epoch().count()));
+        uint64_t seed = workload.get_seed();
+        // uint64_t seed = uint64_t(140708231432333);
+        cout << "seed = " << seed << endl;
+
+        for (int i = 0; i < 100; i++) {
+            tx = workload.NextTransaction();
+            if (tx == nullptr) {
+                cout << "=== tx is nullptr ===" << endl;
+                continue;
+            }
+            minw1.execute(tx);
+            minw2.execute(tx);
+        }
+        cout << "transaction generate done" << endl;
+        
+        start = std::chrono::high_resolution_clock::now();
+        minw1.buildGraph();
+        end = std::chrono::high_resolution_clock::now();
+        auto build1 = chrono::duration_cast<chrono::milliseconds>(end - start).count();
+        cout << "build1 time: " << build1 << "ms" << endl;
+
+        start = std::chrono::high_resolution_clock::now();
+        minw2.buildGraph2();
+        end = std::chrono::high_resolution_clock::now();
+        auto build2 = chrono::duration_cast<chrono::milliseconds>(end - start).count();
+        cout << "build2 time: " << build2 << "ms" << endl;
+        cout << "gap: " << build1 - build2 << "ms" << endl;
+        if (build1 < build2) {
+            counter++;
+        }
+    }
+    
+    cout << "counter: " << counter << endl;
 }

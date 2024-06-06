@@ -48,7 +48,7 @@ TEST(CompareTest, TestRollback) {
 
     cout << "========================== MinW ==========================" << endl;
     start = chrono::high_resolution_clock::now();
-    minw.build();
+    minw.buildGraph();
     end = chrono::high_resolution_clock::now();
     cout << "MinW Build time: " << chrono::duration_cast<chrono::microseconds>(end - start).count() << "us" << endl;
     

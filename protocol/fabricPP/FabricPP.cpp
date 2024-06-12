@@ -10,7 +10,7 @@ void FabricPP::execute(const Transaction::Ptr& tx) {
     
     // 构建事务节点
     Vertex::Ptr rootVertex = make_shared<Vertex>(hyperVertex, txid, to_string(txid));
-    hyperVertex->buildVertexs(tx, rootVertex);
+    hyperVertex->buildVertexs(tx, rootVertex, m_invertedIndex);
     
     // 设置超节点状态
     // 添加回滚代价

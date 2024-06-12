@@ -4,6 +4,7 @@
 #include <tbb/concurrent_unordered_map.h>
 #include "Vertex.h"
 #include "workload/tpcc/Transaction.hpp"
+#include "protocol/common.h"
 
 using namespace std;
 
@@ -16,9 +17,9 @@ class HyperVertex : public std::enable_shared_from_this<HyperVertex>
 
         ~HyperVertex();
 
-        int buildVertexs(const Transaction::Ptr& tx, HyperVertex::Ptr& hyperVertex, Vertex::Ptr& vertex, string& txid);
+        int buildVertexs(const Transaction::Ptr& tx, HyperVertex::Ptr& hyperVertex, Vertex::Ptr& vertex, string& txid, tbb::concurrent_unordered_map<string, protocol::RWSets<Vertex::Ptr>>& invertedIndex);
 
-        void buildVertexs(const Transaction::Ptr& tx, Vertex::Ptr& vertex);
+        void buildVertexs(const Transaction::Ptr& tx, Vertex::Ptr& vertex, tbb::concurrent_unordered_map<string, protocol::RWSets<Vertex::Ptr>>& invertedIndex);
 
         void recognizeCascades(Vertex::Ptr vertex);
 

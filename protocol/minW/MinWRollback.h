@@ -100,6 +100,7 @@ class MinWRollback
 
         void printEdgeRollBack(HyperVertex::Ptr& hyperVertex, const tbb::concurrent_unordered_set<HyperVertex::Ptr, HyperVertex::HyperVertexHash>& scc);
 
+        
 
     public:
         // 测试标志
@@ -114,4 +115,6 @@ class MinWRollback
         tbb::concurrent_unordered_map<long long, tbb::concurrent_unordered_set<HyperVertex::Ptr, HyperVertex::HyperVertexHash>> m_min2HyperVertex;
         // 记录所有回滚事务
         tbb::concurrent_unordered_set<Vertex::Ptr, Vertex::VertexHash> m_rollbackTxs;
+        // 建立倒排索引
+        tbb::concurrent_unordered_map<string, protocol::RWSets<Vertex::Ptr>> m_invertedIndex;
 };

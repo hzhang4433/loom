@@ -388,16 +388,21 @@ TEST(MinWRollbackTest, TestOptCompare) {
     Workload workload;
     chrono::high_resolution_clock::time_point start, end;
     Transaction::Ptr tx;
+    Random random(time(0));
 
-    uint64_t seed = workload.get_seed();
+    uint64_t w_seed = workload.get_seed();
+    uint64_t r_seed = random.get_seed();
     // uint64_t seed = uint64_t(140711476888349);
     // 140716750994125: 50-8ms
     // 140707595429853: 5-6ms
-    cout << "seed = " << seed << endl;
+    cout << "w_seed = " << w_seed << endl;
+    cout << "r_seed = " << r_seed << endl;
 
     for (int i = 0; i < 2; i++) {        
         MinWRollback minw;
-        workload.set_seed(seed);
+        int nestCounter = 0;
+        workload.set_seed(w_seed);
+        random.set_seed(r_seed);
 
         for (int i = 0; i < 50; i++) {
             tx = workload.NextTransaction();
@@ -405,7 +410,16 @@ TEST(MinWRollbackTest, TestOptCompare) {
                 cout << "=== tx is nullptr ===" << endl;
                 continue;
             }
-            minw.execute(tx);
+            
+            // 控制嵌套交易比例
+            auto rnd = random.uniform_dist(1, 10);
+            // cout << "num: " << num << endl;
+            if (rnd <= 5) {
+                minw.execute(tx, false);
+            } else {
+                nestCounter++;
+                minw.execute(tx);
+            }
         }
         cout << "transaction generate done" << endl;
         
@@ -421,6 +435,7 @@ TEST(MinWRollbackTest, TestOptCompare) {
         cout << "rollback time: " << (double)chrono::duration_cast<chrono::microseconds>(end - start).count() / 1000 << "ms" << endl;
 
         minw.printRollbackTxs();
+        cout << "nestCounter: " << nestCounter << endl;
     }
 }
 
@@ -467,4 +482,31 @@ TEST(MinWRollbackTest, TestBuildGraph) {
     }
     
     cout << "counter: " << counter << endl;
+}
+
+TEST(MinWRollbackTest, TestBuildTime) {
+    Workload workload;
+    chrono::high_resolution_clock::time_point start, end;
+    Transaction::Ptr tx;
+    MinWRollback minw;
+        
+    uint64_t seed = workload.get_seed();
+    // uint64_t seed = uint64_t(140708231432333);
+    cout << "seed = " << seed << endl;
+
+    for (int i = 0; i < 100; i++) {
+        tx = workload.NextTransaction();
+        if (tx == nullptr) {
+            cout << "=== tx is nullptr ===" << endl;
+            continue;
+        }
+        minw.execute(tx);
+    }
+    cout << "transaction generate done" << endl;
+    
+    start = std::chrono::high_resolution_clock::now();
+    minw.buildGraph();
+    end = std::chrono::high_resolution_clock::now();
+    auto build = chrono::duration_cast<chrono::milliseconds>(end - start).count();
+    cout << "build time: " << build << "ms" << endl;
 }

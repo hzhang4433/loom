@@ -23,14 +23,14 @@ void MinWRollback::execute(const Transaction::Ptr& tx, bool isNest) {
     string txid_str = to_string(txid);
     
     if (isNest) {
-        hyperVertex->buildVertexs(tx, hyperVertex, rootVertex, txid_str);
+        hyperVertex->buildVertexs(tx, hyperVertex, rootVertex, txid_str, m_invertedIndex);
         // 记录超节点包含的所有节点
         hyperVertex->m_vertices = rootVertex->cascadeVertices;
         // 根据子节点依赖更新回滚代价和级联子事务
         hyperVertex->m_rootVertex = rootVertex;
         hyperVertex->recognizeCascades(rootVertex);
     } else {
-        hyperVertex->buildVertexs(tx, rootVertex);
+        hyperVertex->buildVertexs(tx, rootVertex, m_invertedIndex);
         // 添加回滚代价
         rootVertex->m_cost = rootVertex->m_self_cost;
 
@@ -181,79 +181,6 @@ void MinWRollback::build(tbb::concurrent_unordered_set<Vertex::Ptr, Vertex::Vert
 
 void MinWRollback::build2(tbb::concurrent_unordered_set<Vertex::Ptr, Vertex::VertexHash>& vertices) {
     
-    for (auto& newV: vertices) {
-        for (auto& oldV: m_vertices) {
-            // 获取超节点
-            auto& newHyperVertex = newV->m_hyperVertex;
-            auto& oldHyperVertex = oldV->m_hyperVertex;
-            // 存在rw依赖
-            if (protocol::hasConflict(newV->readSet, oldV->writeSet)) {
-                // newV新增一条出边 -- 考虑不用加了
-                newV->m_out_edges.insert(oldV);
-                
-                // 更新newV对应的hyperVertex的out_edges -- 考虑使用第一个
-                // newHyperVertex->m_out_edges[oldHyperVertex][newV].insert(oldV);
-                handleNewEdge(newV, oldV, newHyperVertex->m_out_edges[oldHyperVertex]);
-
-                // 更新依赖数
-                newV->m_degree++;
-
-                // 尝试更新newV对应的hyperVertex的min_out
-                int min_out = min(oldHyperVertex->m_min_out, oldV->m_hyperId);
-                if (min_out < newHyperVertex->m_min_out) {
-                    recursiveUpdate(newHyperVertex, min_out, minw::EdgeType::OUT);
-                }
-
-                // oldV新增一条入边
-                oldV->m_in_edges.insert(newV);
-
-                // 更新oldV对应的hyperVertex的in_edges
-                // oldHyperVertex->m_in_edges[newHyperVertex][oldV].insert(newV);
-                handleNewEdge(oldV, newV, oldHyperVertex->m_in_edges[newHyperVertex]);
-
-                // 更新依赖数
-                oldV->m_degree++;
-
-                // 尝试更新oldV对应的hyperVertex的min_in
-                int min_in = min(newHyperVertex->m_min_in, newV->m_hyperId);
-                if (min_in < oldHyperVertex->m_min_in) {
-                    recursiveUpdate(oldHyperVertex, min_in, minw::EdgeType::IN);
-                }
-            }
-            // 存在wr依赖
-            if (protocol::hasConflict(newV->writeSet, oldV->readSet)) {
-                // newV新增一条入边
-                newV->m_in_edges.insert(oldV);
-
-                // 更新newV对应的hyperVertex的in_edges
-                // newHyperVertex->m_in_edges[oldHyperVertex][newV].insert(oldV);
-                handleNewEdge(newV, oldV, newHyperVertex->m_in_edges[oldHyperVertex]);
-
-                // 更新依赖数
-                newV->m_degree++;
-                // 尝试更新newV对应的hyperVertex的min_in
-                int min_in = min(oldHyperVertex->m_min_in, oldV->m_hyperId);
-                if (min_in < newHyperVertex->m_min_in) {
-                    recursiveUpdate(newHyperVertex, min_in, minw::EdgeType::IN);
-                }
-
-                // oldV新增一条出边                
-                oldV->m_out_edges.insert(newV);
-
-                // 更新oldV对应的hyperVertex的out_edges
-                // oldHyperVertex->m_out_edges[newHyperVertex][oldV].insert(newV);
-                handleNewEdge(oldV, newV, oldHyperVertex->m_out_edges[newHyperVertex]);
-
-                // 更新依赖数
-                oldV->m_degree++;
-                // 尝试更新oldV对应的hyperVertex的min_out
-                int min_out = min(newHyperVertex->m_min_out, newV->m_hyperId);
-                if (min_out < oldHyperVertex->m_min_out) {
-                    recursiveUpdate(oldHyperVertex, min_out, minw::EdgeType::OUT);
-                }
-            }
-        }
-    }
 }
 
 /* 构图算法：遍历超节点

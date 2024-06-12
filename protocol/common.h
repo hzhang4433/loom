@@ -2,6 +2,7 @@
 
 #include <tbb/tbb.h>
 #include <atomic>
+#include <unordered_set>
 
 namespace protocol {
 
@@ -124,4 +125,10 @@ namespace protocol {
         });
         return diff;
     }
+
+    template<typename T>
+    struct RWSets {
+        std::unordered_set<T> readSet;
+        std::unordered_set<T> writeSet;
+    };
 }

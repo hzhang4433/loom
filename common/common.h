@@ -16,7 +16,6 @@ enum class EdgeType {
     BOTH
 };
 
-
 static std::string edgeTypeToString(minw::EdgeType type) {
     switch (type) {
         case minw::EdgeType::IN:

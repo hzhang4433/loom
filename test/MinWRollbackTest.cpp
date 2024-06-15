@@ -490,8 +490,9 @@ TEST(MinWRollbackTest, TestBuildTime) {
     Transaction::Ptr tx;
     MinWRollback minw;
         
-    uint64_t seed = workload.get_seed();
-    // uint64_t seed = uint64_t(140708231432333);
+    // uint64_t seed = workload.get_seed();
+    uint64_t seed = uint64_t(140708984311565);
+    workload.set_seed(seed);
     cout << "seed = " << seed << endl;
 
     for (int i = 0; i < 100; i++) {
@@ -500,7 +501,10 @@ TEST(MinWRollbackTest, TestBuildTime) {
             cout << "=== tx is nullptr ===" << endl;
             continue;
         }
+        // start = std::chrono::high_resolution_clock::now();
         minw.execute(tx);
+        // end = std::chrono::high_resolution_clock::now();
+        // cout << "execute time: " << chrono::duration_cast<chrono::microseconds>(end - start).count() << "us" << endl;
     }
     cout << "transaction generate done" << endl;
     
@@ -508,5 +512,13 @@ TEST(MinWRollbackTest, TestBuildTime) {
     minw.buildGraph();
     end = std::chrono::high_resolution_clock::now();
     auto build = chrono::duration_cast<chrono::milliseconds>(end - start).count();
-    cout << "build time: " << build << "ms" << endl;
+    cout << "normal build time: " << build << "ms "
+         << "edgecounter: " << minw.edgeCounter << endl;
+
+    start = std::chrono::high_resolution_clock::now();
+    minw.buildGraph2();
+    end = std::chrono::high_resolution_clock::now();
+    auto build2 = chrono::duration_cast<chrono::milliseconds>(end - start).count();
+    cout << "index build time: " << build2 << "ms "
+         << "edgecounter: " << minw.edgeCounter << endl;
 }

@@ -5,12 +5,17 @@
 /* 负载类：生成已经转化为嵌套事务形式的五种TPC-C事务 */ 
 class Workload {
     public:
-        Workload() : random(reinterpret_cast<uint64_t>(this)), tx_random(reinterpret_cast<uint64_t>(this)){}
+        Workload() : random(reinterpret_cast<uint64_t>(this)), tx_random(reinterpret_cast<uint64_t>(this)){
+            // 重置静态变量的值
+            txGenerator->resetStatic();
+            txGenerator = std::make_shared<NewOrderTransaction>(tx_random);
+            txGenerator->makeTransaction();
+        }
         
         Workload(uint64_t seed) : random(seed), tx_random(seed) {
             // 重置静态变量的值
             txGenerator->resetStatic();
-            txGenerator = std::make_shared<NewOrderTransaction>(random);
+            txGenerator = std::make_shared<NewOrderTransaction>(tx_random);
             txGenerator->makeTransaction();
         };
         

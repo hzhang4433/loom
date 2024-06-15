@@ -20,7 +20,7 @@ class MinWRollback
 
         void build(tbb::concurrent_unordered_set<Vertex::Ptr, Vertex::VertexHash>& vertices);
 
-        void build2(tbb::concurrent_unordered_set<Vertex::Ptr, Vertex::VertexHash>& vertices);
+        void build2(Vertex::Ptr &rTx, Vertex::Ptr &wTx);
 
         void build(Vertex::Ptr& rootVertex);
 
@@ -104,7 +104,10 @@ class MinWRollback
 
     public:
         // 测试标志
-        bool testFlag = true;   
+        bool testFlag = true;
+        // 统计加边次数
+        int edgeCounter = 0;
+        
         // 分配事务ID
         std::atomic<int> id_counter;   
         // 超图中所有事务节点

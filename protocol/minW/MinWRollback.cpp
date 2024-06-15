@@ -59,14 +59,16 @@ void MinWRollback::execute(const Transaction::Ptr& tx, bool isNest) {
 /* 构建超图
 */
 void MinWRollback::buildGraph() {
+    edgeCounter = 0;
+
     for (auto& hyperVertex : m_hyperVertices) {
         auto rootVertex = hyperVertex->m_rootVertex;
         // cout << "tx" << hyperVertex->m_hyperId << " start build, m_vertices size: " << m_vertices.size() 
         //      << " cascadeVertices size: " << rootVertex->cascadeVertices.size() << endl;
         
-        auto start = std::chrono::high_resolution_clock::now();
+        // auto start = std::chrono::high_resolution_clock::now();
         build(rootVertex->cascadeVertices);
-        auto end = std::chrono::high_resolution_clock::now();
+        // auto end = std::chrono::high_resolution_clock::now();
        
         // 记录节点
         m_vertices.insert(rootVertex->cascadeVertices.begin(), rootVertex->cascadeVertices.end());
@@ -77,22 +79,32 @@ void MinWRollback::buildGraph() {
     return;
 }
 
-void MinWRollback::buildGraph2() {
-    for (auto& hyperVertex : m_hyperVertices) {
-        auto rootVertex = hyperVertex->m_rootVertex;
-        // cout << "tx" << hyperVertex->m_hyperId << " start build, m_vertices size: " << m_vertices.size() 
-        //      << " cascadeVertices size: " << rootVertex->cascadeVertices.size() << endl;
-        
-        auto start = std::chrono::high_resolution_clock::now();
-        build2(rootVertex->cascadeVertices);
-        auto end = std::chrono::high_resolution_clock::now();
-       
-        // 记录节点
-        m_vertices.insert(rootVertex->cascadeVertices.begin(), rootVertex->cascadeVertices.end());
-        
-        // cout <<" build time: " << chrono::duration_cast<chrono::microseconds>(end - start).count() << "us" << endl;
-    }
+/* 倒排索引构建超图
 
+*/
+void MinWRollback::buildGraph2() {
+    edgeCounter = 0;
+
+    // 遍历倒排索引
+    for (auto& kv : m_invertedIndex) {
+        auto& readTxs = kv.second.readSet;
+        auto& writeTxs = kv.second.writeSet;
+        // 遍历读集
+        for (auto rTx : readTxs) {
+            // cout << "vertex: " << vertex->m_id << endl;
+            // 遍历读集
+            for (auto wTx : writeTxs) {
+                if (rTx == wTx) {
+                    continue;
+                }
+                // 构建超图
+                // auto start = std::chrono::high_resolution_clock::now();
+                build2(rTx, wTx);
+                // auto end = std::chrono::high_resolution_clock::now();
+                // cout << "build time: " << chrono::duration_cast<chrono::microseconds>(end - start).count() << "us" << endl;
+            }
+        }
+    }
     return;
 }
 
@@ -123,64 +135,100 @@ void MinWRollback::build(tbb::concurrent_unordered_set<Vertex::Ptr, Vertex::Vert
             auto& oldHyperVertex = oldV->m_hyperVertex;
             // 存在rw依赖
             if (protocol::hasConflict(newV->readSet, oldV->writeSet)) {
-                // 更新newV对应的hyperVertex的out_edges
-                handleNewEdge(newV, oldV, newHyperVertex->m_out_edges[oldHyperVertex]);
-                // 更新依赖数
-                newV->m_degree++;
-                // 尝试更新newV对应的hyperVertex的min_out
-                int min_out = min(oldHyperVertex->m_min_out, oldV->m_hyperId);
-                if (min_out < newHyperVertex->m_min_out) {
-                    recursiveUpdate(newHyperVertex, min_out, minw::EdgeType::OUT);
-                }
-                // 更新回滚集合
-                newHyperVertex->m_out_rollback[oldHyperVertex].insert(newV->cascadeVertices.cbegin(), newV->cascadeVertices.cend());
+                edgeCounter++;
+                
+                // // 更新newV对应的hyperVertex的out_edges
+                // handleNewEdge(newV, oldV, newHyperVertex->m_out_edges[oldHyperVertex]);
+                // // 更新依赖数
+                // newV->m_degree++;
+                // // 尝试更新newV对应的hyperVertex的min_out
+                // int min_out = min(oldHyperVertex->m_min_out, oldV->m_hyperId);
+                // if (min_out < newHyperVertex->m_min_out) {
+                //     recursiveUpdate(newHyperVertex, min_out, minw::EdgeType::OUT);
+                // }
+                // // 更新回滚集合
+                // newHyperVertex->m_out_rollback[oldHyperVertex].insert(newV->cascadeVertices.cbegin(), newV->cascadeVertices.cend());
 
 
-                // 更新oldV对应的hyperVertex的in_edges
-                handleNewEdge(oldV, newV, oldHyperVertex->m_in_edges[newHyperVertex]);
-                // 更新依赖数
-                oldV->m_degree++;
-                // 尝试更新oldV对应的hyperVertex的min_in
-                int min_in = min(newHyperVertex->m_min_in, newV->m_hyperId);
-                if (min_in < oldHyperVertex->m_min_in) {
-                    recursiveUpdate(oldHyperVertex, min_in, minw::EdgeType::IN);
-                }
-                // 更新回滚集合
-                oldHyperVertex->m_in_allRB.insert(newV->cascadeVertices.cbegin(), newV->cascadeVertices.cend());
+                // // 更新oldV对应的hyperVertex的in_edges
+                // handleNewEdge(oldV, newV, oldHyperVertex->m_in_edges[newHyperVertex]);
+                // // 更新依赖数
+                // oldV->m_degree++;
+                // // 尝试更新oldV对应的hyperVertex的min_in
+                // int min_in = min(newHyperVertex->m_min_in, newV->m_hyperId);
+                // if (min_in < oldHyperVertex->m_min_in) {
+                //     recursiveUpdate(oldHyperVertex, min_in, minw::EdgeType::IN);
+                // }
+                // // 更新回滚集合
+                // oldHyperVertex->m_in_allRB.insert(newV->cascadeVertices.cbegin(), newV->cascadeVertices.cend());
             }
             // 存在wr依赖
             if (protocol::hasConflict(newV->writeSet, oldV->readSet)) {
-                // 更新newV对应的hyperVertex的in_edges
-                handleNewEdge(newV, oldV, newHyperVertex->m_in_edges[oldHyperVertex]);
-                // 更新依赖数
-                newV->m_degree++;
-                // 尝试更新newV对应的hyperVertex的min_in
-                int min_in = min(oldHyperVertex->m_min_in, oldV->m_hyperId);
-                if (min_in < newHyperVertex->m_min_in) {
-                    recursiveUpdate(newHyperVertex, min_in, minw::EdgeType::IN);
-                }
-                // 更新回滚集合
-                newHyperVertex->m_in_allRB.insert(oldV->cascadeVertices.cbegin(), oldV->cascadeVertices.cend());
+                edgeCounter++;
+
+                // // 更新newV对应的hyperVertex的in_edges
+                // handleNewEdge(newV, oldV, newHyperVertex->m_in_edges[oldHyperVertex]);
+                // // 更新依赖数
+                // newV->m_degree++;
+                // // 尝试更新newV对应的hyperVertex的min_in
+                // int min_in = min(oldHyperVertex->m_min_in, oldV->m_hyperId);
+                // if (min_in < newHyperVertex->m_min_in) {
+                //     recursiveUpdate(newHyperVertex, min_in, minw::EdgeType::IN);
+                // }
+                // // 更新回滚集合
+                // newHyperVertex->m_in_allRB.insert(oldV->cascadeVertices.cbegin(), oldV->cascadeVertices.cend());
 
 
-                // 更新oldV对应的hyperVertex的out_edges
-                handleNewEdge(oldV, newV, oldHyperVertex->m_out_edges[newHyperVertex]);
-                // 更新依赖数
-                oldV->m_degree++;
-                // 尝试更新oldV对应的hyperVertex的min_out
-                int min_out = min(newHyperVertex->m_min_out, newV->m_hyperId);
-                if (min_out < oldHyperVertex->m_min_out) {
-                    recursiveUpdate(oldHyperVertex, min_out, minw::EdgeType::OUT);
-                }
-                // 更新回滚集合
-                oldHyperVertex->m_out_rollback[newHyperVertex].insert(oldV->cascadeVertices.cbegin(), oldV->cascadeVertices.cend());
+                // // 更新oldV对应的hyperVertex的out_edges
+                // handleNewEdge(oldV, newV, oldHyperVertex->m_out_edges[newHyperVertex]);
+                // // 更新依赖数
+                // oldV->m_degree++;
+                // // 尝试更新oldV对应的hyperVertex的min_out
+                // int min_out = min(newHyperVertex->m_min_out, newV->m_hyperId);
+                // if (min_out < oldHyperVertex->m_min_out) {
+                //     recursiveUpdate(oldHyperVertex, min_out, minw::EdgeType::OUT);
+                // }
+                // // 更新回滚集合
+                // oldHyperVertex->m_out_rollback[newHyperVertex].insert(oldV->cascadeVertices.cbegin(), oldV->cascadeVertices.cend());
             }
         }
     }
 }
 
-void MinWRollback::build2(tbb::concurrent_unordered_set<Vertex::Ptr, Vertex::VertexHash>& vertices) {
-    
+void MinWRollback::build2(Vertex::Ptr &rTx, Vertex::Ptr &wTx) {
+    // 获取超节点
+    auto& rHyperVertex = rTx->m_hyperVertex;
+    auto& wHyperVertex = wTx->m_hyperVertex;
+
+    edgeCounter++;
+
+    // // 更新newV对应的hyperVertex的out_edges
+    // handleNewEdge(rTx, wTx, rTx->m_hyperVertex->m_out_edges[wTx->m_hyperVertex]);
+    // 更新依赖数
+    rTx->m_degree++;
+    // 尝试更新newV对应的hyperVertex的min_out
+    int min_out = min(wHyperVertex->m_min_out, wTx->m_hyperId);
+    if (min_out < rHyperVertex->m_min_out) {
+        recursiveUpdate(rHyperVertex, min_out, minw::EdgeType::OUT);
+    }
+    // // 更新回滚集合
+    // rHyperVertex->m_out_rollback[wHyperVertex].insert(rTx->cascadeVertices.cbegin(), rTx->cascadeVertices.cend());
+    unordered_set<Vertex::Ptr, Vertex::VertexHash> test1;
+    test1.insert(rTx->cascadeVertices.cbegin(), rTx->cascadeVertices.cend());
+
+
+    // // 更新oldV对应的hyperVertex的in_edges
+    // handleNewEdge(wTx, rTx, wHyperVertex->m_in_edges[rHyperVertex]);
+    // 更新依赖数
+    wTx->m_degree++;
+    // 尝试更新oldV对应的hyperVertex的min_in
+    int min_in = min(rHyperVertex->m_min_in, rTx->m_hyperId);
+    if (min_in < wHyperVertex->m_min_in) {
+        recursiveUpdate(wHyperVertex, min_in, minw::EdgeType::IN);
+    }
+    // // 更新回滚集合
+    // wHyperVertex->m_in_allRB.insert(rTx->cascadeVertices.cbegin(), rTx->cascadeVertices.cend());
+
 }
 
 /* 构图算法：遍历超节点

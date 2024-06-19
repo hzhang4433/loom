@@ -8,6 +8,15 @@ HyperVertex::HyperVertex(int id) {
     this->m_hyperId = id;
     this->m_min_in = INT_MAX;
     this->m_min_out = INT_MAX;
+    m_out_edges.resize(minw::BLOCK_SIZE + 1);
+    m_in_edges.resize(minw::BLOCK_SIZE + 1);
+    m_out_rollback.resize(minw::BLOCK_SIZE + 1);
+    m_in_rollback.resize(minw::BLOCK_SIZE + 1);
+
+    m_out_mapS.resize(minw::BLOCK_SIZE + 1);
+    m_in_mapS.resize(minw::BLOCK_SIZE + 1);
+    m_out_rollbackMS.resize(minw::BLOCK_SIZE + 1);
+    m_in_rollbackMS.resize(minw::BLOCK_SIZE + 1);
 }
 
 HyperVertex::~HyperVertex() {}
@@ -57,13 +66,31 @@ int HyperVertex::buildVertexs(const Transaction::Ptr& tx, HyperVertex::Ptr& hype
     // 添加读写集
     vertex->readSet = tx->getReadRows();
     vertex->writeSet = tx->getUpdateRows();
-
+    auto hv = vertex->m_hyperVertex;
     // 构建倒排索引
     for (auto& readKey : vertex->readSet) {
         invertedIndex[readKey].readSet.insert(vertex);
+        // // 构建map的key
+        // for (auto& writeV : invertedIndex[readKey].writeSet) {
+        //     auto whv = writeV->m_hyperVertex;
+        //     if (whv != hv) {
+        //         hv->m_out_edges[whv];
+        //         whv->m_in_edges[hv];
+        //         hv->m_out_rollback[whv];
+        //     }
+        // }
     }
     for (auto& writeKey : vertex->writeSet) {
         invertedIndex[writeKey].writeSet.insert(vertex);
+        // // 构建map的key
+        // for (auto& readV : invertedIndex[writeKey].readSet) {
+        //     auto rhv = readV->m_hyperVertex;
+        //     if (rhv != hv) {
+        //         rhv->m_out_edges[hv];
+        //         hv->m_in_edges[rhv];
+        //         rhv->m_out_rollback[hv];
+        //     }
+        // }
     }
 
     // 添加回滚代价

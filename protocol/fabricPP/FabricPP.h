@@ -1,6 +1,7 @@
 #pragma once
 
 #include <stack>
+#include <set>
 #include <atomic>
 #include "common/HyperVertex.h"
 
@@ -18,13 +19,13 @@ class FabricPP {
 
         bool Tarjan(tbb::concurrent_unordered_set<Vertex::Ptr, Vertex::VertexHash>& vertices, vector<tbb::concurrent_unordered_set<Vertex::Ptr, Vertex::VertexHash>>& sccs);
 
-        void strongConnect(Vertex::Ptr& v, int& index, stack<Vertex::Ptr>& s, unordered_map<Vertex::Ptr, int>& indexMap,
+        void strongConnect(const Vertex::Ptr& v, int& index, stack<Vertex::Ptr>& s, unordered_map<Vertex::Ptr, int>& indexMap,
                            unordered_map<Vertex::Ptr, int>& lowLinkMap, unordered_map<Vertex::Ptr, bool>& onStackMap,
                            vector<tbb::concurrent_unordered_set<Vertex::Ptr, Vertex::VertexHash>>& components);
         
         void Johnson(tbb::concurrent_unordered_set<Vertex::Ptr, Vertex::VertexHash>& scc, vector<set<Vertex::Ptr, Vertex::VertexCompare>>& cycles);
         
-        void findCycles(Vertex::Ptr& start, Vertex::Ptr& v, vector<Vertex::Ptr>& stack, tbb::concurrent_unordered_map<Vertex::Ptr, bool, Vertex::VertexHash>& blockedMap, tbb::concurrent_unordered_map<Vertex::Ptr, tbb::concurrent_unordered_set<Vertex::Ptr, Vertex::VertexHash>, Vertex::VertexHash>& blockedSet, vector<set<Vertex::Ptr, Vertex::VertexCompare>>& cycles, const tbb::concurrent_unordered_set<Vertex::Ptr, Vertex::VertexHash>& scc);
+        void findCycles(Vertex::Ptr& start, const Vertex::Ptr& v, vector<Vertex::Ptr>& stack, tbb::concurrent_unordered_map<Vertex::Ptr, bool, Vertex::VertexHash>& blockedMap, tbb::concurrent_unordered_map<Vertex::Ptr, tbb::concurrent_unordered_set<Vertex::Ptr, Vertex::VertexHash>, Vertex::VertexHash>& blockedSet, vector<set<Vertex::Ptr, Vertex::VertexCompare>>& cycles, const tbb::concurrent_unordered_set<Vertex::Ptr, Vertex::VertexHash>& scc);
 
         void unblock(Vertex::Ptr& v, tbb::concurrent_unordered_map<Vertex::Ptr, bool, Vertex::VertexHash>& blockedMap, tbb::concurrent_unordered_map<Vertex::Ptr, tbb::concurrent_unordered_set<Vertex::Ptr, Vertex::VertexHash>, Vertex::VertexHash>& blockedSet);
 

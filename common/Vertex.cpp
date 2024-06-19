@@ -10,7 +10,7 @@ Vertex::Vertex(shared_ptr<HyperVertex> hyperVertex, int hyperId, string id, bool
 
 Vertex::~Vertex() {}
 
-const tbb::concurrent_unordered_set<Vertex::ChildVertex, Vertex::ChildVertexHash, Vertex::ChildVertexEqual>& Vertex::getChildren() const { 
+const unordered_set<Vertex::ChildVertex, Vertex::ChildVertexHash, Vertex::ChildVertexEqual>& Vertex::getChildren() const { 
     return m_children; 
 }
 

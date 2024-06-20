@@ -58,9 +58,33 @@ namespace protocol {
         */ 
     }
 
+    template <typename T>
+    bool hasConflict(std::unordered_set<T>& set1, std::unordered_set<T>& set2) {
+        for (auto item : set2) {
+            if (set1.find(item) != set1.end()) {
+                return true;
+            }
+        }
+        return false;
+    }
+
     // 判断set1是否包含set2
     template <typename T, typename Hash>
     bool hasContain(const tbb::concurrent_unordered_set<T, Hash>& set1, const tbb::concurrent_unordered_set<T, Hash>& set2) {
+        if (set1.size() < set2.size()) {
+            return false;
+        }
+
+        for (const auto& item : set2) {
+            if (set1.find(item) == set1.end()) {
+                return false;
+            }
+        }
+        return true;
+    }
+
+    template <typename T, typename Hash>
+    bool hasContain(const tbb::concurrent_unordered_set<T, Hash>& set1, const std::unordered_set<T, Hash>& set2) {
         if (set1.size() < set2.size()) {
             return false;
         }

@@ -29,4 +29,7 @@ static std::string edgeTypeToString(minw::EdgeType type) {
     }
 }
 
+// 定义区块大小
+static size_t BLOCK_SIZE = 100;
+
 }

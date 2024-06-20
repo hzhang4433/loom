@@ -1,16 +1,51 @@
 #include "ThreadPool.h"
+#include <pthread.h>
+#include <sstream>
+#include <iostream>
 
-// 构造函数，创建指定数量的线程并让它们等待任务
-ThreadPool::ThreadPool(size_t threadNum) : stop(false) {
+void ThreadPool::PinRoundRobin(std::thread& thread, unsigned rotate_id) {
+    auto core_id = rotate_id % std::thread::hardware_concurrency(); // 获取核心ID
+    cpu_set_t cpu_set;
+    CPU_ZERO(&cpu_set);
+    CPU_SET(core_id, &cpu_set);
+    auto rc = pthread_setaffinity_np(
+        thread.native_handle(),   // 获取线程的本地句柄
+        sizeof(cpu_set_t), &cpu_set
+    );
+    if (rc != 0) {
+        std::stringstream ss;
+        ss << "cannot pin thread-" << thread.get_id()
+           << " to core " << core_id;
+        throw std::runtime_error(ss.str());
+    }
+}
+
+void ThreadPool::PinRoundRobin(pthread_t& thread, unsigned rotate_id) {
+    auto core_id = rotate_id % std::thread::hardware_concurrency(); // 获取核心ID
+    cpu_set_t cpu_set;
+    CPU_ZERO(&cpu_set);
+    CPU_SET(core_id, &cpu_set);
+    auto rc = pthread_setaffinity_np(
+        thread,   // 获取线程的本地句柄
+        sizeof(cpu_set_t), &cpu_set
+    );
+    if (rc != 0) {
+        std::stringstream ss;
+        ss << "cannot pin thread to core" << core_id;
+        throw std::runtime_error(ss.str());
+    }
+}
+
+/* 构造函数，创建指定数量的线程并让它们等待任务 - orig */
+ThreadPool::ThreadPool(size_t threadNum) : stop(false), threadDurations(threadNum), threadNum(threadNum), taskCounts(threadNum, 0) {
     // 创建指定数量的线程
-    for(size_t i = 0; i < threadNum; ++i)
+    for(size_t i = 0; i < threadNum; ++i) {
         // 将新创建的线程添加到线程池中
         workers.emplace_back(
-            [this] {
+            [this, i] {
                 for(;;) { // 每个线程会无限循环这个函数，直到线程被停止
                     // 用于存储要从任务队列中取出的任务
                     std::function<void()> task;
-
                     {
                         // 锁住任务队列
                         std::unique_lock<std::mutex> lock(this->queue_mutex);
@@ -25,10 +60,17 @@ ThreadPool::ThreadPool(size_t threadNum) : stop(false) {
                         this->tasks.pop();
                     }
                     // 执行任务
+                    auto start = std::chrono::high_resolution_clock::now();
                     task();
+                    auto end = std::chrono::high_resolution_clock::now();
+                    threadDurations[i] += std::chrono::duration_cast<std::chrono::microseconds>(end - start);
+                    taskCounts[i] += 1; // 更新任务计数
                 }
             }
         );
+        // 绑定线程到核心
+        PinRoundRobin(workers.back(), i);
+    }
 }
 
 // 析构函数，停止所有线程并等待它们完成任务
@@ -63,4 +105,16 @@ std::future<void> ThreadPool::enqueue(std::function<void()> task) {
     // 唤醒一个等待的线程
     condition.notify_one();
     return future;
+}
+
+const std::vector<std::chrono::microseconds>& ThreadPool::getThreadDurations() const {
+    return threadDurations;
+}
+
+const int ThreadPool::getThreadNum() const {
+    return threadNum;
+}
+
+const std::vector<size_t>& ThreadPool::getTaskCounts() const {
+    return taskCounts;
 }

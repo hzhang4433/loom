@@ -1,10 +1,13 @@
 #include <gtest/gtest.h>
 #include <chrono>
+#include "thread/ThreadPool.h"
 
 #include "protocol/minW/MinWRollback.h"
 #include "workload/tpcc/Workload.hpp"
+#include "utils/ThreadPool/UThreadPool.h"
 
 using namespace std;
+using namespace CGraph;
 
 void simulateRow(Transaction::Ptr tx, string txid) {
     tx->addReadRow(txid + "4");
@@ -305,7 +308,7 @@ TEST(MinWRollbackTest, TestSCC) {
             continue;
         }
 
-        vector<tbb::concurrent_unordered_set<HyperVertex::Ptr, HyperVertex::HyperVertexHash>> sccs;
+        vector<unordered_set<HyperVertex::Ptr, HyperVertex::HyperVertexHash>> sccs;
         if (!minw.recognizeSCC(hyperVertexs.second, sccs)) {
             cout << "这个不行" << endl;
             continue;
@@ -323,12 +326,12 @@ TEST(MinWRollbackTest, TestSCC) {
             for (auto hv : scc) {
                 cout << "hyperId: " << hv->m_hyperId << endl;
                 cout << "outEdges: ";
-                for (auto edge : hv->m_out_edges) {
-                    cout << edge.first->m_hyperId << " ";
+                for (auto outhv : hv->m_out_hv) {
+                    cout << outhv->m_hyperId << " ";
                 }
                 cout << endl << "inEdges: ";
-                for (auto edge: hv->m_in_edges) {
-                    cout << edge.first->m_hyperId << " ";
+                for (auto inhv: hv->m_in_hv) {
+                    cout << inhv->m_hyperId << " ";
                 }
                 cout << endl;
             }
@@ -411,15 +414,17 @@ TEST(MinWRollbackTest, TestOptCompare) {
                 continue;
             }
             
-            // 控制嵌套交易比例
-            auto rnd = random.uniform_dist(1, 10);
-            // cout << "num: " << num << endl;
-            if (rnd <= 5) {
-                minw.execute(tx, false);
-            } else {
-                nestCounter++;
-                minw.execute(tx);
-            }
+            // // 控制嵌套交易比例
+            // auto rnd = random.uniform_dist(1, 10);
+            // // cout << "num: " << num << endl;
+            // if (rnd <= 5) {
+            //     minw.execute(tx, false);
+            // } else {
+            //     nestCounter++;
+            //     minw.execute(tx);
+            // }
+
+            minw.execute(tx);
         }
         cout << "transaction generate done" << endl;
         
@@ -508,17 +513,167 @@ TEST(MinWRollbackTest, TestBuildTime) {
     }
     cout << "transaction generate done" << endl;
     
-    start = std::chrono::high_resolution_clock::now();
-    minw.buildGraph();
-    end = std::chrono::high_resolution_clock::now();
-    auto build = chrono::duration_cast<chrono::milliseconds>(end - start).count();
-    cout << "normal build time: " << build << "ms "
-         << "edgecounter: " << minw.edgeCounter << endl;
+    // start = std::chrono::high_resolution_clock::now();
+    // minw.buildGraph();
+    // end = std::chrono::high_resolution_clock::now();
+    // auto build = chrono::duration_cast<chrono::microseconds>(end - start).count();
+    // cout << "normal build time: " << (double)build / 1000 << "ms "
+    //      << "edgecounter: " << minw.edgeCounter << endl;
 
     start = std::chrono::high_resolution_clock::now();
     minw.buildGraph2();
     end = std::chrono::high_resolution_clock::now();
-    auto build2 = chrono::duration_cast<chrono::milliseconds>(end - start).count();
-    cout << "index build time: " << build2 << "ms "
+    auto build2 = chrono::duration_cast<chrono::microseconds>(end - start).count();
+    cout << "index build time: " << (double)build2 / 1000 << "ms "
          << "edgecounter: " << minw.edgeCounter << endl;
+}
+
+TEST(MinWRollbackTest, TestConcurrentBuild) {
+    Workload workload;
+    chrono::high_resolution_clock::time_point start, end;
+    Transaction::Ptr tx;
+    MinWRollback minw1, minw2;
+    Random random(time(0));
+    // Random random(140708984311565);
+    int nestCounter = 0;
+        
+    uint64_t seed = workload.get_seed();
+    // uint64_t seed = uint64_t(140711110005613);
+    workload.set_seed(seed);
+    cout << "seed = " << seed << endl;
+
+    for (int i = 0; i < minw::BLOCK_SIZE; i++) {
+        tx = workload.NextTransaction();
+        if (tx == nullptr) {
+            cout << "=== tx is nullptr ===" << endl;
+            continue;
+        }
+        // // 控制嵌套交易比例
+        // auto rnd = random.uniform_dist(1, 100);
+        // if (rnd <= 55) {
+        //     minw1.execute(tx, false);
+        //     minw2.execute(tx, false);
+        // } else {
+        //     nestCounter++;
+        //     minw1.execute(tx);
+        //     minw2.execute(tx);
+        // }
+
+        if (nestCounter < minw::BLOCK_SIZE * 0.55) {
+            minw1.execute(tx, false);
+            minw2.execute(tx, false);
+            nestCounter++;
+        } else {
+            minw1.execute(tx);
+            minw2.execute(tx);
+        }
+
+        // minw1.execute(tx, false);
+        // minw2.execute(tx, false);
+        // minw1.execute(tx);
+        // minw2.execute(tx);
+    }
+    cout << "transaction generate done" << endl;
+    
+
+    start = std::chrono::high_resolution_clock::now();
+    minw1.buildGraph();
+    end = std::chrono::high_resolution_clock::now();
+    auto build = chrono::duration_cast<chrono::microseconds>(end - start).count();
+    cout << "build time: " << (double)build / 1000 << "ms " << "edgecounter: " << minw1.edgeCounter << endl;
+
+
+    // start = std::chrono::high_resolution_clock::now();
+    // minw2.buildGraph2();
+    // end = std::chrono::high_resolution_clock::now();
+    // auto build2 = chrono::duration_cast<chrono::microseconds>(end - start).count();
+    // cout << "build2 time: " << (double)build2 / 1000 << "ms " << "edgecounter: " << minw2.edgeCounter << endl;
+
+
+    int threadNum = std::thread::hardware_concurrency() / 2; // 获取硬件支持的并发线程数
+    // int threadNum = 16;
+    // ThreadPool::Ptr pool = std::make_shared<ThreadPool>(threadNum);
+    threadpool::Ptr pool = std::make_unique<threadpool>((unsigned short)threadNum);
+
+    UThreadPoolPtr tp = UAllocator::safeMallocTemplateCObject<UThreadPool>();
+
+    minw2.onWarm();
+    start = std::chrono::high_resolution_clock::now();
+    // minw2.buildGraphConcurrent(tp);
+    // minw2.buildGraphConcurrent(pool);
+    minw2.buildGraphConcurrent(pool);
+    end = std::chrono::high_resolution_clock::now();
+    auto buildC = chrono::duration_cast<chrono::microseconds>(end - start).count();
+    cout << "buildC time: " << (double)buildC / 1000 << "ms " << "edgecounter: " << minw2.edgeCounter << endl;
+
+    cout << "nestCounter: " << nestCounter << endl;
+
+}
+
+TEST(MinWRollbackTest, TestThreadPool) {
+    Workload workload;
+    chrono::high_resolution_clock::time_point start, end;
+    Transaction::Ptr tx;
+    MinWRollback minw1, minw2, minw3;
+    Random random(time(0));
+    // Random random(140708984311565);
+    int nestCounter = 0;
+        
+    uint64_t seed = workload.get_seed();
+    // uint64_t seed = uint64_t(140703916355645);
+    workload.set_seed(seed);
+    cout << "seed = " << seed << endl;
+
+    for (int i = 0; i < minw::BLOCK_SIZE; i++) {
+        tx = workload.NextTransaction();
+        if (tx == nullptr) {
+            cout << "=== tx is nullptr ===" << endl;
+            continue;
+        }
+
+        // 控制嵌套交易比例
+        auto rnd = random.uniform_dist(1, 100);
+        if (rnd <= 60) {
+            minw1.execute(tx, false);
+            minw2.execute(tx, false);
+            minw3.execute(tx, false);
+        } else {
+            nestCounter++;
+            minw1.execute(tx);
+            minw2.execute(tx);
+            minw3.execute(tx);
+        }
+    }
+    cout << "transaction generate done" << endl;
+    
+    // int threadNum = std::thread::hardware_concurrency() / 2; // 获取硬件支持的并发线程数
+    int threadNum = 36;
+
+    ThreadPool::Ptr tp1 = std::make_shared<ThreadPool>(threadNum);
+    minw1.onWarm();
+    start = std::chrono::high_resolution_clock::now();
+    minw1.buildGraphConcurrent(tp1);
+    end = std::chrono::high_resolution_clock::now();
+    auto build = chrono::duration_cast<chrono::microseconds>(end - start).count();
+    cout << "my threadpool time: " << (double)build / 1000 << "ms " << endl;
+
+
+    UThreadPoolPtr tp = UAllocator::safeMallocTemplateCObject<UThreadPool>();
+    minw2.onWarm();
+    start = std::chrono::high_resolution_clock::now();
+    minw2.buildGraphConcurrent(tp);
+    end = std::chrono::high_resolution_clock::now();
+    auto build2 = chrono::duration_cast<chrono::microseconds>(end - start).count();
+    cout << "CGraph threadpool time: " << (double)build2 / 1000 << "ms " << endl;
+
+
+    threadpool::Ptr pool = std::make_unique<threadpool>((unsigned short)threadNum);
+    minw3.onWarm();
+    start = std::chrono::high_resolution_clock::now();
+    minw3.buildGraphConcurrent(pool);
+    end = std::chrono::high_resolution_clock::now();
+    auto build3 = chrono::duration_cast<chrono::microseconds>(end - start).count();
+    cout << "github threadpool time: " << (double)build3 / 1000 << "ms " << endl;
+
+    cout << "nestCounter: " << nestCounter << endl;
 }

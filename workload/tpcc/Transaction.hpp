@@ -5,7 +5,7 @@
 #include <ctime>
 #include <memory>
 #include <unordered_map>
-#include <tbb/concurrent_unordered_set.h>
+#include <unordered_set>
 #include <queue>
 #include <map>
 #include "Random.hpp"
@@ -85,7 +85,7 @@ class Transaction : public std::enable_shared_from_this<Transaction>
         }
 
         // get readRows
-        const tbb::concurrent_unordered_set<std::string>& getReadRows() const {
+        const unordered_set<std::string>& getReadRows() const {
             return readRows;
         }
 
@@ -95,7 +95,7 @@ class Transaction : public std::enable_shared_from_this<Transaction>
         }
 
         // get updateRows
-        const tbb::concurrent_unordered_set<std::string>& getUpdateRows() const {
+        const unordered_set<std::string>& getUpdateRows() const {
             return updateRows;
         }
 
@@ -158,8 +158,8 @@ class Transaction : public std::enable_shared_from_this<Transaction>
         static std::map<size_t, int> ol_i_id_num; // 测试订单行出现频率
 
         // tx operations
-        tbb::concurrent_unordered_set<std::string> readRows;               // read rows
-        tbb::concurrent_unordered_set<std::string> updateRows;             // update rows
+        unordered_set<std::string> readRows;               // read rows
+        unordered_set<std::string> updateRows;             // update rows
         // tx structure
         std::vector<ChildTransaction> children;                 // child transactions
         std::vector<Transaction::Ptr> siblings;                 // sibling transactions

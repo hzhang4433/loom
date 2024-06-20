@@ -156,8 +156,15 @@ void MinWRollback::buildGraphConcurrent(ThreadPool::Ptr Pool) {
     }
 
     size_t totalPairs = rwPairs.size();
-    size_t chunkSize = 1;
-    // size_t chunkSize = (totalPairs + Pool->getThreadNum() - 1) / (Pool->getThreadNum() * 2);
+    size_t chunkSize;
+    if (minw::BLOCK_SIZE == 50) {
+        chunkSize = 20;
+    } else if (minw::BLOCK_SIZE == 100) {
+        chunkSize = 50;
+    } else {
+        chunkSize = minw::BLOCK_SIZE / 2;
+        // chunkSize = (totalPairs + CGRAPH_DEFAULT_THREAD_SIZE - 1) / (CGRAPH_DEFAULT_THREAD_SIZE * 1);
+    }
     cout << "totalPairs: " << totalPairs << " chunkSize: " << chunkSize << endl;
 
     for (size_t i = 0; i < totalPairs; i += chunkSize) {
@@ -174,12 +181,103 @@ void MinWRollback::buildGraphConcurrent(ThreadPool::Ptr Pool) {
         future.get();
     }
 
-    const auto& threadDurations = Pool->getThreadDurations();
-    const auto& taskCounts = Pool->getTaskCounts();
-    for (size_t i = 0; i < threadDurations.size(); ++i) {
-        std::cout << "Thread " << i << " duration: " << (double)threadDurations[i].count() / 1000 << " ms "
-                  << "Task count: " << taskCounts[i] << std::endl;
+    // const auto& threadDurations = Pool->getThreadDurations();
+    // const auto& taskCounts = Pool->getTaskCounts();
+    // for (size_t i = 0; i < threadDurations.size(); ++i) {
+    //     std::cout << "Thread " << i << " duration: " << (double)threadDurations[i].count() / 1000 << " ms "
+    //               << "Task count: " << taskCounts[i] << std::endl;
+    // }
+}
+
+void MinWRollback::buildGraphConcurrent(UThreadPoolPtr Pool) {
+    edgeCounter = 0;
+    std::vector<std::future<void>> futures;
+
+    // 将多个onRW的处理作为一个任务
+    std::vector<std::pair<Vertex::Ptr, Vertex::Ptr>> rwPairs;
+
+    for (auto& rTxs : m_RWIndex) {
+        auto& rTx = rTxs.first;
+        auto& wTxs = rTxs.second;
+        for (auto& wTx : wTxs) {
+            // 构建超图
+            rwPairs.emplace_back(rTx, wTx);
+            // futures.emplace_back(Pool->commit([this, rTx, wTx] {
+            //     onRWC(rTx, wTx);
+            // }));
+        }
     }
+
+    size_t totalPairs = rwPairs.size();
+    size_t chunkSize;
+    if (minw::BLOCK_SIZE == 50) {
+        chunkSize = 20;
+    } else if (minw::BLOCK_SIZE == 100) {
+        chunkSize = 50;
+    } else {
+        chunkSize = minw::BLOCK_SIZE / 2;
+        // chunkSize = (totalPairs + CGRAPH_DEFAULT_THREAD_SIZE - 1) / (CGRAPH_DEFAULT_THREAD_SIZE * 1);
+    }
+    cout << "totalPairs: " << totalPairs << " chunkSize: " << chunkSize << endl;
+
+    for (size_t i = 0; i < totalPairs; i += chunkSize) {
+        futures.emplace_back(Pool->commit([this, &rwPairs, i, chunkSize, totalPairs] {
+            size_t end = std::min(i + chunkSize, totalPairs);
+            for (size_t j = i; j < end; ++j) {
+                onRWC(rwPairs[j].first, rwPairs[j].second);
+            }
+        }));
+    }
+
+    // 等待所有任务完成
+    for (auto &future : futures) {
+        future.get();
+    }
+}
+
+void MinWRollback::buildGraphConcurrent(threadpool::Ptr& Pool) {
+    edgeCounter = 0;
+    std::vector<std::future<void>> futures;
+
+    // 将多个onRW的处理作为一个任务
+    std::vector<std::pair<Vertex::Ptr, Vertex::Ptr>> rwPairs;
+
+    for (auto& rTxs : m_RWIndex) {
+        auto& rTx = rTxs.first;
+        auto& wTxs = rTxs.second;
+        for (auto& wTx : wTxs) {
+            // 构建超图
+            rwPairs.emplace_back(rTx, wTx);
+        }
+    }
+
+    size_t totalPairs = rwPairs.size();
+    size_t chunkSize;
+    if (minw::BLOCK_SIZE == 50) {
+        chunkSize = 20;
+    } else if (minw::BLOCK_SIZE == 100) {
+        chunkSize = 50;
+    } else {
+        chunkSize = minw::BLOCK_SIZE / 2;
+        // chunkSize = (totalPairs + CGRAPH_DEFAULT_THREAD_SIZE - 1) / (CGRAPH_DEFAULT_THREAD_SIZE * 1);
+    }
+
+    cout << "totalPairs: " << totalPairs << " chunkSize: " << chunkSize << endl;
+
+    for (size_t i = 0; i < totalPairs; i += chunkSize) {
+        futures.emplace_back(Pool->commit([this, &rwPairs, i, chunkSize, totalPairs] {
+            size_t end = std::min(i + chunkSize, totalPairs);
+            for (size_t j = i; j < end; ++j) {
+                onRWC(rwPairs[j].first, rwPairs[j].second);
+            }
+        }));
+    }
+
+    // 等待所有任务完成
+    for (auto &future : futures) {
+        future.get();
+    }
+
 }
 
 /*  构图算法（考虑多线程扩展性）: 将hyperVertex转化为hyperGraph

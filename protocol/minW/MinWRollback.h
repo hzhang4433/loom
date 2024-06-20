@@ -5,6 +5,10 @@
 #include <stack>
 #include "common/HyperVertex.h"
 #include "thread/ThreadPool.h"
+#include "thread/threadpool.h"
+#include "utils/ThreadPool/UThreadPoolInclude.h"
+
+using namespace CGraph;
 
 class MinWRollback
 {
@@ -34,6 +38,10 @@ class MinWRollback
         void buildGraph2();
 
         void buildGraphConcurrent(ThreadPool::Ptr Pool);
+
+        void buildGraphConcurrent(UThreadPoolPtr Pool);
+
+        void buildGraphConcurrent(threadpool::Ptr& Pool);
 
         void rollback(int mode);
 

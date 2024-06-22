@@ -6,7 +6,7 @@
 #include "common/HyperVertex.h"
 #include "thread/ThreadPool.h"
 #include "thread/threadpool.h"
-#include "utils/ThreadPool/UThreadPoolInclude.h"
+#include "utils/ThreadPool/UThreadPool.h"
 
 using namespace CGraph;
 
@@ -37,13 +37,21 @@ class MinWRollback
 
         void buildGraph2();
 
-        void buildGraphConcurrent(ThreadPool::Ptr Pool);
+        void buildGraphConcurrent(ThreadPool::Ptr& Pool);
 
-        void buildGraphConcurrent(UThreadPoolPtr Pool);
+        void buildGraphConcurrent(UThreadPoolPtr& Pool);
 
         void buildGraphConcurrent(threadpool::Ptr& Pool);
 
         void rollback(int mode);
+
+        void rollback(UThreadPoolPtr& Pool, std::vector<std::future<void>>& futures);
+
+        void rollback(threadpool::Ptr& Pool, std::vector<std::future<void>>& futures);
+
+        void rollback(ThreadPool::Ptr& Pool, std::vector<std::future<void>>& futures);
+
+        void rollback();
 
         bool recognizeSCC(tbb::concurrent_unordered_set<HyperVertex::Ptr, HyperVertex::HyperVertexHash>& hyperVertexs, vector<unordered_set<HyperVertex::Ptr, HyperVertex::HyperVertexHash>>& sccs);
 
@@ -71,7 +79,7 @@ class MinWRollback
         };
 
         // 计算超节点总回滚代价
-        void calculateHyperVertexWeight(unordered_set<HyperVertex::Ptr, HyperVertex::HyperVertexHash>& scc, set<HyperVertex::Ptr, cmp>& pq);
+        void calculateHyperVertexWeight(const unordered_set<HyperVertex::Ptr, HyperVertex::HyperVertexHash>& scc, set<HyperVertex::Ptr, cmp>& pq);
 
         // 计算超节点间一条依赖的回滚代价
         void calculateVertexRollback(HyperVertex::Ptr& hv1, HyperVertex::Ptr hv2, minw::EdgeType type);
@@ -122,7 +130,7 @@ class MinWRollback
         // 超图中所有事务节点
         unordered_set<Vertex::Ptr, Vertex::VertexHash> m_vertices; 
         // 超图中所有超节点
-        unordered_set<HyperVertex::Ptr, HyperVertex::HyperVertexHash> m_hyperVertices; 
+        tbb::concurrent_unordered_set<HyperVertex::Ptr, HyperVertex::HyperVertexHash> m_hyperVertices; 
         // 记录所有可能的scc
         tbb::concurrent_unordered_map<long long, tbb::concurrent_unordered_set<HyperVertex::Ptr, HyperVertex::HyperVertexHash>> m_min2HyperVertex;
         // 记录所有回滚事务

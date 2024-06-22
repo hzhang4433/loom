@@ -36,7 +36,6 @@ void MinWRollback::execute(const Transaction::Ptr& tx, bool isNest) {
         rootVertex->m_cost = rootVertex->m_self_cost;
         // 添加自己
         rootVertex->cascadeVertices.insert(rootVertex);
-
         hyperVertex->m_vertices.insert(rootVertex);
         hyperVertex->m_rootVertex = rootVertex;
     }
@@ -127,7 +126,7 @@ void MinWRollback::buildGraph2() {
 }
 
 /* 基于倒排索引并发构图 */
-void MinWRollback::buildGraphConcurrent(ThreadPool::Ptr Pool) {
+void MinWRollback::buildGraphConcurrent(ThreadPool::Ptr& Pool) {
     edgeCounter = 0;
     std::vector<std::future<void>> futures;
 
@@ -189,7 +188,7 @@ void MinWRollback::buildGraphConcurrent(ThreadPool::Ptr Pool) {
     // }
 }
 
-void MinWRollback::buildGraphConcurrent(UThreadPoolPtr Pool) {
+void MinWRollback::buildGraphConcurrent(UThreadPoolPtr& Pool) {
     edgeCounter = 0;
     std::vector<std::future<void>> futures;
 
@@ -572,6 +571,8 @@ long long MinWRollback::combine(int a, int b) {
    状态: 测试完成，待优化...
 */
 void MinWRollback::rollback(int mode) {
+    long totalSCC = 0;
+
     // 遍历所有强连通分量
     for (auto hyperVertexs : m_min2HyperVertex) {
         
@@ -583,9 +584,14 @@ void MinWRollback::rollback(int mode) {
 
         // 拿到所有scc
         vector<unordered_set<HyperVertex::Ptr, HyperVertex::HyperVertexHash>> sccs;
+        auto start = std::chrono::high_resolution_clock::now();
         if (!recognizeSCC(hyperVertexs.second, sccs)) {
+            auto end = std::chrono::high_resolution_clock::now();
+            totalSCC += chrono::duration_cast<chrono::microseconds>(end - start).count();
             continue;
         }
+        auto end = std::chrono::high_resolution_clock::now();
+        totalSCC += chrono::duration_cast<chrono::microseconds>(end - start).count();
 
         // 遍历scc回滚节点
         for (auto& scc : sccs) { 
@@ -619,6 +625,147 @@ void MinWRollback::rollback(int mode) {
             cout << "scc rollback time: " << (double)chrono::duration_cast<chrono::microseconds>(end - start).count() / 1000 << "ms" << endl;
         
         }
+    }
+
+    cout << "totalSCC time: " << (double)totalSCC / 1000 << "ms" << endl;
+}
+
+void MinWRollback::rollback() {
+    // 拿到所有scc
+    vector<unordered_set<HyperVertex::Ptr, HyperVertex::HyperVertexHash>> sccs;
+    
+    auto start = std::chrono::high_resolution_clock::now();
+    recognizeSCC(m_hyperVertices, sccs);
+    auto end = std::chrono::high_resolution_clock::now();
+    cout << "recognizeSCC time: " << (double)chrono::duration_cast<chrono::microseconds>(end - start).count() / 1000 << "ms" << endl;
+
+    std::vector<std::future<void>> futures;
+
+    // 遍历所有scc回滚节点
+    for (auto& scc : sccs) {
+        cout << "===== 输出scc中的每一个元素的详细信息 =====" << endl;
+        cout << "size = " << scc.size() << ", all vertexs:"; 
+        for (auto hv : scc) {
+            cout << hv->m_hyperId << " ";
+        }
+        cout << endl;
+
+
+        // 统计每个scc rollback耗时
+        auto start = std::chrono::high_resolution_clock::now();
+
+// 可尝试使用fibonacci堆优化更新效率，带测试，看效果
+        // 定义有序集合，以hyperVertex.m_cost为key从小到大排序
+        set<HyperVertex::Ptr, cmp> pq;
+
+        // 遍历强连通分量中每个超节点，计算scc超节点间边权
+        calculateHyperVertexWeight(scc, pq);
+
+        // 贪心获取最小回滚代价的节点集
+        GreedySelectVertex(scc, pq, m_rollbackTxs, 1);
+        auto end = std::chrono::high_resolution_clock::now();
+        cout << "scc rollback time: " << (double)chrono::duration_cast<chrono::microseconds>(end - start).count() / 1000 << "ms" << endl;
+        
+    }
+}
+
+/* 确定性并发回滚: 从hyperGraph中找到最小的回滚子事务集合
+   状态: 测试完成，待优化...
+*/
+void MinWRollback::rollback(UThreadPoolPtr& Pool, std::vector<std::future<void>>& futures) {
+    // 拿到所有scc
+    vector<unordered_set<HyperVertex::Ptr, HyperVertex::HyperVertexHash>> sccs;
+    
+    auto start = std::chrono::high_resolution_clock::now();
+    recognizeSCC(m_hyperVertices, sccs);
+    auto end = std::chrono::high_resolution_clock::now();
+    cout << "recognizeSCC time: " << (double)chrono::duration_cast<chrono::microseconds>(end - start).count() / 1000 << "ms" << endl;
+
+    // 遍历所有scc回滚节点
+    for (auto& scc : sccs) {
+
+        futures.emplace_back(Pool->commit([this, scc] {
+            auto scc_copy = scc;
+            // 统计每个scc rollback耗时
+            auto start = std::chrono::high_resolution_clock::now();
+
+    // 可尝试使用fibonacci堆优化更新效率，带测试，看效果
+            // 定义有序集合，以hyperVertex.m_cost为key从小到大排序
+            set<HyperVertex::Ptr, cmp> pq;
+
+            // 遍历强连通分量中每个超节点，计算scc超节点间边权
+            calculateHyperVertexWeight(scc_copy, pq);
+
+            // 贪心获取最小回滚代价的节点集
+            GreedySelectVertex(scc_copy, pq, m_rollbackTxs, 1);
+            auto end = std::chrono::high_resolution_clock::now();
+            cout << "scc size: " << scc.size() << " scc rollback time: " << (double)chrono::duration_cast<chrono::microseconds>(end - start).count() / 1000 << "ms" << endl;
+        }));
+    }
+}
+
+
+void MinWRollback::rollback(threadpool::Ptr& Pool, std::vector<std::future<void>>& futures) {
+    // 拿到所有scc
+    vector<unordered_set<HyperVertex::Ptr, HyperVertex::HyperVertexHash>> sccs;
+    
+    auto start = std::chrono::high_resolution_clock::now();
+    recognizeSCC(m_hyperVertices, sccs);
+    auto end = std::chrono::high_resolution_clock::now();
+    cout << "recognizeSCC time: " << (double)chrono::duration_cast<chrono::microseconds>(end - start).count() / 1000 << "ms" << endl;
+
+    // 遍历所有scc回滚节点
+    for (auto& scc : sccs) {
+
+        futures.emplace_back(Pool->commit([this, scc] {
+            auto scc_copy = scc;
+            // 统计每个scc rollback耗时
+            auto start = std::chrono::high_resolution_clock::now();
+
+    // 可尝试使用fibonacci堆优化更新效率，带测试，看效果
+            // 定义有序集合，以hyperVertex.m_cost为key从小到大排序
+            set<HyperVertex::Ptr, cmp> pq;
+
+            // 遍历强连通分量中每个超节点，计算scc超节点间边权
+            calculateHyperVertexWeight(scc_copy, pq);
+
+            // 贪心获取最小回滚代价的节点集
+            GreedySelectVertex(scc_copy, pq, m_rollbackTxs, 1);
+            auto end = std::chrono::high_resolution_clock::now();
+            cout << "scc size: " << scc.size() << " scc rollback time: " << (double)chrono::duration_cast<chrono::microseconds>(end - start).count() / 1000 << "ms" << endl;
+        }));
+    }
+}
+
+void MinWRollback::rollback(ThreadPool::Ptr& Pool, std::vector<std::future<void>>& futures) {
+    // 拿到所有scc
+    vector<unordered_set<HyperVertex::Ptr, HyperVertex::HyperVertexHash>> sccs;
+    
+    auto start = std::chrono::high_resolution_clock::now();
+    recognizeSCC(m_hyperVertices, sccs);
+    auto end = std::chrono::high_resolution_clock::now();
+    cout << "recognizeSCC time: " << (double)chrono::duration_cast<chrono::microseconds>(end - start).count() / 1000 << "ms" << endl;
+
+    // 遍历所有scc回滚节点
+    for (auto& scc : sccs) {
+
+        futures.emplace_back(Pool->enqueue([this, scc] {
+            auto scc_copy = scc;
+            // 统计每个scc rollback耗时
+            auto start = std::chrono::high_resolution_clock::now();
+
+    // 可尝试使用fibonacci堆优化更新效率，带测试，看效果
+            // 定义有序集合，以hyperVertex.m_cost为key从小到大排序
+            set<HyperVertex::Ptr, cmp> pq;
+
+            // 遍历强连通分量中每个超节点，计算scc超节点间边权
+            calculateHyperVertexWeight(scc_copy, pq);
+
+            // 贪心获取最小回滚代价的节点集
+            GreedySelectVertex(scc_copy, pq, m_rollbackTxs, 1);
+            auto end = std::chrono::high_resolution_clock::now();
+            cout << "scc size: " << scc.size() << " scc rollback time: " << (double)chrono::duration_cast<chrono::microseconds>(end - start).count() / 1000 << "ms" << endl;
+        }));
     }
 }
 
@@ -687,7 +834,7 @@ void MinWRollback::strongconnect(tbb::concurrent_unordered_set<HyperVertex::Ptr,
     2. 计算每个超节点的最小回滚代价
     3. 将超节点放入优先队列
 */
-void MinWRollback::calculateHyperVertexWeight(unordered_set<HyperVertex::Ptr, HyperVertex::HyperVertexHash>& scc, set<HyperVertex::Ptr, cmp>& pq) {
+void MinWRollback::calculateHyperVertexWeight(const unordered_set<HyperVertex::Ptr, HyperVertex::HyperVertexHash>& scc, set<HyperVertex::Ptr, cmp>& pq) {
     // 计算每个超节点的in和out边权重
     for (auto& hyperVertex : scc) {
         // 计算m_out_cost
@@ -1041,7 +1188,8 @@ void MinWRollback::GreedySelectVertex(unordered_set<HyperVertex::Ptr, HyperVerte
         result.insert(rb->m_in_allRB.begin(), rb->m_in_allRB.end());
     }
     
-    cout << "Greedy delete: " << rb->m_hyperId << endl;
+    // cout << "Greedy delete: " << rb->m_hyperId << endl;
+
     // 从scc中删除rb
     scc.erase(rb);
     pq.erase(rb);
@@ -1304,7 +1452,7 @@ void MinWRollback::recursiveDelete(unordered_set<HyperVertex::Ptr, HyperVertex::
         if (scc.find(out_vertex) != scc.cend()) {
             // 判断是否可以无需代价直接删除
             if (rb->m_rollback_type == minw::EdgeType::OUT && protocol::hasContain(rbVertexs, out_vertex->m_in_allRB)) {
-                cout << "can delete without cost out loop: " << out_vertex->m_hyperId << endl;
+                // cout << "can delete without cost out loop: " << out_vertex->m_hyperId << endl;
                 scc.erase(out_vertex);
                 pq.erase(out_vertex);
                 // 递归删除
@@ -1352,7 +1500,7 @@ void MinWRollback::recursiveDelete(unordered_set<HyperVertex::Ptr, HyperVertex::
             }
             // 确定了：确实不存在入边，删除该超节点，递归更新scc
             if (canDelete) {
-                cout << "can delete without in: " << out_vertex->m_hyperId << endl;
+                // cout << "can delete without in: " << out_vertex->m_hyperId << endl;
                 scc.erase(out_vertex);
                 pq.erase(out_vertex);
                 // 递归删除
@@ -1368,7 +1516,7 @@ void MinWRollback::recursiveDelete(unordered_set<HyperVertex::Ptr, HyperVertex::
         if (scc.find(in_vertex) != scc.cend()) {
             // 判断是否可以无需代价直接删除 —— 可以删除
             if (rb->m_rollback_type == minw::EdgeType::IN && protocol::hasContain(rbVertexs, in_vertex->m_out_allRB)) {
-                cout << "can delete without cost in loop: " << in_vertex->m_hyperId << endl;
+                // cout << "can delete without cost in loop: " << in_vertex->m_hyperId << endl;
                 scc.erase(in_vertex);
                 pq.erase(in_vertex);
                 // 递归删除
@@ -1436,7 +1584,7 @@ void MinWRollback::recursiveDelete(unordered_set<HyperVertex::Ptr, HyperVertex::
             }
             // 确定了：不存在出边，则删除该超节点，递归更新scc
             if (canDelete) {
-                cout << "can delete without out: " << in_vertex->m_hyperId << endl;
+                // cout << "can delete without out: " << in_vertex->m_hyperId << endl;
                 scc.erase(in_vertex);
                 pq.erase(in_vertex);
                 // 递归删除

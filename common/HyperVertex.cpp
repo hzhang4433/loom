@@ -1,6 +1,5 @@
 #include "HyperVertex.h"
 #include "Vertex.h"
-#include <iostream>
 
 using namespace std;
 
@@ -12,6 +11,8 @@ HyperVertex::HyperVertex(int id) {
     m_in_edges.resize(minw::BLOCK_SIZE + 1);
     m_out_rollback.resize(minw::BLOCK_SIZE + 1);
     m_in_rollback.resize(minw::BLOCK_SIZE + 1);
+    m_out_weights.resize(minw::BLOCK_SIZE + 1);
+    m_in_weights.resize(minw::BLOCK_SIZE + 1);
 
     m_out_mapS.resize(minw::BLOCK_SIZE + 1);
     m_in_mapS.resize(minw::BLOCK_SIZE + 1);

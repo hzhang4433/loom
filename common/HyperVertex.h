@@ -33,6 +33,15 @@ class HyperVertex : public std::enable_shared_from_this<HyperVertex>
             }
         };
 
+        struct compare {
+            bool operator()(const HyperVertex::Ptr& a, const HyperVertex::Ptr& b) const {
+                if (a->m_cost == b->m_cost) {
+                    return a->m_hyperId < b->m_hyperId;  // 如果 m_cost 相同，那么 id 小的在前
+                }
+                return a->m_cost < b->m_cost;
+            }
+        };
+
     // 公共变量
         int m_hyperId;      // 超节点ID
         int m_min_in;       // 超节点的最小入度ID
@@ -84,8 +93,8 @@ class HyperVertex : public std::enable_shared_from_this<HyperVertex>
         unordered_map<HyperVertex::Ptr, unordered_set<Vertex::Ptr, Vertex::VertexHash>, HyperVertexHash> m_out_rollbackS; // 记录出边的级联回滚子事务
 
 
-        tbb::concurrent_unordered_map<HyperVertex::Ptr, double, HyperVertexHash> m_out_weights; //记录出边边权
-        tbb::concurrent_unordered_map<HyperVertex::Ptr, double, HyperVertexHash> m_in_weights;  //记录入边边权
+        tbb::concurrent_vector<double> m_out_weights; //记录出边边权
+        tbb::concurrent_vector<double> m_in_weights;  //记录入边边权
         minw::EdgeType m_rollback_type; // 边类型
         unordered_set<Vertex::Ptr, Vertex::VertexHash> m_vertices;  // 记录所有节点
         Vertex::Ptr m_rootVertex;                               // 根节点

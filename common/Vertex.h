@@ -111,7 +111,7 @@ class Vertex : public std::enable_shared_from_this<Vertex>
         unordered_set<Vertex::Ptr, VertexHash> cascadeVertices;                  // 记录级联回滚节点
         unordered_set<string> readSet;                                           // 记录读集
         unordered_set<string> writeSet;                                          // 记录写集
-        bool isNested;                                                                           // 标记节点是否是嵌套节点
+        bool isNested;                                                           // 标记节点是否是嵌套节点
         unordered_set<ChildVertex, ChildVertexHash, ChildVertexEqual> m_children;// 记录子节点
         // set<ChildVertex, ChildVertexCmp> m_children;             // 记录子节点
 };

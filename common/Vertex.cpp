@@ -6,6 +6,9 @@ Vertex::Vertex(shared_ptr<HyperVertex> hyperVertex, int hyperId, string id, bool
     // m_min_in = -1;
     // m_min_out = -1;
     m_degree = 0;
+    m_cost = 0;
+    m_self_cost = 0;
+    
 }
 
 Vertex::~Vertex() {}

@@ -100,8 +100,6 @@ class Vertex : public std::enable_shared_from_this<Vertex>
         int m_hyperId;                                                           // 记录节点对应的超节点id
         shared_ptr<HyperVertex> m_hyperVertex;                                   // 记录节点对应的超节点
         string m_id;                                                             // 记录节点自身的id
-        int m_min_in;                                                            // 记录节点能被哪个最小id的节点到达
-        int m_min_out;                                                           // 记录节点能到达的最小id的节点
         int m_cost;                                                              // 记录节点的执行代价 => 由执行时间正则化得到
         int m_self_cost;                                                         // 记录节点自身的执行代价
         int m_degree;                                                            // 记录节点的度

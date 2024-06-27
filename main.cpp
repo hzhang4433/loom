@@ -13,7 +13,7 @@ int main(int argc, char** argv) {
     testing::InitGoogleTest(&argc, argv);
     // ::testing::GTEST_FLAG(filter) = "TpccTest.WorkloadTEST";
     // ::testing::GTEST_FLAG(filter) = "MinWRollbackTest.TestLoopPerformance";
-    ::testing::GTEST_FLAG(filter) = "MinWRollbackTest.TestOptCompare";
+    ::testing::GTEST_FLAG(filter) = "MinWRollbackTest.TestFastMode";
     // ::testing::GTEST_FLAG(filter) = "FabricPPTest.TestRollback";
     // ::testing::GTEST_FLAG(filter) = "CompareTest.TestRollback";
     int result = RUN_ALL_TESTS();

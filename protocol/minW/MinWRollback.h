@@ -44,6 +44,10 @@ class MinWRollback
 
         void buildGraphNoEdge();
 
+        void buildGraphNoEdgeC(UThreadPoolPtr& Pool);
+        void buildGraphNoEdgeC(ThreadPool::Ptr& Pool);
+        void buildGraphNoEdgeC(threadpool::Ptr& Pool);
+
         void buildGraphConcurrent(ThreadPool::Ptr& Pool);
 
         void buildGraphConcurrent(UThreadPoolPtr& Pool);
@@ -120,10 +124,11 @@ class MinWRollback
         void recursiveDelete(unordered_set<HyperVertex::Ptr, HyperVertex::HyperVertexHash>& scc, set<HyperVertex::Ptr, cmp>& pq, const HyperVertex::Ptr& rb, const tbb::concurrent_unordered_set<Vertex::Ptr, Vertex::VertexHash>& rbVertexs, unordered_map<HyperVertex::Ptr, minw::EdgeType, HyperVertex::HyperVertexHash>& waitToUpdate);
         
         //opt2:NoEdge
+        void rollbackNoEdge(bool fastMode);
         void rollbackNoEdge();
-        void GreedySelectVertexNoEdge(unordered_set<HyperVertex::Ptr, HyperVertex::HyperVertexHash>& scc, set<HyperVertex::Ptr, cmp>& pq, tbb::concurrent_unordered_set<Vertex::Ptr, Vertex::VertexHash>& result);
-        void updateSCCandDependencyNoEdge(unordered_set<HyperVertex::Ptr, HyperVertex::HyperVertexHash>& scc, const HyperVertex::Ptr& rb, set<HyperVertex::Ptr, cmp>& pq, const tbb::concurrent_unordered_set<Vertex::Ptr, Vertex::VertexHash>& rbVertexs);
-
+        void GreedySelectVertexNoEdge(unordered_set<HyperVertex::Ptr, HyperVertex::HyperVertexHash>& scc, set<HyperVertex::Ptr, cmp>& pq, tbb::concurrent_unordered_set<Vertex::Ptr, Vertex::VertexHash>& result, bool fastMode);
+        void updateSCCandDependencyNoEdge(unordered_set<HyperVertex::Ptr, HyperVertex::HyperVertexHash>& scc, const HyperVertex::Ptr& rb, set<HyperVertex::Ptr, cmp>& pq);
+        void updateSCCandDependencyFastMode(unordered_set<HyperVertex::Ptr, HyperVertex::HyperVertexHash>& scc, const HyperVertex::Ptr& rb, set<HyperVertex::Ptr, cmp>& pq);
 
         // 打印超图
         void printHyperGraph();

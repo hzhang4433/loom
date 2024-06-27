@@ -145,6 +145,142 @@ void MinWRollback::buildGraphNoEdge() {
     return;
 }
 
+void MinWRollback::buildGraphNoEdgeC(UThreadPoolPtr& Pool) {
+    edgeCounter = 0;
+    std::vector<std::future<void>> futures;
+
+    // // 遍历倒排索引
+    // for (auto& kv : m_invertedIndex) {
+    //     auto& readTxs = kv.second.readSet;
+    //     auto& writeTxs = kv.second.writeSet;
+    //     // 遍历读集
+    //     for (auto& rTx : readTxs) {
+    //         // 遍历读集
+    //         for (auto& wTx : writeTxs) {
+    //             if (rTx != wTx) {
+    //                 // 构建超图
+    //                 onRWCNoEdge(rTx, wTx);
+    //             }
+    //         }
+    //     }
+    // }
+    
+    // 将多个onRW的处理作为一个任务
+    std::vector<std::pair<Vertex::Ptr, Vertex::Ptr>> rwPairs;
+    for (auto& rTxs : m_RWIndex) {
+        auto& rTx = rTxs.first;
+        auto& wTxs = rTxs.second;
+        for (auto& wTx : wTxs) {
+            // 构建超图
+            rwPairs.emplace_back(rTx, wTx);
+        }
+    }
+
+    size_t totalPairs = rwPairs.size();
+    size_t chunkSize;
+    if (minw::BLOCK_SIZE == 50) {
+        chunkSize = 20;
+    } else {
+        // chunkSize = minw::BLOCK_SIZE / 2;
+        chunkSize = (totalPairs + CGRAPH_DEFAULT_THREAD_SIZE - 1) / (CGRAPH_DEFAULT_THREAD_SIZE * 1.5);
+    }
+    cout << "totalPairs: " << totalPairs << " chunkSize: " << chunkSize << endl;
+
+    for (size_t i = 0; i < totalPairs; i += chunkSize) {
+        futures.emplace_back(Pool->commit([this, &rwPairs, i, chunkSize, totalPairs] {
+            size_t end = std::min(i + chunkSize, totalPairs);
+            for (size_t j = i; j < end; ++j) {
+                onRWCNoEdge(rwPairs[j].first, rwPairs[j].second);
+            }
+        }));
+    }
+
+    // 等待所有任务完成
+    for (auto &future : futures) {
+        future.get();
+    }
+}
+
+void MinWRollback::buildGraphNoEdgeC(ThreadPool::Ptr& Pool) {
+    edgeCounter = 0;
+    std::vector<std::future<void>> futures;
+    
+    // 将多个onRW的处理作为一个任务
+    std::vector<std::pair<Vertex::Ptr, Vertex::Ptr>> rwPairs;
+    for (auto& rTxs : m_RWIndex) {
+        auto& rTx = rTxs.first;
+        auto& wTxs = rTxs.second;
+        for (auto& wTx : wTxs) {
+            // 构建超图
+            rwPairs.emplace_back(rTx, wTx);
+        }
+    }
+
+    size_t totalPairs = rwPairs.size();
+    size_t chunkSize;
+    if (minw::BLOCK_SIZE == 50) {
+        chunkSize = 20;
+    } else {
+        // chunkSize = minw::BLOCK_SIZE / 2;
+        chunkSize = (totalPairs + CGRAPH_DEFAULT_THREAD_SIZE - 1) / (CGRAPH_DEFAULT_THREAD_SIZE * 1.5);
+    }
+    cout << "totalPairs: " << totalPairs << " chunkSize: " << chunkSize << endl;
+
+    for (size_t i = 0; i < totalPairs; i += chunkSize) {
+        futures.emplace_back(Pool->enqueue([this, &rwPairs, i, chunkSize, totalPairs] {
+            size_t end = std::min(i + chunkSize, totalPairs);
+            for (size_t j = i; j < end; ++j) {
+                onRWCNoEdge(rwPairs[j].first, rwPairs[j].second);
+            }
+        }));
+    }
+
+    // 等待所有任务完成
+    for (auto &future : futures) {
+        future.get();
+    }
+}
+
+void MinWRollback::buildGraphNoEdgeC(threadpool::Ptr& Pool) {
+    edgeCounter = 0;
+    std::vector<std::future<void>> futures;
+    
+    // 将多个onRW的处理作为一个任务
+    std::vector<std::pair<Vertex::Ptr, Vertex::Ptr>> rwPairs;
+    for (auto& rTxs : m_RWIndex) {
+        auto& rTx = rTxs.first;
+        auto& wTxs = rTxs.second;
+        for (auto& wTx : wTxs) {
+            // 构建超图
+            rwPairs.emplace_back(rTx, wTx);
+        }
+    }
+
+    size_t totalPairs = rwPairs.size();
+    size_t chunkSize;
+    if (minw::BLOCK_SIZE == 50) {
+        chunkSize = 20;
+    } else {
+        // chunkSize = minw::BLOCK_SIZE / 2;
+        chunkSize = (totalPairs + CGRAPH_DEFAULT_THREAD_SIZE - 1) / (CGRAPH_DEFAULT_THREAD_SIZE * 1.5);
+    }
+    cout << "totalPairs: " << totalPairs << " chunkSize: " << chunkSize << endl;
+
+    for (size_t i = 0; i < totalPairs; i += chunkSize) {
+        futures.emplace_back(Pool->commit([this, &rwPairs, i, chunkSize, totalPairs] {
+            size_t end = std::min(i + chunkSize, totalPairs);
+            for (size_t j = i; j < end; ++j) {
+                onRWCNoEdge(rwPairs[j].first, rwPairs[j].second);
+            }
+        }));
+    }
+
+    // 等待所有任务完成
+    for (auto &future : futures) {
+        future.get();
+    }
+}
+
 /* 基于倒排索引并发构图 */
 void MinWRollback::buildGraphConcurrent(ThreadPool::Ptr& Pool) {
     edgeCounter = 0;
@@ -178,8 +314,6 @@ void MinWRollback::buildGraphConcurrent(ThreadPool::Ptr& Pool) {
     size_t chunkSize;
     if (minw::BLOCK_SIZE == 50) {
         chunkSize = 20;
-    } else if (minw::BLOCK_SIZE == 100) {
-        chunkSize = 50;
     } else {
         chunkSize = minw::BLOCK_SIZE / 2;
         // chunkSize = (totalPairs + CGRAPH_DEFAULT_THREAD_SIZE - 1) / (CGRAPH_DEFAULT_THREAD_SIZE * 1);
@@ -231,11 +365,9 @@ void MinWRollback::buildGraphConcurrent(UThreadPoolPtr& Pool) {
     size_t chunkSize;
     if (minw::BLOCK_SIZE == 50) {
         chunkSize = 20;
-    } else if (minw::BLOCK_SIZE == 100) {
-        chunkSize = 50;
     } else {
-        chunkSize = minw::BLOCK_SIZE / 2;
-        // chunkSize = (totalPairs + CGRAPH_DEFAULT_THREAD_SIZE - 1) / (CGRAPH_DEFAULT_THREAD_SIZE * 1);
+        // chunkSize = minw::BLOCK_SIZE / 2;
+        chunkSize = (totalPairs + CGRAPH_DEFAULT_THREAD_SIZE - 1) / (CGRAPH_DEFAULT_THREAD_SIZE * 2);
     }
     cout << "totalPairs: " << totalPairs << " chunkSize: " << chunkSize << endl;
 
@@ -274,8 +406,6 @@ void MinWRollback::buildGraphConcurrent(threadpool::Ptr& Pool) {
     size_t chunkSize;
     if (minw::BLOCK_SIZE == 50) {
         chunkSize = 20;
-    } else if (minw::BLOCK_SIZE == 100) {
-        chunkSize = 50;
     } else {
         chunkSize = minw::BLOCK_SIZE / 2;
         // chunkSize = (totalPairs + CGRAPH_DEFAULT_THREAD_SIZE - 1) / (CGRAPH_DEFAULT_THREAD_SIZE * 1);
@@ -489,7 +619,7 @@ void MinWRollback::onRWCNoEdge(const Vertex::Ptr &rTx, const Vertex::Ptr &wTx) {
 
     // 更新newV对应的hyperVertex的out_edges
     rHyperVertex->m_out_hv.insert(wHyperVertex);
-    rHyperVertex->m_out_edges[whvIdx].insert(wTx);
+    // rHyperVertex->m_out_edges[whvIdx].insert(wTx);
 
     // 更新回滚集合
     rHyperVertex->m_out_rollback[whvIdx].insert(rTx->cascadeVertices.cbegin(), rTx->cascadeVertices.cend());
@@ -498,7 +628,7 @@ void MinWRollback::onRWCNoEdge(const Vertex::Ptr &rTx, const Vertex::Ptr &wTx) {
 
     // 更新oldV对应的hyperVertex的in_edges
     wHyperVertex->m_in_hv.insert(rHyperVertex);
-    wHyperVertex->m_in_edges[rhvIdx].insert(rTx);
+    // wHyperVertex->m_in_edges[rhvIdx].insert(rTx);
     
     // 更新回滚集合
     wHyperVertex->m_in_allRB.insert(rTx->cascadeVertices.cbegin(), rTx->cascadeVertices.cend());
@@ -760,6 +890,63 @@ void MinWRollback::rollbackOpt1() {
 }
 
 void MinWRollback::rollbackNoEdge() {
+    long totalSCC = 0;
+
+    for (auto hyperVertexs : m_min2HyperVertex) {
+        
+        if (hyperVertexs.second.size() <= 1) {
+            continue;
+        }
+        
+        // 拿到所有scc
+        vector<unordered_set<HyperVertex::Ptr, HyperVertex::HyperVertexHash>> sccs;
+        auto start = std::chrono::high_resolution_clock::now();
+        if (!recognizeSCC(hyperVertexs.second, sccs)) {
+            auto end = std::chrono::high_resolution_clock::now();
+            totalSCC += chrono::duration_cast<chrono::microseconds>(end - start).count();
+            continue;
+        }
+        auto end = std::chrono::high_resolution_clock::now();
+        totalSCC += chrono::duration_cast<chrono::microseconds>(end - start).count();
+
+
+        // 遍历所有scc回滚节点
+        for (auto& scc : sccs) {
+            cout << "===== 输出scc中的每一个元素的详细信息 =====" << endl;
+            cout << "size = " << scc.size() << ", all vertexs:"; 
+            for (auto hv : scc) {
+                cout << hv->m_hyperId << " ";
+            }
+            cout << endl;
+
+
+            // 统计每个scc rollback耗时
+            auto start = std::chrono::high_resolution_clock::now();
+
+            // 定义有序集合，以hyperVertex.m_cost为key从小到大排序
+            set<HyperVertex::Ptr, cmp> pq;
+            // 遍历强连通分量中每个超节点，计算scc超节点间边权
+            calculateHyperVertexWeightNoEdge(scc, pq);
+            // 贪心获取最小回滚代价的节点集
+            // testFlag = true;
+            GreedySelectVertexNoEdge(scc, pq, m_rollbackTxs, false);
+
+
+    // // 可尝试使用fibonacci堆优化更新效率，带测试，看效果
+    //         boost::heap::fibonacci_heap<HyperVertex::Ptr, boost::heap::compare<HyperVertex::compare>> heap;
+    //         std::unordered_map<HyperVertex::Ptr, decltype(heap)::handle_type, HyperVertex::HyperVertexHash> handles;
+    //         calculateHyperVertexWeightNoEdge(scc, heap, handles);
+    //         GreedySelectVertexNoEdge(scc, heap, handles, m_rollbackTxs);
+
+            auto end = std::chrono::high_resolution_clock::now();
+            cout << "scc rollback time: " << (double)chrono::duration_cast<chrono::microseconds>(end - start).count() / 1000 << "ms" << endl;
+        }
+    }
+
+    cout << "recognizeSCC time: " << (double)totalSCC / 1000 << "ms" << endl;
+}
+
+void MinWRollback::rollbackNoEdge(bool fastMode) {
     // 拿到所有scc
     vector<unordered_set<HyperVertex::Ptr, HyperVertex::HyperVertexHash>> sccs;
     
@@ -787,7 +974,8 @@ void MinWRollback::rollbackNoEdge() {
         // 遍历强连通分量中每个超节点，计算scc超节点间边权
         calculateHyperVertexWeightNoEdge(scc, pq);
         // 贪心获取最小回滚代价的节点集
-        GreedySelectVertexNoEdge(scc, pq, m_rollbackTxs);
+        // testFlag = true;
+        GreedySelectVertexNoEdge(scc, pq, m_rollbackTxs, fastMode);
 
 
 // // 可尝试使用fibonacci堆优化更新效率，带测试，看效果
@@ -1498,15 +1686,36 @@ void MinWRollback::GreedySelectVertexOpt1(unordered_set<HyperVertex::Ptr, HyperV
 }
 
 
-void MinWRollback::GreedySelectVertexNoEdge(unordered_set<HyperVertex::Ptr, HyperVertex::HyperVertexHash>& scc, set<HyperVertex::Ptr, cmp>& pq, tbb::concurrent_unordered_set<Vertex::Ptr, Vertex::VertexHash>& result) {
+void MinWRollback::GreedySelectVertexNoEdge(unordered_set<HyperVertex::Ptr, HyperVertex::HyperVertexHash>& scc, set<HyperVertex::Ptr, cmp>& pq, tbb::concurrent_unordered_set<Vertex::Ptr, Vertex::VertexHash>& result, bool fastMode) {
     auto rb = *pq.begin();
 
-    // // 打印pq
-    // cout << "pq init: ";
-    // for (auto v : pq) {
-    //     cout << v->m_hyperId << " " << v->m_cost << " ";
+    // 打印pq
+    // if (testFlag) {
+    //     cout << "pq init: ";
+    //     for (auto v : pq) {
+    //         cout << "id: " << v->m_hyperId << " cost: " << v->m_cost << endl;
+    //         cout << "out_all_rb: ";
+    //         for (auto& pair : v->m_out_allRB) {
+    //             cout << pair.first->m_id << ": " << endl;
+    //             cout << "writeSet: ";
+    //             for (auto& w : pair.first->writeSet) {
+    //                 cout << w << " ";
+    //             }
+    //             cout << endl << "readSet: ";
+    //             for (auto& r : pair.first->readSet) {
+    //                 cout << r << " ";
+    //             }
+    //             cout << endl;
+    //         }
+    //         cout << "in_all_rb: ";
+    //         for (auto& pair : v->m_in_allRB) {
+    //             cout << pair->m_id << " ";
+    //         }
+    //         cout << endl;
+    //     }
+    //     testFlag = false;
     // }
-    // cout << endl;
+
 
     // 记录rb需要回滚的（子）事务
     if (rb->m_rollback_type == minw::EdgeType::OUT) {
@@ -1521,12 +1730,19 @@ void MinWRollback::GreedySelectVertexNoEdge(unordered_set<HyperVertex::Ptr, Hype
     // 从scc中删除rb
     scc.erase(rb);
     pq.erase(rb);
-    updateSCCandDependencyNoEdge(scc, rb, pq, result);
+
+    if (scc.size() > 1) {
+        if (fastMode) {
+            updateSCCandDependencyFastMode(scc, rb, pq);
+        } else {
+            updateSCCandDependencyNoEdge(scc, rb, pq);
+        }
+    }
     
     // 若scc中只剩下一个超节点，则无需回滚
     if (scc.size() > 1) {
         // 递归调用GreedySelectVertex获取回滚节点集合
-        GreedySelectVertexNoEdge(scc, pq, result);
+        GreedySelectVertexNoEdge(scc, pq, result, fastMode);
     }
 }
 
@@ -1905,12 +2121,7 @@ void MinWRollback::recursiveDelete(unordered_set<HyperVertex::Ptr, HyperVertex::
 
 /* 不考虑度数更新scc，仍有逻辑漏洞待考虑：rbvertex的使用？
 */
-void MinWRollback::updateSCCandDependencyNoEdge(unordered_set<HyperVertex::Ptr, HyperVertex::HyperVertexHash>& scc, const HyperVertex::Ptr& rb, 
-                                          set<HyperVertex::Ptr, cmp>& pq, const tbb::concurrent_unordered_set<Vertex::Ptr, Vertex::VertexHash>& rbVertexs) {
-    if (scc.size() <= 1) {
-        return;
-    }
-    
+void MinWRollback::updateSCCandDependencyNoEdge(unordered_set<HyperVertex::Ptr, HyperVertex::HyperVertexHash>& scc, const HyperVertex::Ptr& rb, set<HyperVertex::Ptr, cmp>& pq) { 
     auto rbIdx = rb->m_hyperId;
     // 递归删除出边超节点
     for (auto& out_vertex : rb->m_out_hv) {
@@ -1920,33 +2131,35 @@ void MinWRollback::updateSCCandDependencyNoEdge(unordered_set<HyperVertex::Ptr, 
             auto out_vertex_idx = out_vertex->m_hyperId;
 
             out_vertex->m_in_cost -= rb->m_out_weights[out_vertex_idx];
-            if (out_vertex->m_in_cost == 0) {
-                // cout << "can delete without in: " << out_vertex->m_hyperId << endl;
-                scc.erase(out_vertex);
-                pq.erase(out_vertex);
-                // 递归删除
-                updateSCCandDependencyNoEdge(scc, out_vertex, pq, rbVertexs);
-                continue;
-            } else if (out_vertex->m_in_cost < out_vertex->m_cost) {
+            if (out_vertex->m_in_cost < out_vertex->m_cost) {
                 pq.erase(out_vertex);
                 out_vertex->m_cost = out_vertex->m_in_cost;
                 out_vertex->m_rollback_type = minw::EdgeType::IN;
                 pq.insert(out_vertex);
+            } else if (out_vertex->m_in_cost == 0) {
+                cout << "now get zero by out loop" << endl;
+                scc.erase(out_vertex);
+                pq.erase(out_vertex);
+                // 递归删除
+                updateSCCandDependencyNoEdge(scc, out_vertex, pq);
+                continue;
             }
 
             // 更新事务回滚事务集
-            for (auto& vertex : rb->m_out_rollback[out_vertex_idx]) {
-                out_vertex->m_in_allRB.unsafe_erase(vertex);
+            if (rb->m_rollback_type == minw::EdgeType::IN) {
+                for (auto& vertex : rb->m_out_rollback[out_vertex_idx]) {
+                    out_vertex->m_in_allRB.unsafe_erase(vertex);
+                }
             }
 
-            // // 不存在入边，删除该超节点，递归更新scc
-            // if (out_vertex->m_in_allRB.size() == 0) { 
-            //     // cout << "can delete without in: " << out_vertex->m_hyperId << endl;
-            //     scc.erase(out_vertex);
-            //     pq.erase(out_vertex);
-            //     // 递归删除
-            //     updateSCCandDependencyNoEdge(scc, out_vertex, pq, rbVertexs);
-            // }
+            // 不存在入边，删除该超节点，递归更新scc
+            if (out_vertex->m_in_allRB.size() == 0) { 
+                // cout << "can delete without in: " << out_vertex->m_hyperId << endl;
+                scc.erase(out_vertex);
+                pq.erase(out_vertex);
+                // 递归删除
+                updateSCCandDependencyNoEdge(scc, out_vertex, pq);
+            }
 
             
         }
@@ -1956,18 +2169,18 @@ void MinWRollback::updateSCCandDependencyNoEdge(unordered_set<HyperVertex::Ptr, 
         // 超节点在scc中
         if (scc.find(in_vertex) != scc.end()) {
             in_vertex->m_out_cost -= in_vertex->m_out_weights[rbIdx];
-            if (in_vertex->m_out_cost == 0) {
-                // cout << "can delete without out: " << in_vertex->m_hyperId << endl;
-                scc.erase(in_vertex);
-                pq.erase(in_vertex);
-                // 递归删除
-                updateSCCandDependencyNoEdge(scc, in_vertex, pq, rbVertexs);
-                continue;
-            } else if (in_vertex->m_out_cost < in_vertex->m_cost) {
+            if (in_vertex->m_out_cost < in_vertex->m_cost) {
                 pq.erase(in_vertex);
                 in_vertex->m_cost = in_vertex->m_out_cost;
                 in_vertex->m_rollback_type = minw::EdgeType::OUT;
                 pq.insert(in_vertex);
+            } else if (in_vertex->m_out_cost == 0) {
+                cout << "now get zero by in loop" << endl;
+                scc.erase(in_vertex);
+                pq.erase(in_vertex);
+                // 递归删除
+                updateSCCandDependencyNoEdge(scc, in_vertex, pq);
+                continue;
             }
 
 
@@ -1981,27 +2194,207 @@ void MinWRollback::updateSCCandDependencyNoEdge(unordered_set<HyperVertex::Ptr, 
                         in_vertex->m_out_allRB[vertex]--;
                     }
                 }
-
-                // if (in_vertex->m_out_allRB.size() == 0) {
-                //     // cout << "can delete without out: " << in_vertex->m_hyperId << endl;
-                //     scc.erase(in_vertex);
-                //     pq.erase(in_vertex);
-                //     // 递归删除
-                //     updateSCCandDependencyNoEdge(scc, in_vertex, pq, rbVertexs);
-                // }
             } else {
                 for (auto& vertex : in_vertex->m_out_rollback[rbIdx]) {
                     in_vertex->m_out_allRB.unsafe_erase(vertex);
                 }
             }
+            // 不存在入边，删除该超节点，递归更新scc
+            if (in_vertex->m_out_allRB.size() == 0) {
+                // cout << "can delete without out: " << in_vertex->m_hyperId << endl;
+                scc.erase(in_vertex);
+                pq.erase(in_vertex);
+                // 递归删除
+                updateSCCandDependencyNoEdge(scc, in_vertex, pq);
+            }
 
-            
-            /* 上面这段循环存在并行优化的可能 */
         }
     
     }
 }
 
+void MinWRollback::updateSCCandDependencyFastMode(unordered_set<HyperVertex::Ptr, HyperVertex::HyperVertexHash>& scc, const HyperVertex::Ptr& rb, set<HyperVertex::Ptr, cmp>& pq) {
+    
+    
+    auto rbIdx = rb->m_hyperId;
+    // 递归删除出边超节点
+    for (auto& out_vertex : rb->m_out_hv) {
+        // 超节点在scc中
+        if (scc.find(out_vertex) != scc.end()) {
+            // 记录出边超节点索引
+            auto out_vertex_idx = out_vertex->m_hyperId;
+            // 更新事务回滚事务集
+            if (rb->m_rollback_type == minw::EdgeType::IN) {
+                for (auto& vertex : rb->m_out_rollback[out_vertex_idx]) {
+                    out_vertex->m_in_allRB.unsafe_erase(vertex);
+                }
+            }
+
+            // 不存在入边，删除该超节点，递归更新scc
+            if (out_vertex->m_in_allRB.size() == 0) { 
+                // cout << "can delete without in: " << out_vertex->m_hyperId << endl;
+                scc.erase(out_vertex);
+                pq.erase(out_vertex);
+                // 递归删除
+                updateSCCandDependencyNoEdge(scc, out_vertex, pq);
+            }   
+        }
+    }
+    // 递归删除入边超节点
+    for (auto& in_vertex : rb->m_in_hv) {
+        // 超节点在scc中
+        if (scc.find(in_vertex) != scc.end()) {
+            // 更新事务回滚事务集
+            if (rb->m_rollback_type == minw::EdgeType::OUT) {
+                for (auto& vertex : in_vertex->m_out_rollback[rbIdx]) {
+                    // 若value为1，代表只有本节点和该节点依赖，可直接删除
+                    if (in_vertex->m_out_allRB[vertex] == 1) {
+                        in_vertex->m_out_allRB.unsafe_erase(vertex);
+                    } else {
+                        in_vertex->m_out_allRB[vertex]--;
+                    }
+                }
+            } else {
+                for (auto& vertex : in_vertex->m_out_rollback[rbIdx]) {
+                    in_vertex->m_out_allRB.unsafe_erase(vertex);
+                }
+            }
+            // 不存在入边，删除该超节点，递归更新scc
+            if (in_vertex->m_out_allRB.size() == 0) {
+                // cout << "can delete without out: " << in_vertex->m_hyperId << endl;
+                scc.erase(in_vertex);
+                pq.erase(in_vertex);
+                // 递归删除
+                updateSCCandDependencyNoEdge(scc, in_vertex, pq);
+            }
+        }
+    
+    }
+
+    /*
+    if (rb->m_rollback_type == minw::EdgeType::OUT) {
+        // 递归删除入边超节点
+        for (auto& in_vertex : rb->m_in_hv) {
+            // 超节点在scc中
+            if (scc.find(in_vertex) != scc.end()) {
+                // in_vertex->m_out_cost -= in_vertex->m_out_weights[rbIdx];
+                // if (in_vertex->m_out_cost < in_vertex->m_cost) {
+                //     pq.erase(in_vertex);
+                //     in_vertex->m_cost = in_vertex->m_out_cost;
+                //     in_vertex->m_rollback_type = minw::EdgeType::OUT;
+                //     pq.insert(in_vertex);
+                // } else if (in_vertex->m_out_cost == 0) {
+                //     cout << "now get zero by in loop" << endl;
+                //     scc.erase(in_vertex);
+                //     pq.erase(in_vertex);
+                //     // 递归更新
+                //     updateSCCandDependencyFastMode(scc, in_vertex, pq);
+                //     continue;
+                // }
+
+
+                // 更新事务回滚事务集
+                for (auto& vertex : in_vertex->m_out_rollback[rbIdx]) {
+                    // 若value为1，代表只有本节点和该节点依赖，可直接删除
+                    if (in_vertex->m_out_allRB[vertex] == 1) {
+                        in_vertex->m_out_allRB.unsafe_erase(vertex);
+                    } else {
+                        in_vertex->m_out_allRB[vertex]--;
+                    }
+                }
+                
+                // // 不存在入边，删除该超节点，递归更新scc
+                // if (in_vertex->m_out_allRB.size() == 0) {
+                //     cout << "can delete without out: " << in_vertex->m_hyperId << endl;
+                //     scc.erase(in_vertex);
+                //     pq.erase(in_vertex);
+                //     // 递归删除
+                //     updateSCCandDependencyFastMode(scc, in_vertex, pq);
+                // }
+
+            }
+        
+        }
+    }
+    
+    if (rb->m_rollback_type == minw::EdgeType::IN) {
+        // 递归删除出边超节点
+        for (auto& out_vertex : rb->m_out_hv) {
+            // 超节点在scc中
+            if (scc.find(out_vertex) != scc.end()) {
+                // 记录出边超节点索引
+                auto out_vertex_idx = out_vertex->m_hyperId;
+
+                // out_vertex->m_in_cost -= rb->m_out_weights[out_vertex_idx];
+                // if (out_vertex->m_in_cost < out_vertex->m_cost) {
+                //     pq.erase(out_vertex);
+                //     out_vertex->m_cost = out_vertex->m_in_cost;
+                //     out_vertex->m_rollback_type = minw::EdgeType::IN;
+                //     pq.insert(out_vertex);
+                // } else if (out_vertex->m_in_cost == 0) {
+                //     cout << "now get zero by out loop" << endl;
+                //     scc.erase(out_vertex);
+                //     pq.erase(out_vertex);
+                //     // 递归更新
+                //     updateSCCandDependencyFastMode(scc, out_vertex, pq);
+                //     continue;
+                // }
+
+                // 更新事务回滚事务集
+                for (auto& vertex : rb->m_out_rollback[out_vertex_idx]) {
+                    out_vertex->m_in_allRB.unsafe_erase(vertex);
+                }
+                
+
+                // // 不存在入边，删除该超节点，递归更新scc
+                // if (out_vertex->m_in_allRB.size() == 0) { 
+                //     cout << "can delete without in: " << out_vertex->m_hyperId << endl;
+                //     scc.erase(out_vertex);
+                //     pq.erase(out_vertex);
+                //     // 递归删除
+                //     updateSCCandDependencyFastMode(scc, out_vertex, pq);
+                // }
+            }
+        }
+
+        for (auto& in_vertex : rb->m_in_hv) {
+            // 超节点在scc中
+            if (scc.find(in_vertex) != scc.end()) {
+                // in_vertex->m_out_cost -= in_vertex->m_out_weights[rbIdx];
+                // if (in_vertex->m_out_cost < in_vertex->m_cost) {
+                //     pq.erase(in_vertex);
+                //     in_vertex->m_cost = in_vertex->m_out_cost;
+                //     in_vertex->m_rollback_type = minw::EdgeType::OUT;
+                //     pq.insert(in_vertex);
+                // } else if (in_vertex->m_out_cost == 0) {
+                //     cout << "now get zero by in loop" << endl;
+                //     scc.erase(in_vertex);
+                //     pq.erase(in_vertex);
+                //     // 递归更新
+                //     updateSCCandDependencyFastMode(scc, in_vertex, pq);
+                //     continue;
+                // }
+
+
+                // 更新事务回滚事务集
+                for (auto& vertex : in_vertex->m_out_rollback[rbIdx]) {
+                    in_vertex->m_out_allRB.unsafe_erase(vertex);
+                }
+                
+                // // 不存在入边，删除该超节点，递归更新scc
+                // if (in_vertex->m_out_allRB.size() == 0) {
+                //     cout << "can delete without out: " << in_vertex->m_hyperId << endl;
+                //     scc.erase(in_vertex);
+                //     pq.erase(in_vertex);
+                //     // 递归删除
+                //     updateSCCandDependencyFastMode(scc, in_vertex, pq);
+                // }
+            }
+        }    
+    }
+    */ 
+    
+}
 
 void MinWRollback::updateSCCandDependencyNoEdge(unordered_set<HyperVertex::Ptr, HyperVertex::HyperVertexHash>& scc, const HyperVertex::Ptr& rb, boost::heap::fibonacci_heap<HyperVertex::Ptr, boost::heap::compare<HyperVertex::compare>>& heap, std::unordered_map<HyperVertex::Ptr, typename std::remove_reference<decltype(heap)>::type::handle_type, HyperVertex::HyperVertexHash>& handles, const tbb::concurrent_unordered_set<Vertex::Ptr, Vertex::VertexHash>& rbVertexs) {
     if (scc.size() <= 1) {
@@ -2532,7 +2925,7 @@ int MinWRollback::printRollbackTxs() {
     int totalRollbackCost = 0;
     for (auto& tx : m_rollbackTxs) {
         totalRollbackCost += tx->m_self_cost;
-        // cout << tx->m_id << endl;
+        // cout << "id: " << tx->m_id << " cost: " << tx->m_self_cost << endl;
     }
     cout << "rollback cost: " << totalRollbackCost << endl;
     cout << "=============================================================" << endl;

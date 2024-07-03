@@ -9,7 +9,9 @@
 #include <queue>
 #include <map>
 #include "Random.hpp"
-#include "common.hpp"
+#include "Define.h"
+#include "common/common.h"
+
 
 #include <iostream>
 using namespace std;
@@ -120,8 +122,8 @@ class Transaction : public std::enable_shared_from_this<Transaction>
                 counter.store(1);
             }
             // wd_orderLineCounters
-            for (int i = 0; i < TPCC::n_warehouses; i++) {
-                for (int j = 0; j < TPCC::n_districts; j++) {
+            for (int i = 0; i < TPCC::N_WAREHOUSES; i++) {
+                for (int j = 0; j < TPCC::N_DISTRICTS; j++) {
                     wd_orderLineCounters[i][j] = 0;
                 }
             }
@@ -153,7 +155,7 @@ class Transaction : public std::enable_shared_from_this<Transaction>
         static std::unordered_map<std::string, OrderInfo> wdc_latestOrder;                      // format: (w_id-d_id-c_id, {o_id, o_ol_cnt})
         static std::unordered_map<std::string, std::queue<OrderInfo>> wd_oldestNewOrder;        // format: (w_id-d_id, {o_id, o_c_id, o_ol_cnt})
         static std::unordered_map<std::string, std::vector<OrderLineInfo>> wd_latestOrderLines; // format: (d_id, [{o_id, ol_i_id}, ...])
-        static uint64_t wd_orderLineCounters[TPCC::n_warehouses][TPCC::n_districts];            // warehouse-distirct orderLine counter
+        static uint64_t wd_orderLineCounters[TPCC::N_WAREHOUSES][TPCC::N_DISTRICTS];            // warehouse-distirct orderLine counter
         
         static std::map<size_t, int> ol_i_id_num; // 测试订单行出现频率
 
@@ -178,9 +180,9 @@ class NewOrderTransaction : public Transaction
         NewOrderTransaction::Ptr makeNewOrder() {
             NewOrderTransaction::Ptr newOrderTx = std::make_shared<NewOrderTransaction>(random);
             // NewOrder主键ID
-            newOrderTx->w_id = random.uniform_dist(1, TPCC::n_warehouses);
-            newOrderTx->d_id = random.uniform_dist(1, TPCC::n_districts);
-            newOrderTx->c_id = random.non_uniform_distribution(1023, 1, TPCC::n_customers);
+            newOrderTx->w_id = random.uniform_dist(1, TPCC::N_WAREHOUSES);
+            newOrderTx->d_id = random.uniform_dist(1, TPCC::N_DISTRICTS);
+            newOrderTx->c_id = random.non_uniform_distribution(1023, 1, TPCC::N_CUSTOMERS);
             newOrderTx->o_ol_cnt = random.uniform_dist(5, 15);
             
             // NewOrder订单行参数
@@ -251,10 +253,11 @@ class NewOrderTransaction : public Transaction
 
             // 获取下一个订单号
             uint64_t next_o_id = increment_order(newOrderTx->d_id - 1);
-            // cout << "In NewOrderTransaction, d_id: " << newOrderTx->d_id 
-            //      << " next_o_id: " << next_o_id 
-            //      << " ol_cnt: " << newOrderTx->o_ol_cnt 
-            //      << " c_id: " << newOrderTx->c_id << endl;
+            // cout << "In NewOrderTransaction, w_id = " << newOrderTx->w_id
+            //      << " d_id = " << newOrderTx->d_id 
+            //      << " next_o_id = " << next_o_id 
+            //      << " ol_cnt = " << newOrderTx->o_ol_cnt 
+            //      << " c_id = " << newOrderTx->c_id << endl;
             // cout << "order lines: ";
             // for (auto i = 0; i < newOrderTx->o_ol_cnt; i++) {
             //     cout << newOrderTx->orderLines[i].ol_i_id << " ";
@@ -372,8 +375,8 @@ class PaymentTransaction : public Transaction
         // 构造Payment事务
         PaymentTransaction::Ptr makePayment() {
             PaymentTransaction::Ptr paymentTx = std::make_shared<PaymentTransaction>(random);
-            paymentTx->w_id = random.uniform_dist(1, TPCC::n_warehouses);
-            paymentTx->d_id = random.uniform_dist(1, TPCC::n_districts);
+            paymentTx->w_id = random.uniform_dist(1, TPCC::N_WAREHOUSES);
+            paymentTx->d_id = random.uniform_dist(1, TPCC::N_DISTRICTS);
             
             // 随机选择c_last或c_id
             int y = random.uniform_dist(1, 100);
@@ -385,9 +388,9 @@ class PaymentTransaction : public Transaction
                 
                 paymentTx->c_id = -1;
             } else {
-                paymentTx->c_id = random.non_uniform_distribution(1023, 1, TPCC::n_customers);
+                paymentTx->c_id = random.non_uniform_distribution(1023, 1, TPCC::N_CUSTOMERS);
             }
-            // paymentTx->c_id = random.non_uniform_distribution(1023, 1, n_customers);
+            // paymentTx->c_id = random.non_uniform_distribution(1023, 1, N_CUSTOMERS);
             paymentTx->h_amount = random.uniform_dist(1, 5000);
             return paymentTx;
         }
@@ -401,6 +404,7 @@ class PaymentTransaction : public Transaction
             //                     ", d_id = " << paymentTx->d_id <<
             //                     ", c_id = " << paymentTx->c_id << 
             //                     ", c_last = " << paymentTx->c_last << endl;
+            
             /* 事务逻辑：
                 1. warehouse表: 读取并更新w_ytd字段
                 2. district表: 读取并更新d_ytd字段
@@ -482,11 +486,11 @@ class OrderStatusTransaction : public Transaction
         // 构造OrderStatus事务
         OrderStatusTransaction::Ptr makeOrderStatus() {
             OrderStatusTransaction::Ptr orderStatusTx = std::make_shared<OrderStatusTransaction>(random);
-            orderStatusTx->w_id = random.uniform_dist(1, TPCC::n_warehouses);
-            
             string wdc_key;
+
             do {
-                orderStatusTx->d_id = random.uniform_dist(1, TPCC::n_districts);
+                orderStatusTx->w_id = random.uniform_dist(1, TPCC::N_WAREHOUSES);
+                orderStatusTx->d_id = random.uniform_dist(1, TPCC::N_DISTRICTS);
             
                 int y = random.uniform_dist(1, 100);
                 int32_t temp_c_id;
@@ -500,7 +504,7 @@ class OrderStatusTransaction : public Transaction
                     auto c_ids = c_last_to_c_id.at(orderStatusTx->c_last);
                     temp_c_id = c_ids[(c_ids.size() - 1) / 2];
                 } else {
-                    orderStatusTx->c_id = random.non_uniform_distribution(1023, 1, TPCC::n_customers);
+                    orderStatusTx->c_id = random.non_uniform_distribution(1023, 1, TPCC::N_CUSTOMERS);
                     orderStatusTx->c_last = "";
                     temp_c_id = orderStatusTx->c_id;
                 }
@@ -529,6 +533,7 @@ class OrderStatusTransaction : public Transaction
                 3. orderLine表: 根据w_id, d_id, o_id查找, 读取ol_i_id, ol_supply_w_id, ol_quantity, ol_amount等字段
                 需要额外维护的数据：(w_id-d_id-c_id, {o_id, o_ol_cnt})
             */
+            
             // 根子事务：可能为customer子事务
             Transaction::Ptr root;
             // customer子事务
@@ -610,8 +615,8 @@ class DeliveryTransaction : public Transaction
         // 构造Delivery事务
         DeliveryTransaction::Ptr makeDelivery() {
             DeliveryTransaction::Ptr deliveryTx = std::make_shared<DeliveryTransaction>(random);
-            deliveryTx->w_id = random.uniform_dist(1, TPCC::n_warehouses);
-            deliveryTx->o_carrier_id = random.uniform_dist(1, TPCC::n_carriers);
+            deliveryTx->w_id = random.uniform_dist(1, TPCC::N_WAREHOUSES);
+            deliveryTx->o_carrier_id = random.uniform_dist(1, TPCC::N_CARRIERS);
             deliveryTx->ol_delivery_d = std::time(nullptr);
             return deliveryTx;
         }
@@ -636,7 +641,7 @@ class DeliveryTransaction : public Transaction
             Transaction::Ptr root = std::make_shared<Transaction>(random);
             root->setExecutionTime(TPCC::ConsumptionType::HIGH);
 
-            for (int i = 1; i <= TPCC::n_districts; i++) {
+            for (int i = 1; i <= TPCC::N_DISTRICTS; i++) {
                 // newOrder子事务 + customer子事务
                 Transaction::Ptr no_cAccess = std::make_shared<Transaction>(random);
                 
@@ -644,7 +649,7 @@ class DeliveryTransaction : public Transaction
                 auto wd_key = std::to_string(deliveryTx->w_id) + "-" + std::to_string(i);
                 // 若不存在了，则跳过
                 if (wd_oldestNewOrder.count(wd_key) == 0 || wd_oldestNewOrder.at(wd_key).empty()) {
-                    // cout << "\tWARNING: distirct " << i << " has no new order..." << endl;
+                    // cout << "\tWARNING: warehouse: " << deliveryTx->w_id << " distirct: " << i << " has no new order..." << endl;
                     // if (i == 10) cout << endl;
                     continue;
                 }
@@ -718,12 +723,12 @@ class StockLevelTransaction : public Transaction
         // 构造StockLevel事务
         StockLevelTransaction::Ptr makeStockLevel() {
             StockLevelTransaction::Ptr stockLevelTx = std::make_shared<StockLevelTransaction>(random);
-            stockLevelTx->w_id = random.uniform_dist(1, TPCC::n_warehouses);
             do {
-                stockLevelTx->d_id = random.uniform_dist(1, TPCC::n_districts);
+                stockLevelTx->w_id = random.uniform_dist(1, TPCC::N_WAREHOUSES);
+                stockLevelTx->d_id = random.uniform_dist(1, TPCC::N_DISTRICTS);
             } while (wd_latestOrderLines.count(std::to_string(stockLevelTx->w_id) + "-" + std::to_string(stockLevelTx->d_id)) == 0);
             
-            // stockLevelTx->d_id = random.uniform_dist(1, TPCC::n_districts);
+            // stockLevelTx->d_id = random.uniform_dist(1, TPCC::N_DISTRICTS);
             stockLevelTx->threshold = random.uniform_dist(10, 20);
             return stockLevelTx;
         }
@@ -733,9 +738,9 @@ class StockLevelTransaction : public Transaction
             // cout << "======= making stock level transaction =======" << endl;
 
             auto stockLevelTx = makeStockLevel();
-            // cout << "deliveryTx: w_id: " << stockLevelTx->w_id << 
-            //         ", d_id: " << stockLevelTx->d_id <<
-            //         ", threshold: " << stockLevelTx->threshold << endl;
+            // cout << "deliveryTx: w_id = " << stockLevelTx->w_id << 
+            //         ", d_id = " << stockLevelTx->d_id <<
+            //         ", threshold = " << stockLevelTx->threshold << endl;
 
             /* 事务逻辑：(顺序执行可看成一笔事务)
                 1. district表: 根据w_id, d_id查找, 读取d_next_o_id字段

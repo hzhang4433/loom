@@ -1,17 +1,22 @@
 #include "HyperVertex.h"
 #include "Vertex.h"
-#include <iostream>
 
 using namespace std;
 
 HyperVertex::HyperVertex(int id) {
-    this->m_hyperId = id;
-    this->m_min_in = INT_MAX;
-    this->m_min_out = INT_MAX;
+    m_hyperId = id;
+    m_min_in = INT_MAX;
+    m_min_out = INT_MAX;
+    m_cost = 0;
+    m_in_cost = 0;
+    m_out_cost = 0;
+
     m_out_edges.resize(minw::BLOCK_SIZE + 1);
     m_in_edges.resize(minw::BLOCK_SIZE + 1);
     m_out_rollback.resize(minw::BLOCK_SIZE + 1);
     m_in_rollback.resize(minw::BLOCK_SIZE + 1);
+    m_out_weights.resize(minw::BLOCK_SIZE + 1);
+    m_in_weights.resize(minw::BLOCK_SIZE + 1);
 
     m_out_mapS.resize(minw::BLOCK_SIZE + 1);
     m_in_mapS.resize(minw::BLOCK_SIZE + 1);

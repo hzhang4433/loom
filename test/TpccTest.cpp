@@ -169,3 +169,20 @@ TEST(TpccTest, RandomTEST) {
     cout << endl;
 
 }
+
+TEST(TpccTest, MultiWarehouseTEST) {
+    Workload workload;
+    MinWRollback minw;
+    Transaction::Ptr tx;
+    chrono::high_resolution_clock::time_point start, end;
+
+    cout << "Seed: " << workload.get_seed() << endl;
+
+    for (int i = 0; i < 500; i++) {
+        tx = workload.NextTransaction();
+        if (tx == nullptr) {
+            cout << "tx is nullptr" << endl;
+            continue;
+        }
+    }
+}

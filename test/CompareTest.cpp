@@ -55,7 +55,7 @@ TEST(CompareTest, TestRollback) {
     // minw.printHyperGraph();
     
     start = chrono::high_resolution_clock::now();
-    minw.rollback(0);
+    minw.rollback();
     end = chrono::high_resolution_clock::now();
     cout << "MinW Rollback time: " << chrono::duration_cast<chrono::microseconds>(end - start).count() << "us" << endl;
 

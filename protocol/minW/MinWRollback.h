@@ -40,13 +40,13 @@ class MinWRollback
 
         void buildGraph();
 
-        void buildGraph2();
+        void buildGraphSerial();
 
         void buildGraphNoEdge();
 
-        void buildGraphNoEdgeC(UThreadPoolPtr& Pool);
-        void buildGraphNoEdgeC(ThreadPool::Ptr& Pool);
-        void buildGraphNoEdgeC(threadpool::Ptr& Pool);
+        void buildGraphNoEdgeC(UThreadPoolPtr& Pool, std::vector<std::future<void>>& futures);
+        void buildGraphNoEdgeC(ThreadPool::Ptr& Pool, std::vector<std::future<void>>& futures);
+        void buildGraphNoEdgeC(threadpool::Ptr& Pool, std::vector<std::future<void>>& futures);
 
         void buildGraphConcurrent(ThreadPool::Ptr& Pool);
 
@@ -126,6 +126,7 @@ class MinWRollback
         //opt2:NoEdge
         void rollbackNoEdge(bool fastMode);
         void rollbackNoEdge();
+        void rollbackNoEdgeConcurrent(UThreadPoolPtr& Pool, std::vector<std::future<void>>& futures, bool fastMode);
         void GreedySelectVertexNoEdge(unordered_set<HyperVertex::Ptr, HyperVertex::HyperVertexHash>& scc, set<HyperVertex::Ptr, cmp>& pq, tbb::concurrent_unordered_set<Vertex::Ptr, Vertex::VertexHash>& result, bool fastMode);
         void updateSCCandDependencyNoEdge(unordered_set<HyperVertex::Ptr, HyperVertex::HyperVertexHash>& scc, const HyperVertex::Ptr& rb, set<HyperVertex::Ptr, cmp>& pq);
         void updateSCCandDependencyFastMode(unordered_set<HyperVertex::Ptr, HyperVertex::HyperVertexHash>& scc, const HyperVertex::Ptr& rb, set<HyperVertex::Ptr, cmp>& pq);

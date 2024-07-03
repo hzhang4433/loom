@@ -387,198 +387,6 @@ TEST(MinWRollbackTest, TestLoopPerformance) {
     
 }
 
-TEST(MinWRollbackTest, TestOptCompare) {
-    Workload workload;
-    chrono::high_resolution_clock::time_point start, end;
-    Transaction::Ptr tx;
-    MinWRollback minw0, minw1, minw2;
-    Random random(time(0));
-    int nestCounter = 0;
-
-    // uint64_t w_seed = workload.get_seed();
-    // uint64_t r_seed = random.get_seed();
-    uint64_t w_seed = uint64_t(140719229094333);
-    uint64_t r_seed = uint64_t(24571667628);
-    workload.set_seed(w_seed);
-    random.set_seed(r_seed);
-
-    // 140716750994125: 50-8ms
-    // 140707595429853: 5-6ms
-    cout << "w_seed = " << w_seed << endl;
-    cout << "r_seed = " << r_seed << endl;
-
-
-    for (int i = 0; i < minw::BLOCK_SIZE; i++) {
-        tx = workload.NextTransaction();
-        if (tx == nullptr) {
-            cout << "=== tx is nullptr ===" << endl;
-            continue;
-        }
-        
-        // // 控制嵌套交易比例
-        // auto rnd = random.uniform_dist(1, 100);
-        // if (rnd <= 55) {
-        //     minw0.execute(tx, false);
-        //     minw1.execute(tx, false);
-        //     minw2.execute(tx, false);
-        // } else {
-        //     nestCounter++;
-        //     minw0.execute(tx);
-        //     minw1.execute(tx);
-        //     minw2.execute(tx);
-        // }
-        
-        minw0.execute(tx);
-        minw1.execute(tx);
-        minw2.execute(tx);
-    }
-    cout << "transaction generate done" << endl;
-    
-
-    // start = std::chrono::high_resolution_clock::now();
-    // minw0.buildGraph2();
-    // end = std::chrono::high_resolution_clock::now();
-    // cout << "串行集合构图: " << (double)chrono::duration_cast<chrono::microseconds>(end - start).count() / 1000 << "ms" << endl;
-
-    // start = std::chrono::high_resolution_clock::now();
-    // minw0.rollback();
-    // end = std::chrono::high_resolution_clock::now();
-    // cout << "origin rollback time: " << (double)chrono::duration_cast<chrono::microseconds>(end - start).count() / 1000 << "ms" << endl;
-
-    // minw0.printRollbackTxs();
-
-
-    // // UThreadPoolPtr tp = UAllocator::safeMallocTemplateCObject<UThreadPool>();
-    // // minw1.onWarm();
-    // start = std::chrono::high_resolution_clock::now();
-    // minw1.buildGraph2();
-    // // minw1.buildGraphConcurrent(tp);
-    // end = std::chrono::high_resolution_clock::now();
-    // cout << "串行索引构图: " << (double)chrono::duration_cast<chrono::microseconds>(end - start).count() / 1000 << "ms" << endl;
-
-    // start = std::chrono::high_resolution_clock::now();
-    // minw1.rollbackOpt1();
-    // end = std::chrono::high_resolution_clock::now();
-    // cout << "opt1 rollback time: " << (double)chrono::duration_cast<chrono::microseconds>(end - start).count() / 1000 << "ms" << endl;
-
-    // minw1.printRollbackTxs();
-
-
-    start = std::chrono::high_resolution_clock::now();
-    minw2.buildGraphNoEdge();
-    end = std::chrono::high_resolution_clock::now();
-    cout << "noedge串行索引构图: " << (double)chrono::duration_cast<chrono::microseconds>(end - start).count() / 1000 << "ms" << endl;
-
-    start = std::chrono::high_resolution_clock::now();
-    minw2.rollbackNoEdge(true);
-    end = std::chrono::high_resolution_clock::now();
-    cout << "opt2 rollback time: " << (double)chrono::duration_cast<chrono::microseconds>(end - start).count() / 1000 << "ms" << endl;
-
-    minw2.printRollbackTxs();
-    
-
-    // UThreadPoolPtr tp = UAllocator::safeMallocTemplateCObject<UThreadPool>();
-    // minw2.onWarm();
-    // start = std::chrono::high_resolution_clock::now();
-    // minw2.buildGraphConcurrent(tp);
-    // end = std::chrono::high_resolution_clock::now();
-    // cout << "并行索引构图: " << (double)chrono::duration_cast<chrono::microseconds>(end - start).count() / 1000 << "ms" << endl;
-
-    // // ThreadPool::Ptr pool = std::make_shared<ThreadPool>(8);
-    // std::vector<std::future<void>> futures;
-    // start = std::chrono::high_resolution_clock::now();
-    // // minw2.rollback(pool, futures);
-    // minw2.rollback(tp, futures);
-    
-    // // 等待所有任务完成
-    // for (auto &future : futures) {
-    //     future.get();
-    // }
-
-    // end = std::chrono::high_resolution_clock::now();
-    // cout << "concurrent rollback time: " << (double)chrono::duration_cast<chrono::microseconds>(end - start).count() / 1000 << "ms" << endl;
-
-    // minw2.printRollbackTxs();
-
-
-    cout << "nestCounter: " << nestCounter << endl;
-}
-
-TEST(MinWRollbackTest, TestFastMode) {
-    Workload workload;
-    chrono::high_resolution_clock::time_point start, end;
-    Transaction::Ptr tx;
-    MinWRollback minw1, minw2;
-    Random random(time(0));
-    int nestCounter = 0;
-
-    uint64_t w_seed = workload.get_seed();
-    uint64_t r_seed = random.get_seed();
-    // uint64_t w_seed = uint64_t(140717124209869);
-    // uint64_t r_seed = uint64_t(24571294127);
-    workload.set_seed(w_seed);
-    random.set_seed(r_seed);
-
-    cout << "w_seed = " << w_seed << endl;
-    cout << "r_seed = " << r_seed << endl;
-
-
-    for (int i = 0; i < minw::BLOCK_SIZE; i++) {
-        tx = workload.NextTransaction();
-        if (tx == nullptr) {
-            cout << "=== tx is nullptr ===" << endl;
-            continue;
-        }
-        
-        // 控制嵌套交易比例
-        auto rnd = random.uniform_dist(1, 100);
-        if (rnd <= 60) {
-            minw1.execute(tx, false);
-            minw2.execute(tx, false);
-        } else {
-            nestCounter++;
-            minw1.execute(tx);
-            minw2.execute(tx);
-        }
-        
-        // minw1.execute(tx);
-        // minw2.execute(tx);
-    }
-    cout << "transaction generate done" << endl;
-    
-
-
-    start = std::chrono::high_resolution_clock::now();
-    minw1.buildGraphNoEdge();
-    end = std::chrono::high_resolution_clock::now();
-    cout << "noEdge串行索引构图: " << (double)chrono::duration_cast<chrono::microseconds>(end - start).count() / 1000 << "ms" << endl;
-
-    start = std::chrono::high_resolution_clock::now();
-    minw1.rollbackNoEdge();
-    end = std::chrono::high_resolution_clock::now();
-    cout << "noedge rollback time: " << (double)chrono::duration_cast<chrono::microseconds>(end - start).count() / 1000 << "ms" << endl;
-
-    minw1.printRollbackTxs();
-
-
-    UThreadPoolPtr tp = UAllocator::safeMallocTemplateCObject<UThreadPool>();
-    minw2.onWarm();
-    start = std::chrono::high_resolution_clock::now();
-    minw2.buildGraphNoEdgeC(tp);
-    end = std::chrono::high_resolution_clock::now();
-    cout << "noEdge并行索引构图: " << (double)chrono::duration_cast<chrono::microseconds>(end - start).count() / 1000 << "ms" << endl;
-
-    start = std::chrono::high_resolution_clock::now();
-    minw2.rollbackNoEdge(true);
-    end = std::chrono::high_resolution_clock::now();
-    cout << "fastmode rollback time: " << (double)chrono::duration_cast<chrono::microseconds>(end - start).count() / 1000 << "ms" << endl;
-
-    minw2.printRollbackTxs();
-    
-
-    cout << "nestCounter: " << nestCounter << endl;
-}
-
 TEST(MinWRollbackTest, TestBuildGraph) {
     Workload workload;
     chrono::high_resolution_clock::time_point start, end;
@@ -611,7 +419,7 @@ TEST(MinWRollbackTest, TestBuildGraph) {
         cout << "build1 time: " << build1 << "ms" << endl;
 
         start = std::chrono::high_resolution_clock::now();
-        minw2.buildGraph2();
+        minw2.buildGraphSerial();
         end = std::chrono::high_resolution_clock::now();
         auto build2 = chrono::duration_cast<chrono::milliseconds>(end - start).count();
         cout << "build2 time: " << build2 << "ms" << endl;
@@ -656,7 +464,7 @@ TEST(MinWRollbackTest, TestBuildTime) {
     //      << "edgecounter: " << minw.edgeCounter << endl;
 
     start = std::chrono::high_resolution_clock::now();
-    minw.buildGraph2();
+    minw.buildGraphSerial();
     end = std::chrono::high_resolution_clock::now();
     auto build2 = chrono::duration_cast<chrono::microseconds>(end - start).count();
     cout << "index build time: " << (double)build2 / 1000 << "ms "
@@ -753,9 +561,10 @@ TEST(MinWRollbackTest, TestThreadPool) {
     Random random(time(0));
     // Random random(140708984311565);
     int nestCounter = 0;
+    std::vector<std::future<void>> futures;
         
     uint64_t seed = workload.get_seed();
-    // uint64_t seed = uint64_t(140703916355645);
+    // uint64_t seed = uint64_t(140707768066669);
     workload.set_seed(seed);
     cout << "seed = " << seed << endl;
 
@@ -792,7 +601,7 @@ TEST(MinWRollbackTest, TestThreadPool) {
     ThreadPool::Ptr tp1 = std::make_shared<ThreadPool>(threadNum);
     minw1.onWarm();
     start = std::chrono::high_resolution_clock::now();
-    minw1.buildGraphNoEdgeC(tp1);
+    minw1.buildGraphNoEdgeC(tp1, futures);
     // minw1.buildGraphConcurrent(tp1);
     end = std::chrono::high_resolution_clock::now();
     auto build = chrono::duration_cast<chrono::microseconds>(end - start).count();
@@ -802,7 +611,7 @@ TEST(MinWRollbackTest, TestThreadPool) {
     UThreadPoolPtr tp = UAllocator::safeMallocTemplateCObject<UThreadPool>();
     minw2.onWarm();
     start = std::chrono::high_resolution_clock::now();
-    minw2.buildGraphNoEdgeC(tp);
+    minw2.buildGraphNoEdgeC(tp, futures);
     // minw2.buildGraphConcurrent(tp);
     end = std::chrono::high_resolution_clock::now();
     auto build2 = chrono::duration_cast<chrono::microseconds>(end - start).count();
@@ -812,11 +621,292 @@ TEST(MinWRollbackTest, TestThreadPool) {
     threadpool::Ptr pool = std::make_unique<threadpool>((unsigned short)threadNum);
     minw3.onWarm();
     start = std::chrono::high_resolution_clock::now();
-    minw3.buildGraphNoEdgeC(pool);
+    minw3.buildGraphNoEdgeC(pool, futures);
     // minw3.buildGraphConcurrent(pool);
     end = std::chrono::high_resolution_clock::now();
     auto build3 = chrono::duration_cast<chrono::microseconds>(end - start).count();
     cout << "github threadpool time: " << (double)build3 / 1000 << "ms " << endl;
+
+    cout << "nestCounter: " << nestCounter << endl;
+}
+
+TEST(MinWRollbackTest, TestOptCompare) {
+    Workload workload;
+    chrono::high_resolution_clock::time_point start, end;
+    Transaction::Ptr tx;
+    MinWRollback minw0, minw1, minw2;
+    Random random(time(0));
+    int nestCounter = 0;
+
+    // uint64_t w_seed = workload.get_seed();
+    // uint64_t r_seed = random.get_seed();
+    uint64_t w_seed = uint64_t(140719229094333);
+    uint64_t r_seed = uint64_t(24571667628);
+    workload.set_seed(w_seed);
+    random.set_seed(r_seed);
+
+    // 140716750994125: 50-8ms
+    // 140707595429853: 5-6ms
+    cout << "w_seed = " << w_seed << endl;
+    cout << "r_seed = " << r_seed << endl;
+
+
+    for (int i = 0; i < minw::BLOCK_SIZE; i++) {
+        tx = workload.NextTransaction();
+        if (tx == nullptr) {
+            cout << "=== tx is nullptr ===" << endl;
+            continue;
+        }
+        
+        // // 控制嵌套交易比例
+        // auto rnd = random.uniform_dist(1, 100);
+        // if (rnd <= 55) {
+        //     minw0.execute(tx, false);
+        //     minw1.execute(tx, false);
+        //     minw2.execute(tx, false);
+        // } else {
+        //     nestCounter++;
+        //     minw0.execute(tx);
+        //     minw1.execute(tx);
+        //     minw2.execute(tx);
+        // }
+        
+        minw0.execute(tx);
+        minw1.execute(tx);
+        minw2.execute(tx);
+    }
+    cout << "transaction generate done" << endl;
+    
+
+    // start = std::chrono::high_resolution_clock::now();
+    // minw0.buildGraphSerial();
+    // end = std::chrono::high_resolution_clock::now();
+    // cout << "串行集合构图: " << (double)chrono::duration_cast<chrono::microseconds>(end - start).count() / 1000 << "ms" << endl;
+
+    // start = std::chrono::high_resolution_clock::now();
+    // minw0.rollback();
+    // end = std::chrono::high_resolution_clock::now();
+    // cout << "origin rollback time: " << (double)chrono::duration_cast<chrono::microseconds>(end - start).count() / 1000 << "ms" << endl;
+
+    // minw0.printRollbackTxs();
+
+
+    // // UThreadPoolPtr tp = UAllocator::safeMallocTemplateCObject<UThreadPool>();
+    // // minw1.onWarm();
+    // start = std::chrono::high_resolution_clock::now();
+    // minw1.buildGraphSerial();
+    // // minw1.buildGraphConcurrent(tp);
+    // end = std::chrono::high_resolution_clock::now();
+    // cout << "串行索引构图: " << (double)chrono::duration_cast<chrono::microseconds>(end - start).count() / 1000 << "ms" << endl;
+
+    // start = std::chrono::high_resolution_clock::now();
+    // minw1.rollbackOpt1();
+    // end = std::chrono::high_resolution_clock::now();
+    // cout << "opt1 rollback time: " << (double)chrono::duration_cast<chrono::microseconds>(end - start).count() / 1000 << "ms" << endl;
+
+    // minw1.printRollbackTxs();
+
+
+    start = std::chrono::high_resolution_clock::now();
+    minw2.buildGraphNoEdge();
+    end = std::chrono::high_resolution_clock::now();
+    cout << "noedge串行索引构图: " << (double)chrono::duration_cast<chrono::microseconds>(end - start).count() / 1000 << "ms" << endl;
+
+    start = std::chrono::high_resolution_clock::now();
+    minw2.rollbackNoEdge(true);
+    end = std::chrono::high_resolution_clock::now();
+    cout << "opt2 rollback time: " << (double)chrono::duration_cast<chrono::microseconds>(end - start).count() / 1000 << "ms" << endl;
+
+    minw2.printRollbackTxs();
+    
+
+    // UThreadPoolPtr tp = UAllocator::safeMallocTemplateCObject<UThreadPool>();
+    // minw2.onWarm();
+    // start = std::chrono::high_resolution_clock::now();
+    // minw2.buildGraphConcurrent(tp);
+    // end = std::chrono::high_resolution_clock::now();
+    // cout << "并行索引构图: " << (double)chrono::duration_cast<chrono::microseconds>(end - start).count() / 1000 << "ms" << endl;
+
+    // // ThreadPool::Ptr pool = std::make_shared<ThreadPool>(8);
+    // std::vector<std::future<void>> futures;
+    // start = std::chrono::high_resolution_clock::now();
+    // // minw2.rollback(pool, futures);
+    // minw2.rollback(tp, futures);
+    
+    // // 等待所有任务完成
+    // for (auto &future : futures) {
+    //     future.get();
+    // }
+
+    // end = std::chrono::high_resolution_clock::now();
+    // cout << "concurrent rollback time: " << (double)chrono::duration_cast<chrono::microseconds>(end - start).count() / 1000 << "ms" << endl;
+
+    // minw2.printRollbackTxs();
+
+
+    cout << "nestCounter: " << nestCounter << endl;
+}
+
+TEST(MinWRollbackTest, TestFastMode) {
+    Workload workload;
+    chrono::high_resolution_clock::time_point start, end;
+    Transaction::Ptr tx;
+    MinWRollback minw1, minw2;
+    Random random(time(0));
+    int nestCounter = 0;
+    std::vector<std::future<void>> futures;
+
+    uint64_t w_seed = workload.get_seed();
+    uint64_t r_seed = random.get_seed();
+
+    // uint64_t w_seed = uint64_t(140719263371741);
+    // uint64_t r_seed = uint64_t(24571399086);
+    // workload.set_seed(w_seed);
+    // random.set_seed(r_seed);
+
+    cout << "w_seed = " << w_seed << endl;
+    cout << "r_seed = " << r_seed << endl;
+
+
+    for (int i = 0; i < minw::BLOCK_SIZE; i++) {
+        tx = workload.NextTransaction();
+        if (tx == nullptr) {
+            cout << "=== tx is nullptr ===" << endl;
+            continue;
+        }
+        
+        // // 控制嵌套交易比例
+        // auto rnd = random.uniform_dist(1, 100);
+        // if (rnd <= 60) {
+        //     minw1.execute(tx, false);
+        //     minw2.execute(tx, false);
+        // } else {
+        //     nestCounter++;
+        //     minw1.execute(tx);
+        //     minw2.execute(tx);
+        // }
+        
+        minw1.execute(tx);
+        minw2.execute(tx);
+    }
+    cout << "transaction generate done" << endl;
+    
+
+
+    start = std::chrono::high_resolution_clock::now();
+    minw1.buildGraphNoEdge();
+    end = std::chrono::high_resolution_clock::now();
+    cout << "noEdge串行索引构图: " << (double)chrono::duration_cast<chrono::microseconds>(end - start).count() / 1000 << "ms" << endl;
+
+    start = std::chrono::high_resolution_clock::now();
+    minw1.rollbackNoEdge();
+    end = std::chrono::high_resolution_clock::now();
+    cout << "noedge rollback time: " << (double)chrono::duration_cast<chrono::microseconds>(end - start).count() / 1000 << "ms" << endl;
+
+    minw1.printRollbackTxs();
+
+
+    UThreadPoolPtr tp = UAllocator::safeMallocTemplateCObject<UThreadPool>();
+    minw2.onWarm();
+    start = std::chrono::high_resolution_clock::now();
+    minw2.buildGraphNoEdgeC(tp, futures);
+    end = std::chrono::high_resolution_clock::now();
+    cout << "noEdge并行索引构图: " << (double)chrono::duration_cast<chrono::microseconds>(end - start).count() / 1000 << "ms" << endl;
+
+    start = std::chrono::high_resolution_clock::now();
+    minw2.rollbackNoEdge(true);
+    end = std::chrono::high_resolution_clock::now();
+    cout << "fastmode rollback time: " << (double)chrono::duration_cast<chrono::microseconds>(end - start).count() / 1000 << "ms" << endl;
+
+    minw2.printRollbackTxs();
+    
+
+    cout << "nestCounter: " << nestCounter << endl;
+}
+
+TEST(MinWRollbackTest, TestConcurrentRollback) {
+    Workload workload;
+    chrono::high_resolution_clock::time_point start, end;
+    Transaction::Ptr tx;
+    MinWRollback minw1, minw2;
+    Random random(time(0));
+    int nestCounter = 0;
+
+    UThreadPoolPtr tp = UAllocator::safeMallocTemplateCObject<UThreadPool>();
+    std::vector<std::future<void>> futures, futures1, futures2;
+
+    uint64_t w_seed = workload.get_seed();
+    uint64_t r_seed = random.get_seed();
+
+    // uint64_t w_seed = uint64_t(140709203674653);
+    // uint64_t r_seed = uint64_t(24569076994);
+    // workload.set_seed(w_seed);
+    // random.set_seed(r_seed);
+
+    cout << "w_seed = " << w_seed << endl;
+    cout << "r_seed = " << r_seed << endl;
+
+
+    for (int i = 0; i < minw::BLOCK_SIZE; i++) {
+        tx = workload.NextTransaction();
+        if (tx == nullptr) {
+            cout << "=== tx is nullptr ===" << endl;
+            continue;
+        }
+        
+        // // 控制嵌套交易比例
+        // auto rnd = random.uniform_dist(1, 100);
+        // if (rnd <= 60) {
+        //     minw1.execute(tx, false);
+        //     minw2.execute(tx, false);
+        // } else {
+        //     nestCounter++;
+        //     minw1.execute(tx);
+        //     minw2.execute(tx);
+        // }
+        
+        minw1.execute(tx);
+        minw2.execute(tx);
+    }
+    cout << "transaction generate done" << endl;
+    
+
+
+    minw1.onWarm();
+    start = std::chrono::high_resolution_clock::now();
+    // minw1.buildGraphNoEdgeC(tp, futures);
+    minw1.buildGraphNoEdge();
+    end = std::chrono::high_resolution_clock::now();
+    cout << "noEdge串行索引构图: " << (double)chrono::duration_cast<chrono::microseconds>(end - start).count() / 1000 << "ms" << endl;
+
+    start = std::chrono::high_resolution_clock::now();
+    minw1.rollbackNoEdge(true);
+    end = std::chrono::high_resolution_clock::now();
+    cout << "serial rollback time: " << (double)chrono::duration_cast<chrono::microseconds>(end - start).count() / 1000 << "ms" << endl;
+
+    minw1.printRollbackTxs();
+
+
+    minw2.onWarm();
+    start = std::chrono::high_resolution_clock::now();
+    minw2.buildGraphNoEdgeC(tp, futures1);
+    // minw2.buildGraphNoEdge();
+    end = std::chrono::high_resolution_clock::now();
+    cout << "noEdge并行索引构图: " << (double)chrono::duration_cast<chrono::microseconds>(end - start).count() / 1000 << "ms" << endl;
+
+    start = std::chrono::high_resolution_clock::now();
+    minw2.rollbackNoEdgeConcurrent(tp, futures2, true);
+
+    // 等待所有任务完成
+    for (auto &future : futures2) {
+        future.get();
+    }
+
+    end = std::chrono::high_resolution_clock::now();
+    cout << "concurrent rollback time: " << (double)chrono::duration_cast<chrono::microseconds>(end - start).count() / 1000 << "ms" << endl;
+
+    minw2.printRollbackTxs();
+    
 
     cout << "nestCounter: " << nestCounter << endl;
 }

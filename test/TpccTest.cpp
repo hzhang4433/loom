@@ -178,7 +178,7 @@ TEST(TpccTest, MultiWarehouseTEST) {
 
     cout << "Seed: " << workload.get_seed() << endl;
 
-    for (int i = 0; i < 100; i++) {
+    for (int i = 0; i < 500; i++) {
         tx = workload.NextTransaction();
         if (tx == nullptr) {
             cout << "tx is nullptr" << endl;

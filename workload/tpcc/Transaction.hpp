@@ -253,10 +253,11 @@ class NewOrderTransaction : public Transaction
 
             // 获取下一个订单号
             uint64_t next_o_id = increment_order(newOrderTx->d_id - 1);
-            // cout << "In NewOrderTransaction, d_id: " << newOrderTx->d_id 
-            //      << " next_o_id: " << next_o_id 
-            //      << " ol_cnt: " << newOrderTx->o_ol_cnt 
-            //      << " c_id: " << newOrderTx->c_id << endl;
+            // cout << "In NewOrderTransaction, w_id = " << newOrderTx->w_id
+            //      << " d_id = " << newOrderTx->d_id 
+            //      << " next_o_id = " << next_o_id 
+            //      << " ol_cnt = " << newOrderTx->o_ol_cnt 
+            //      << " c_id = " << newOrderTx->c_id << endl;
             // cout << "order lines: ";
             // for (auto i = 0; i < newOrderTx->o_ol_cnt; i++) {
             //     cout << newOrderTx->orderLines[i].ol_i_id << " ";
@@ -403,6 +404,7 @@ class PaymentTransaction : public Transaction
             //                     ", d_id = " << paymentTx->d_id <<
             //                     ", c_id = " << paymentTx->c_id << 
             //                     ", c_last = " << paymentTx->c_last << endl;
+            
             /* 事务逻辑：
                 1. warehouse表: 读取并更新w_ytd字段
                 2. district表: 读取并更新d_ytd字段
@@ -484,10 +486,10 @@ class OrderStatusTransaction : public Transaction
         // 构造OrderStatus事务
         OrderStatusTransaction::Ptr makeOrderStatus() {
             OrderStatusTransaction::Ptr orderStatusTx = std::make_shared<OrderStatusTransaction>(random);
-            orderStatusTx->w_id = random.uniform_dist(1, TPCC::N_WAREHOUSES);
-            
             string wdc_key;
+
             do {
+                orderStatusTx->w_id = random.uniform_dist(1, TPCC::N_WAREHOUSES);
                 orderStatusTx->d_id = random.uniform_dist(1, TPCC::N_DISTRICTS);
             
                 int y = random.uniform_dist(1, 100);
@@ -531,6 +533,7 @@ class OrderStatusTransaction : public Transaction
                 3. orderLine表: 根据w_id, d_id, o_id查找, 读取ol_i_id, ol_supply_w_id, ol_quantity, ol_amount等字段
                 需要额外维护的数据：(w_id-d_id-c_id, {o_id, o_ol_cnt})
             */
+            
             // 根子事务：可能为customer子事务
             Transaction::Ptr root;
             // customer子事务
@@ -646,7 +649,7 @@ class DeliveryTransaction : public Transaction
                 auto wd_key = std::to_string(deliveryTx->w_id) + "-" + std::to_string(i);
                 // 若不存在了，则跳过
                 if (wd_oldestNewOrder.count(wd_key) == 0 || wd_oldestNewOrder.at(wd_key).empty()) {
-                    // cout << "\tWARNING: distirct " << i << " has no new order..." << endl;
+                    // cout << "\tWARNING: warehouse: " << deliveryTx->w_id << " distirct: " << i << " has no new order..." << endl;
                     // if (i == 10) cout << endl;
                     continue;
                 }
@@ -720,8 +723,8 @@ class StockLevelTransaction : public Transaction
         // 构造StockLevel事务
         StockLevelTransaction::Ptr makeStockLevel() {
             StockLevelTransaction::Ptr stockLevelTx = std::make_shared<StockLevelTransaction>(random);
-            stockLevelTx->w_id = random.uniform_dist(1, TPCC::N_WAREHOUSES);
             do {
+                stockLevelTx->w_id = random.uniform_dist(1, TPCC::N_WAREHOUSES);
                 stockLevelTx->d_id = random.uniform_dist(1, TPCC::N_DISTRICTS);
             } while (wd_latestOrderLines.count(std::to_string(stockLevelTx->w_id) + "-" + std::to_string(stockLevelTx->d_id)) == 0);
             
@@ -735,9 +738,9 @@ class StockLevelTransaction : public Transaction
             // cout << "======= making stock level transaction =======" << endl;
 
             auto stockLevelTx = makeStockLevel();
-            // cout << "deliveryTx: w_id: " << stockLevelTx->w_id << 
-            //         ", d_id: " << stockLevelTx->d_id <<
-            //         ", threshold: " << stockLevelTx->threshold << endl;
+            // cout << "deliveryTx: w_id = " << stockLevelTx->w_id << 
+            //         ", d_id = " << stockLevelTx->d_id <<
+            //         ", threshold = " << stockLevelTx->threshold << endl;
 
             /* 事务逻辑：(顺序执行可看成一笔事务)
                 1. district表: 根据w_id, d_id查找, 读取d_next_o_id字段

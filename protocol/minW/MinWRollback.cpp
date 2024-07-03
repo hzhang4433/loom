@@ -93,7 +93,7 @@ void MinWRollback::buildGraph() {
 }
 
 /* 索引构建超图 */
-void MinWRollback::buildGraph2() {
+void MinWRollback::buildGraphSerial() {
     edgeCounter = 0;
 
     // 遍历倒排索引
@@ -145,9 +145,8 @@ void MinWRollback::buildGraphNoEdge() {
     return;
 }
 
-void MinWRollback::buildGraphNoEdgeC(UThreadPoolPtr& Pool) {
+void MinWRollback::buildGraphNoEdgeC(UThreadPoolPtr& Pool, std::vector<std::future<void>>& futures) {
     edgeCounter = 0;
-    std::vector<std::future<void>> futures;
 
     // // 遍历倒排索引
     // for (auto& kv : m_invertedIndex) {
@@ -177,13 +176,14 @@ void MinWRollback::buildGraphNoEdgeC(UThreadPoolPtr& Pool) {
     }
 
     size_t totalPairs = rwPairs.size();
-    size_t chunkSize;
-    if (minw::BLOCK_SIZE == 50) {
-        chunkSize = 20;
-    } else {
-        // chunkSize = minw::BLOCK_SIZE / 2;
-        chunkSize = (totalPairs + CGRAPH_DEFAULT_THREAD_SIZE - 1) / (CGRAPH_DEFAULT_THREAD_SIZE * 1.5);
-    }
+    size_t chunkSize = (totalPairs + CGRAPH_DEFAULT_THREAD_SIZE - 1) / (CGRAPH_DEFAULT_THREAD_SIZE * 1.5);
+    // if (minw::BLOCK_SIZE == 50) {
+    //     chunkSize = 20;
+    // } else {
+    //     // chunkSize = minw::BLOCK_SIZE / 2;
+    //     chunkSize = (totalPairs + CGRAPH_DEFAULT_THREAD_SIZE - 1) / (CGRAPH_DEFAULT_THREAD_SIZE * 1.5);
+    //     // chunkSize = 20;
+    // }
     cout << "totalPairs: " << totalPairs << " chunkSize: " << chunkSize << endl;
 
     for (size_t i = 0; i < totalPairs; i += chunkSize) {
@@ -201,9 +201,8 @@ void MinWRollback::buildGraphNoEdgeC(UThreadPoolPtr& Pool) {
     }
 }
 
-void MinWRollback::buildGraphNoEdgeC(ThreadPool::Ptr& Pool) {
+void MinWRollback::buildGraphNoEdgeC(ThreadPool::Ptr& Pool, std::vector<std::future<void>>& futures) {
     edgeCounter = 0;
-    std::vector<std::future<void>> futures;
     
     // 将多个onRW的处理作为一个任务
     std::vector<std::pair<Vertex::Ptr, Vertex::Ptr>> rwPairs;
@@ -217,7 +216,7 @@ void MinWRollback::buildGraphNoEdgeC(ThreadPool::Ptr& Pool) {
     }
 
     size_t totalPairs = rwPairs.size();
-    size_t chunkSize;
+    size_t chunkSize = 20;
     if (minw::BLOCK_SIZE == 50) {
         chunkSize = 20;
     } else {
@@ -241,9 +240,8 @@ void MinWRollback::buildGraphNoEdgeC(ThreadPool::Ptr& Pool) {
     }
 }
 
-void MinWRollback::buildGraphNoEdgeC(threadpool::Ptr& Pool) {
+void MinWRollback::buildGraphNoEdgeC(threadpool::Ptr& Pool, std::vector<std::future<void>>& futures) {
     edgeCounter = 0;
-    std::vector<std::future<void>> futures;
     
     // 将多个onRW的处理作为一个任务
     std::vector<std::pair<Vertex::Ptr, Vertex::Ptr>> rwPairs;
@@ -257,7 +255,7 @@ void MinWRollback::buildGraphNoEdgeC(threadpool::Ptr& Pool) {
     }
 
     size_t totalPairs = rwPairs.size();
-    size_t chunkSize;
+    size_t chunkSize = 20;
     if (minw::BLOCK_SIZE == 50) {
         chunkSize = 20;
     } else {
@@ -958,12 +956,12 @@ void MinWRollback::rollbackNoEdge(bool fastMode) {
 
     // 遍历所有scc回滚节点
     for (auto& scc : sccs) {
-        cout << "===== 输出scc中的每一个元素的详细信息 =====" << endl;
-        cout << "size = " << scc.size() << ", all vertexs:"; 
-        for (auto hv : scc) {
-            cout << hv->m_hyperId << " ";
-        }
-        cout << endl;
+        // cout << "===== 输出scc中的每一个元素的详细信息 =====" << endl;
+        // cout << "size = " << scc.size() << ", all vertexs:"; 
+        // for (auto hv : scc) {
+        //     cout << hv->m_hyperId << " ";
+        // }
+        // cout << endl;
 
 
         // 统计每个scc rollback耗时
@@ -985,9 +983,49 @@ void MinWRollback::rollbackNoEdge(bool fastMode) {
 //         GreedySelectVertexNoEdge(scc, heap, handles, m_rollbackTxs);
 
         auto end = std::chrono::high_resolution_clock::now();
-        cout << "scc rollback time: " << (double)chrono::duration_cast<chrono::microseconds>(end - start).count() / 1000 << "ms" << endl;
+        // cout << "scc rollback time: " << (double)chrono::duration_cast<chrono::microseconds>(end - start).count() / 1000 << "ms" << endl;
     }
 }
+
+void MinWRollback::rollbackNoEdgeConcurrent(UThreadPoolPtr& Pool, std::vector<std::future<void>>& futures, bool fastMode) {
+    // 拿到所有scc
+    vector<unordered_set<HyperVertex::Ptr, HyperVertex::HyperVertexHash>> sccs;
+    
+    auto start = std::chrono::high_resolution_clock::now();
+    recognizeSCC(m_hyperVertices, sccs);
+    auto end = std::chrono::high_resolution_clock::now();
+    cout << "recognizeSCC time: " << (double)chrono::duration_cast<chrono::microseconds>(end - start).count() / 1000 << "ms" << endl;
+
+
+    // 遍历所有scc回滚节点
+    for (auto& scc : sccs) {
+        
+        futures.emplace_back(Pool->commit([this, scc]{
+            auto scc_copy = scc;
+            // 统计每个scc rollback耗时
+            auto start = std::chrono::high_resolution_clock::now();
+
+            // 定义有序集合，以hyperVertex.m_cost为key从小到大排序
+            set<HyperVertex::Ptr, cmp> pq;
+            // 遍历强连通分量中每个超节点，计算scc超节点间边权
+            calculateHyperVertexWeightNoEdge(scc, pq);
+            // 贪心获取最小回滚代价的节点集
+            GreedySelectVertexNoEdge(scc_copy, pq, m_rollbackTxs, true);
+
+
+    // // 可尝试使用fibonacci堆优化更新效率，带测试，看效果
+    //         boost::heap::fibonacci_heap<HyperVertex::Ptr, boost::heap::compare<HyperVertex::compare>> heap;
+    //         std::unordered_map<HyperVertex::Ptr, decltype(heap)::handle_type, HyperVertex::HyperVertexHash> handles;
+    //         calculateHyperVertexWeightNoEdge(scc, heap, handles);
+    //         GreedySelectVertexNoEdge(scc, heap, handles, m_rollbackTxs);
+
+            auto end = std::chrono::high_resolution_clock::now();
+            // cout << "scc size: " << scc.size() << " scc rollback time: " << (double)chrono::duration_cast<chrono::microseconds>(end - start).count() / 1000 << "ms" << endl;
+        }));
+        
+    }
+}
+
 
 /* 确定性并发回滚: 从hyperGraph中找到最小的回滚子事务集合
    状态: 测试完成，待优化...
@@ -1733,7 +1771,7 @@ void MinWRollback::GreedySelectVertexNoEdge(unordered_set<HyperVertex::Ptr, Hype
 
     if (scc.size() > 1) {
         if (fastMode) {
-            updateSCCandDependencyFastMode(scc, rb, pq);
+            // updateSCCandDependencyFastMode(scc, rb, pq);
         } else {
             updateSCCandDependencyNoEdge(scc, rb, pq);
         }

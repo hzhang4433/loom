@@ -2,7 +2,7 @@
 #include <chrono>
 #include "thread/ThreadPool.h"
 
-#include "protocol/minW/MinWRollback.h"
+#include "protocol/loom/MinWRollback.h"
 #include "workload/tpcc/Workload.hpp"
 #include "utils/ThreadPool/UThreadPool.h"
 

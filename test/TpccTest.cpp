@@ -1,7 +1,7 @@
 #include <gtest/gtest.h>
 #include <chrono>
 #include "workload/tpcc/Workload.hpp"
-#include "protocol/minW/MinWRollback.h"
+#include "protocol/loom/MinWRollback.h"
 
 using namespace std;
 

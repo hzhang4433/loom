@@ -25,54 +25,54 @@ Transaction::Ptr makeTx1() {
 
     Transaction::Ptr tx11;
     simulateRow(tx11, "11");
-    tx1->addChild(tx11, minw::DependencyType::STRONG);
+    tx1->addChild(tx11, Loom::DependencyType::STRONG);
     Transaction::Ptr tx111;
     simulateRow(tx111, "111");
-    tx11->addChild(tx111, minw::DependencyType::WEAK);
+    tx11->addChild(tx111, Loom::DependencyType::WEAK);
     Transaction::Ptr tx112;
     simulateRow(tx112, "112");
-    tx11->addChild(tx112, minw::DependencyType::STRONG);
+    tx11->addChild(tx112, Loom::DependencyType::STRONG);
 
     Transaction::Ptr tx12;
     simulateRow(tx12, "12");
-    tx1->addChild(tx12, minw::DependencyType::WEAK);
+    tx1->addChild(tx12, Loom::DependencyType::WEAK);
     Transaction::Ptr tx121;
     simulateRow(tx121, "121");
-    tx12->addChild(tx121, minw::DependencyType::STRONG);
+    tx12->addChild(tx121, Loom::DependencyType::STRONG);
     
     // 需要修改读写集
     Transaction::Ptr tx122;
     simulateRow(tx122, "122");
     tx122->addReadRow("4");
-    tx12->addChild(tx122, minw::DependencyType::WEAK);
+    tx12->addChild(tx122, Loom::DependencyType::WEAK);
     
     // 需要修改读写集
     Transaction::Ptr tx1221;
     simulateRow(tx1221, "1221");
     tx1221->addReadRow("5");
-    tx122->addChild(tx1221, minw::DependencyType::STRONG);
+    tx122->addChild(tx1221, Loom::DependencyType::STRONG);
 
     Transaction::Ptr tx12211;
     simulateRow(tx12211, "12211");
-    tx1221->addChild(tx12211, minw::DependencyType::WEAK);
+    tx1221->addChild(tx12211, Loom::DependencyType::WEAK);
 
     // 需要修改读写集
     Transaction::Ptr tx12212;
     simulateRow(tx12212, "12212");
     tx12212->addUpdateRow("6");
-    tx1221->addChild(tx12212, minw::DependencyType::STRONG);
+    tx1221->addChild(tx12212, Loom::DependencyType::STRONG);
 
     // 需要修改读写集
     Transaction::Ptr tx122121;
     simulateRow(tx122121, "122121");
     tx122121->addUpdateRow("7");
-    tx12212->addChild(tx122121, minw::DependencyType::WEAK);
+    tx12212->addChild(tx122121, Loom::DependencyType::WEAK);
     
     // 需要修改读写集
     Transaction::Ptr tx1221211;
     simulateRow(tx1221211, "1221211");
     tx1221211->addReadRow("8");
-    tx122121->addChild(tx1221211, minw::DependencyType::STRONG);
+    tx122121->addChild(tx1221211, Loom::DependencyType::STRONG);
 
     return tx1;
 }
@@ -85,18 +85,18 @@ Transaction::Ptr makeTx2() {
     Transaction::Ptr tx21;
     simulateRow(tx21, "21");
     tx21->addUpdateRow("4");
-    tx2->addChild(tx21, minw::DependencyType::STRONG);
+    tx2->addChild(tx21, Loom::DependencyType::STRONG);
     Transaction::Ptr tx211;
     simulateRow(tx211, "211");
     tx211->addUpdateRow("5");
-    tx21->addChild(tx211, minw::DependencyType::WEAK);
+    tx21->addChild(tx211, Loom::DependencyType::WEAK);
     Transaction::Ptr tx212;
     simulateRow(tx212, "212");
-    tx21->addChild(tx212, minw::DependencyType::STRONG);
+    tx21->addChild(tx212, Loom::DependencyType::STRONG);
     Transaction::Ptr tx2121;
     simulateRow(tx2121, "2121");
     tx2121->addReadRow("6");
-    tx212->addChild(tx2121, minw::DependencyType::WEAK);
+    tx212->addChild(tx2121, Loom::DependencyType::WEAK);
 
     
 
@@ -104,27 +104,27 @@ Transaction::Ptr makeTx2() {
     Transaction::Ptr tx22;
     simulateRow(tx22, "22");
     tx22->addReadRow("9");
-    tx2->addChild(tx22, minw::DependencyType::WEAK);
+    tx2->addChild(tx22, Loom::DependencyType::WEAK);
     
     Transaction::Ptr tx221;
     simulateRow(tx221, "221");
     tx221->addReadRow("44");
-    tx22->addChild(tx221, minw::DependencyType::STRONG);
+    tx22->addChild(tx221, Loom::DependencyType::STRONG);
     
     Transaction::Ptr tx2211;
     simulateRow(tx2211, "2211");
-    tx221->addChild(tx2211, minw::DependencyType::STRONG);
+    tx221->addChild(tx2211, Loom::DependencyType::STRONG);
     Transaction::Ptr tx22111;
     simulateRow(tx22111, "22111");
-    tx2211->addChild(tx22111, minw::DependencyType::WEAK);
+    tx2211->addChild(tx22111, Loom::DependencyType::WEAK);
     Transaction::Ptr tx22112;
     simulateRow(tx22112, "22112");
-    tx2211->addChild(tx22112, minw::DependencyType::STRONG);
+    tx2211->addChild(tx22112, Loom::DependencyType::STRONG);
 
     Transaction::Ptr tx222;
     simulateRow(tx222, "222");
     tx222->addReadRow("10");
-    tx22->addChild(tx222, minw::DependencyType::WEAK);
+    tx22->addChild(tx222, Loom::DependencyType::WEAK);
 
     return tx2;
 }
@@ -137,43 +137,43 @@ Transaction::Ptr makeTx3() {
     Transaction::Ptr tx31;
     simulateRow(tx31, "31");
     tx31->addUpdateRow("9");
-    tx3->addChild(tx31, minw::DependencyType::STRONG);
+    tx3->addChild(tx31, Loom::DependencyType::STRONG);
     Transaction::Ptr tx311;
     simulateRow(tx311, "311");
     tx311->addUpdateRow("10");
-    tx31->addChild(tx311, minw::DependencyType::STRONG);
+    tx31->addChild(tx311, Loom::DependencyType::STRONG);
     
     Transaction::Ptr tx312;
     simulateRow(tx312, "312");
     tx312->addReadRow("45");
-    tx31->addChild(tx312, minw::DependencyType::WEAK);
+    tx31->addChild(tx312, Loom::DependencyType::WEAK);
 
 
     Transaction::Ptr tx32;
     simulateRow(tx32, "32");
-    tx3->addChild(tx32, minw::DependencyType::WEAK);
+    tx3->addChild(tx32, Loom::DependencyType::WEAK);
     
     Transaction::Ptr tx321;
     simulateRow(tx321, "321");
-    tx32->addChild(tx321, minw::DependencyType::STRONG);
+    tx32->addChild(tx321, Loom::DependencyType::STRONG);
     Transaction::Ptr tx3211;
     simulateRow(tx3211, "3211");
-    tx321->addChild(tx3211, minw::DependencyType::WEAK);
+    tx321->addChild(tx3211, Loom::DependencyType::WEAK);
     Transaction::Ptr tx32111;
     simulateRow(tx32111, "32111");
     tx32111->addReadRow("7");
-    tx3211->addChild(tx32111, minw::DependencyType::STRONG);
+    tx3211->addChild(tx32111, Loom::DependencyType::STRONG);
     Transaction::Ptr tx32112;
     simulateRow(tx32112, "32112");
     tx32112->addUpdateRow("8");
     tx32112->addReadRow("55");
-    tx3211->addChild(tx32112, minw::DependencyType::STRONG);
+    tx3211->addChild(tx32112, Loom::DependencyType::STRONG);
 
 
     Transaction::Ptr tx322;
     simulateRow(tx322, "322");
     tx322->addReadRow("54");
-    tx32->addChild(tx322, minw::DependencyType::WEAK);
+    tx32->addChild(tx322, Loom::DependencyType::WEAK);
 
     return tx3;
 }
@@ -485,7 +485,7 @@ TEST(MinWRollbackTest, TestConcurrentBuild) {
     workload.set_seed(seed);
     cout << "seed = " << seed << endl;
 
-    for (int i = 0; i < minw::BLOCK_SIZE; i++) {
+    for (int i = 0; i < Loom::BLOCK_SIZE; i++) {
         tx = workload.NextTransaction();
         if (tx == nullptr) {
             cout << "=== tx is nullptr ===" << endl;
@@ -502,7 +502,7 @@ TEST(MinWRollbackTest, TestConcurrentBuild) {
         //     minw2.execute(tx);
         // }
 
-        if (nestCounter < minw::BLOCK_SIZE * 0.55) {
+        if (nestCounter < Loom::BLOCK_SIZE * 0.55) {
             minw1.execute(tx, false);
             minw2.execute(tx, false);
             nestCounter++;
@@ -540,7 +540,7 @@ TEST(MinWRollbackTest, TestConcurrentBuild) {
 
     UThreadPoolPtr tp = UAllocator::safeMallocTemplateCObject<UThreadPool>();
 
-    minw2.onWarm();
+    minw2.onWarm2RWIndex();
     start = std::chrono::high_resolution_clock::now();
     // minw2.buildGraphConcurrent(tp);
     // minw2.buildGraphConcurrent(pool);
@@ -568,7 +568,7 @@ TEST(MinWRollbackTest, TestThreadPool) {
     workload.set_seed(seed);
     cout << "seed = " << seed << endl;
 
-    for (int i = 0; i < minw::BLOCK_SIZE; i++) {
+    for (int i = 0; i < Loom::BLOCK_SIZE; i++) {
         tx = workload.NextTransaction();
         if (tx == nullptr) {
             cout << "=== tx is nullptr ===" << endl;
@@ -599,7 +599,7 @@ TEST(MinWRollbackTest, TestThreadPool) {
     // int threadNum = 36;
 
     ThreadPool::Ptr tp1 = std::make_shared<ThreadPool>(threadNum);
-    minw1.onWarm();
+    minw1.onWarm2RWIndex();
     start = std::chrono::high_resolution_clock::now();
     minw1.buildGraphNoEdgeC(tp1, futures);
     // minw1.buildGraphConcurrent(tp1);
@@ -609,7 +609,7 @@ TEST(MinWRollbackTest, TestThreadPool) {
 
 
     UThreadPoolPtr tp = UAllocator::safeMallocTemplateCObject<UThreadPool>();
-    minw2.onWarm();
+    minw2.onWarm2RWIndex();
     start = std::chrono::high_resolution_clock::now();
     minw2.buildGraphNoEdgeC(tp, futures);
     // minw2.buildGraphConcurrent(tp);
@@ -619,7 +619,7 @@ TEST(MinWRollbackTest, TestThreadPool) {
 
 
     threadpool::Ptr pool = std::make_unique<threadpool>((unsigned short)threadNum);
-    minw3.onWarm();
+    minw3.onWarm2RWIndex();
     start = std::chrono::high_resolution_clock::now();
     minw3.buildGraphNoEdgeC(pool, futures);
     // minw3.buildGraphConcurrent(pool);
@@ -651,7 +651,7 @@ TEST(MinWRollbackTest, TestOptCompare) {
     cout << "r_seed = " << r_seed << endl;
 
 
-    for (int i = 0; i < minw::BLOCK_SIZE; i++) {
+    for (int i = 0; i < Loom::BLOCK_SIZE; i++) {
         tx = workload.NextTransaction();
         if (tx == nullptr) {
             cout << "=== tx is nullptr ===" << endl;
@@ -692,7 +692,7 @@ TEST(MinWRollbackTest, TestOptCompare) {
 
 
     // // UThreadPoolPtr tp = UAllocator::safeMallocTemplateCObject<UThreadPool>();
-    // // minw1.onWarm();
+    // // minw1.onWarm2RWIndex();
     // start = std::chrono::high_resolution_clock::now();
     // minw1.buildGraphSerial();
     // // minw1.buildGraphConcurrent(tp);
@@ -711,9 +711,12 @@ TEST(MinWRollbackTest, TestOptCompare) {
     minw2.buildGraphNoEdge();
     end = std::chrono::high_resolution_clock::now();
     cout << "noedge串行索引构图: " << (double)chrono::duration_cast<chrono::microseconds>(end - start).count() / 1000 << "ms" << endl;
-
+    
     start = std::chrono::high_resolution_clock::now();
-    minw2.rollbackNoEdge(true);
+    minw2.onWarm2SCC();
+    for (auto& scc : minw2.m_sccs) {
+        minw2.rollbackNoEdge(scc, true);
+    }
     end = std::chrono::high_resolution_clock::now();
     cout << "opt2 rollback time: " << (double)chrono::duration_cast<chrono::microseconds>(end - start).count() / 1000 << "ms" << endl;
 
@@ -721,7 +724,7 @@ TEST(MinWRollbackTest, TestOptCompare) {
     
 
     // UThreadPoolPtr tp = UAllocator::safeMallocTemplateCObject<UThreadPool>();
-    // minw2.onWarm();
+    // minw2.onWarm2RWIndex();
     // start = std::chrono::high_resolution_clock::now();
     // minw2.buildGraphConcurrent(tp);
     // end = std::chrono::high_resolution_clock::now();
@@ -768,7 +771,7 @@ TEST(MinWRollbackTest, TestFastMode) {
     cout << "r_seed = " << r_seed << endl;
 
 
-    for (int i = 0; i < minw::BLOCK_SIZE; i++) {
+    for (int i = 0; i < Loom::BLOCK_SIZE; i++) {
         tx = workload.NextTransaction();
         if (tx == nullptr) {
             cout << "=== tx is nullptr ===" << endl;
@@ -807,14 +810,17 @@ TEST(MinWRollbackTest, TestFastMode) {
 
 
     UThreadPoolPtr tp = UAllocator::safeMallocTemplateCObject<UThreadPool>();
-    minw2.onWarm();
+    minw2.onWarm2RWIndex();
     start = std::chrono::high_resolution_clock::now();
     minw2.buildGraphNoEdgeC(tp, futures);
     end = std::chrono::high_resolution_clock::now();
     cout << "noEdge并行索引构图: " << (double)chrono::duration_cast<chrono::microseconds>(end - start).count() / 1000 << "ms" << endl;
 
     start = std::chrono::high_resolution_clock::now();
-    minw2.rollbackNoEdge(true);
+    minw2.onWarm2SCC();
+    for (auto& scc : minw2.m_sccs) {
+        minw2.rollbackNoEdge(scc, true);
+    }
     end = std::chrono::high_resolution_clock::now();
     cout << "fastmode rollback time: " << (double)chrono::duration_cast<chrono::microseconds>(end - start).count() / 1000 << "ms" << endl;
 
@@ -847,7 +853,7 @@ TEST(MinWRollbackTest, TestConcurrentRollback) {
     cout << "r_seed = " << r_seed << endl;
 
 
-    for (int i = 0; i < minw::BLOCK_SIZE; i++) {
+    for (int i = 0; i < Loom::BLOCK_SIZE; i++) {
         tx = workload.NextTransaction();
         if (tx == nullptr) {
             cout << "=== tx is nullptr ===" << endl;
@@ -872,7 +878,7 @@ TEST(MinWRollbackTest, TestConcurrentRollback) {
     
 
 
-    minw1.onWarm();
+    minw1.onWarm2RWIndex();
     start = std::chrono::high_resolution_clock::now();
     // minw1.buildGraphNoEdgeC(tp, futures);
     minw1.buildGraphNoEdge();
@@ -880,14 +886,17 @@ TEST(MinWRollbackTest, TestConcurrentRollback) {
     cout << "noEdge串行索引构图: " << (double)chrono::duration_cast<chrono::microseconds>(end - start).count() / 1000 << "ms" << endl;
 
     start = std::chrono::high_resolution_clock::now();
-    minw1.rollbackNoEdge(true);
+    minw1.onWarm2SCC();
+    for (auto& scc : minw1.m_sccs) {
+        minw1.rollbackNoEdge(scc, true);
+    }
     end = std::chrono::high_resolution_clock::now();
     cout << "serial rollback time: " << (double)chrono::duration_cast<chrono::microseconds>(end - start).count() / 1000 << "ms" << endl;
 
     minw1.printRollbackTxs();
 
 
-    minw2.onWarm();
+    minw2.onWarm2RWIndex();
     start = std::chrono::high_resolution_clock::now();
     minw2.buildGraphNoEdgeC(tp, futures1);
     // minw2.buildGraphNoEdge();
@@ -905,6 +914,99 @@ TEST(MinWRollbackTest, TestConcurrentRollback) {
     end = std::chrono::high_resolution_clock::now();
     cout << "concurrent rollback time: " << (double)chrono::duration_cast<chrono::microseconds>(end - start).count() / 1000 << "ms" << endl;
 
+    minw2.printRollbackTxs();
+    
+
+    cout << "nestCounter: " << nestCounter << endl;
+}
+
+/* 测试交易序功能的正确性,以及给性能带来的损耗 */
+TEST(MinWRollbackTest, TestSerialOrder) {
+    Workload workload;
+    chrono::high_resolution_clock::time_point start, end;
+    Transaction::Ptr tx;
+    MinWRollback minw1, minw2;
+    Random random(time(0));
+    int nestCounter = 0;
+
+    UThreadPoolPtr tp = UAllocator::safeMallocTemplateCObject<UThreadPool>();
+    std::vector<std::future<void>> futures, futures1;
+
+    uint64_t w_seed = workload.get_seed();
+    uint64_t r_seed = random.get_seed();
+
+    // uint64_t w_seed = uint64_t(140705477859133);
+    // uint64_t r_seed = uint64_t(24568851433);
+    // workload.set_seed(w_seed);
+    // random.set_seed(r_seed);
+
+    cout << "w_seed = " << w_seed << endl;
+    cout << "r_seed = " << r_seed << endl;
+
+
+    for (int i = 0; i < Loom::BLOCK_SIZE; i++) {
+        tx = workload.NextTransaction();
+        if (tx == nullptr) {
+            cout << "=== tx is nullptr ===" << endl;
+            continue;
+        }
+        
+        // // 控制嵌套交易比例
+        // auto rnd = random.uniform_dist(1, 100);
+        // if (rnd <= 60) {
+        //     minw1.execute(tx, false);
+        //     minw2.execute(tx, false);
+        // } else {
+        //     nestCounter++;
+        //     minw1.execute(tx);
+        //     minw2.execute(tx);
+        // }
+        
+        minw1.execute(tx);
+        minw2.execute(tx);
+    }
+    cout << "transaction generate done" << endl;
+    
+
+    int totalSize = 0, totalCost = 0;
+
+    minw1.onWarm2RWIndex();
+    start = std::chrono::high_resolution_clock::now();
+    minw1.buildGraphNoEdgeC(tp, futures);
+    // minw1.buildGraphNoEdge();
+    end = std::chrono::high_resolution_clock::now();
+    cout << "noEdge并行索引构图: " << (double)chrono::duration_cast<chrono::microseconds>(end - start).count() / 1000 << "ms" << endl;
+
+    start = std::chrono::high_resolution_clock::now();
+    minw1.onWarm2SCC();
+    end = std::chrono::high_resolution_clock::now();
+    cout << "warm time: " << (double)chrono::duration_cast<chrono::microseconds>(end - start).count() / 1000 << "ms" << endl;
+    
+    for (auto& scc : minw1.m_sccs) {
+        auto reExecuteInfo = minw1.rollbackNoEdge(scc, true);
+        // 获得回滚事务顺序
+        Loom::printTxsOrder(reExecuteInfo.m_serialOrder);
+        // 获得回滚事务并根据事务顺序排序
+        set<Vertex::Ptr, Loom::customCompare> rollbackTxs(Loom::customCompare(reExecuteInfo.m_serialOrder));
+        rollbackTxs.insert(reExecuteInfo.m_rollbackTxs.begin(), reExecuteInfo.m_rollbackTxs.end());
+        Loom::printRollbackTxs(rollbackTxs);
+    }
+
+    end = std::chrono::high_resolution_clock::now();
+    cout << "serial Order rollback time: " << (double)chrono::duration_cast<chrono::microseconds>(end - start).count() / 1000 << "ms" << endl;
+    cout << "======================" << endl;
+
+    minw2.onWarm2RWIndex();
+    start = std::chrono::high_resolution_clock::now();
+    minw2.buildGraphNoEdgeC(tp, futures1);
+    // minw2.buildGraphNoEdge();
+    end = std::chrono::high_resolution_clock::now();
+    cout << "noEdge并行索引构图: " << (double)chrono::duration_cast<chrono::microseconds>(end - start).count() / 1000 << "ms" << endl;
+
+    start = std::chrono::high_resolution_clock::now();
+    minw2.rollbackNoEdge(true);
+    end = std::chrono::high_resolution_clock::now();
+    cout << "serial rollback time: " << (double)chrono::duration_cast<chrono::microseconds>(end - start).count() / 1000 << "ms" << endl;
     minw2.printRollbackTxs();
     
 

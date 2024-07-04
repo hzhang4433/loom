@@ -2,7 +2,7 @@
 
 #include <string>
 
-namespace minw {
+namespace Loom {
 class Random {
     public:
         Random(uint64_t seed = 0) { init_seed(seed); }

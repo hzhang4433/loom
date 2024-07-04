@@ -2,7 +2,7 @@
 
 #include <string>
 
-namespace minw {
+namespace Loom {
     
 enum class DependencyType {
     STRONG,
@@ -16,13 +16,13 @@ enum class EdgeType {
     BOTH
 };
 
-static std::string edgeTypeToString(minw::EdgeType type) {
+static std::string edgeTypeToString(Loom::EdgeType type) {
     switch (type) {
-        case minw::EdgeType::IN:
+        case Loom::EdgeType::IN:
             return "IN";
-        case minw::EdgeType::OUT:
+        case Loom::EdgeType::OUT:
             return "OUT";
-        case minw::EdgeType::BOTH:
+        case Loom::EdgeType::BOTH:
             return "BOTH";
         default:
             return "UNKNOWN";
@@ -30,6 +30,6 @@ static std::string edgeTypeToString(minw::EdgeType type) {
 }
 
 // 定义区块大小
-static size_t BLOCK_SIZE = 50;
+static size_t BLOCK_SIZE = 100;
 
 }

@@ -13,7 +13,7 @@ class HyperVertex : public std::enable_shared_from_this<HyperVertex>
     public:
         typedef std::shared_ptr<HyperVertex> Ptr;
 
-        HyperVertex(int id);
+        HyperVertex(int id, bool isNested);
 
         ~HyperVertex();
 
@@ -44,6 +44,7 @@ class HyperVertex : public std::enable_shared_from_this<HyperVertex>
 
     // 公共变量
         int m_hyperId;      // 超节点ID
+        bool m_isNested;      // 标记节点是否是嵌套节点
         int m_min_in;       // 超节点的最小入度ID
         int m_min_out;      // 超节点的最小出度ID
         double m_cost;      // 超节点的最小回滚代价
@@ -95,7 +96,7 @@ class HyperVertex : public std::enable_shared_from_this<HyperVertex>
 
         tbb::concurrent_vector<double> m_out_weights; //记录出边边权
         tbb::concurrent_vector<double> m_in_weights;  //记录入边边权
-        minw::EdgeType m_rollback_type; // 边类型
+        Loom::EdgeType m_rollback_type; // 边类型
         unordered_set<Vertex::Ptr, Vertex::VertexHash> m_vertices;  // 记录所有节点
         Vertex::Ptr m_rootVertex;                               // 根节点
         

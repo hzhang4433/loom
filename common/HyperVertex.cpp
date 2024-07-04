@@ -3,25 +3,24 @@
 
 using namespace std;
 
-HyperVertex::HyperVertex(int id) {
-    m_hyperId = id;
+HyperVertex::HyperVertex(int id, bool isNested): m_hyperId(id), m_isNested(isNested) {
     m_min_in = INT_MAX;
     m_min_out = INT_MAX;
     m_cost = 0;
     m_in_cost = 0;
     m_out_cost = 0;
 
-    m_out_edges.resize(minw::BLOCK_SIZE + 1);
-    m_in_edges.resize(minw::BLOCK_SIZE + 1);
-    m_out_rollback.resize(minw::BLOCK_SIZE + 1);
-    m_in_rollback.resize(minw::BLOCK_SIZE + 1);
-    m_out_weights.resize(minw::BLOCK_SIZE + 1);
-    m_in_weights.resize(minw::BLOCK_SIZE + 1);
+    m_out_edges.resize(Loom::BLOCK_SIZE + 1);
+    m_in_edges.resize(Loom::BLOCK_SIZE + 1);
+    m_out_rollback.resize(Loom::BLOCK_SIZE + 1);
+    m_in_rollback.resize(Loom::BLOCK_SIZE + 1);
+    m_out_weights.resize(Loom::BLOCK_SIZE + 1);
+    m_in_weights.resize(Loom::BLOCK_SIZE + 1);
 
-    m_out_mapS.resize(minw::BLOCK_SIZE + 1);
-    m_in_mapS.resize(minw::BLOCK_SIZE + 1);
-    m_out_rollbackMS.resize(minw::BLOCK_SIZE + 1);
-    m_in_rollbackMS.resize(minw::BLOCK_SIZE + 1);
+    m_out_mapS.resize(Loom::BLOCK_SIZE + 1);
+    m_in_mapS.resize(Loom::BLOCK_SIZE + 1);
+    m_out_rollbackMS.resize(Loom::BLOCK_SIZE + 1);
+    m_in_rollbackMS.resize(Loom::BLOCK_SIZE + 1);
 }
 
 HyperVertex::~HyperVertex() {}
@@ -31,7 +30,7 @@ void HyperVertex::recognizeCascades(Vertex::Ptr vertex) {
     // 递归识别并更新级联子事务
     for (auto& child : vertex->getChildren()) {
         // 更新回滚代价
-        if (child.dependency == minw::DependencyType::STRONG) {
+        if (child.dependency == Loom::DependencyType::STRONG) {
             child.vertex->m_cost = vertex->m_cost;
             child.vertex->cascadeVertices = vertex->cascadeVertices;
         }

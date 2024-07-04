@@ -6,7 +6,7 @@ using namespace std;
 void FabricPP::execute(const Transaction::Ptr& tx) {
     // 构建超节点
     int txid = getId();
-    HyperVertex::Ptr hyperVertex = make_shared<HyperVertex>(txid);
+    HyperVertex::Ptr hyperVertex = make_shared<HyperVertex>(txid, false);
     
     // 构建事务节点
     Vertex::Ptr rootVertex = make_shared<Vertex>(hyperVertex, txid, to_string(txid));

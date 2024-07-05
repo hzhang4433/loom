@@ -79,7 +79,7 @@ class Vertex : public std::enable_shared_from_this<Vertex>
             }
         };
 
-        Vertex(shared_ptr<HyperVertex> hyperVertex, int hyperId, std::string id, bool isNested = false);
+        Vertex(shared_ptr<HyperVertex> hyperVertex, int hyperId, std::string id, int layer, bool isNested = false);
 
         ~Vertex();
 
@@ -100,6 +100,7 @@ class Vertex : public std::enable_shared_from_this<Vertex>
         int m_hyperId;                                                           // 记录节点对应的超节点id
         shared_ptr<HyperVertex> m_hyperVertex;                                   // 记录节点对应的超节点
         string m_id;                                                             // 记录节点自身的id
+        int m_layer;                                                             // 记录节点所在层
         int m_cost;                                                              // 记录节点的执行代价 => 由执行时间正则化得到
         int m_self_cost;                                                         // 记录节点自身的执行代价
         int m_degree;                                                            // 记录节点的度
@@ -111,5 +112,5 @@ class Vertex : public std::enable_shared_from_this<Vertex>
         unordered_set<string> writeSet;                                          // 记录写集
         bool isNested;                                                           // 标记节点是否是嵌套节点
         unordered_set<ChildVertex, ChildVertexHash, ChildVertexEqual> m_children;// 记录子节点
-        // set<ChildVertex, ChildVertexCmp> m_children;             // 记录子节点
+        int scheduledTime;                                                       // 事务执行时刻
 };

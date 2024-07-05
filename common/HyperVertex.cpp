@@ -55,7 +55,7 @@ int HyperVertex::buildVertexs(const Transaction::Ptr& tx, HyperVertex::Ptr& hype
         auto& children = tx->getChildren();
         for (int i = 1; i <= children.size(); i++) {
             string subTxid = txid + "_" + to_string(i);
-            Vertex::Ptr childVertex = make_shared<Vertex>(hyperVertex, this->m_hyperId, subTxid, true);
+            Vertex::Ptr childVertex = make_shared<Vertex>(hyperVertex, this->m_hyperId, subTxid, vertex->m_layer + 1, true);
             // 递归添加级联回滚代价
             execTime += buildVertexs(children[i - 1].transaction, hyperVertex, childVertex, subTxid, invertedIndex);
             // 递归添加级联回滚节点
@@ -74,32 +74,13 @@ int HyperVertex::buildVertexs(const Transaction::Ptr& tx, HyperVertex::Ptr& hype
     // 构建倒排索引
     for (auto& readKey : vertex->readSet) {
         invertedIndex[readKey].readSet.insert(vertex);
-        // // 构建map的key
-        // for (auto& writeV : invertedIndex[readKey].writeSet) {
-        //     auto whv = writeV->m_hyperVertex;
-        //     if (whv != hv) {
-        //         hv->m_out_edges[whv];
-        //         whv->m_in_edges[hv];
-        //         hv->m_out_rollback[whv];
-        //     }
-        // }
     }
     for (auto& writeKey : vertex->writeSet) {
         invertedIndex[writeKey].writeSet.insert(vertex);
-        // // 构建map的key
-        // for (auto& readV : invertedIndex[writeKey].readSet) {
-        //     auto rhv = readV->m_hyperVertex;
-        //     if (rhv != hv) {
-        //         rhv->m_out_edges[hv];
-        //         hv->m_in_edges[rhv];
-        //         rhv->m_out_rollback[hv];
-        //     }
-        // }
     }
 
     // 添加回滚代价
     vertex->m_cost = execTime;
-    // cout << "VertexId: " << vertex->m_id << " Cost: " << vertex->m_cost << endl;
     return execTime;
 }
 

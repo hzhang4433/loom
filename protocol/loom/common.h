@@ -73,4 +73,24 @@ namespace Loom {
         }
         cout << endl;
     }
+
+    // 按照scheduledTime从小到大排序，如果scheduledTime相等，则按照id从小到大排序
+    struct lessScheduledTime {
+        bool operator()(const Vertex::Ptr& lhs, const Vertex::Ptr& rhs) const {
+            if (lhs->scheduledTime != rhs->scheduledTime) {
+                return lhs->scheduledTime < rhs->scheduledTime;
+            }
+            return lhs->m_id < rhs->m_id;
+        }
+    };
+
+    // 按照scheduledTime从大到小排序，如果scheduledTime相等，则按照id从小到大排序
+    struct greaterScheduledTime {
+        bool operator()(const Vertex::Ptr& lhs, const Vertex::Ptr& rhs) const {
+            if (lhs->scheduledTime != rhs->scheduledTime) {
+                return lhs->scheduledTime > rhs->scheduledTime;
+            }
+            return lhs->m_id < rhs->m_id;
+        }
+    };
 }

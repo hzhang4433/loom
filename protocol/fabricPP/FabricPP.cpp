@@ -9,7 +9,7 @@ void FabricPP::execute(const Transaction::Ptr& tx) {
     HyperVertex::Ptr hyperVertex = make_shared<HyperVertex>(txid, false);
     
     // 构建事务节点
-    Vertex::Ptr rootVertex = make_shared<Vertex>(hyperVertex, txid, to_string(txid));
+    Vertex::Ptr rootVertex = make_shared<Vertex>(hyperVertex, txid, to_string(txid), 0);
     hyperVertex->buildVertexs(tx, rootVertex, m_invertedIndex);
     
     // 设置超节点状态

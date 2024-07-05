@@ -615,7 +615,7 @@ TEST(MinWRollbackTest, TestThreadPool) {
     // minw2.buildGraphConcurrent(tp);
     end = std::chrono::high_resolution_clock::now();
     auto build2 = chrono::duration_cast<chrono::microseconds>(end - start).count();
-    cout << "CGraph threadpool time: " << (double)build2 / 1000 << "ms " << endl;
+    cout << "Loom threadpool time: " << (double)build2 / 1000 << "ms " << endl;
 
 
     threadpool::Ptr pool = std::make_unique<threadpool>((unsigned short)threadNum);

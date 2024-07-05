@@ -2,7 +2,7 @@
 #include "Vertex.h"
 
 
-Vertex::Vertex(shared_ptr<HyperVertex> hyperVertex, int hyperId, string id, bool isNested) : m_hyperVertex(hyperVertex), m_hyperId(hyperId), m_id(id), isNested(isNested) {
+Vertex::Vertex(shared_ptr<HyperVertex> hyperVertex, int hyperId, string id, int layer, bool isNested) : m_hyperVertex(hyperVertex), m_hyperId(hyperId), m_id(id), m_layer(layer), isNested(isNested) {
     // m_min_in = -1;
     // m_min_out = -1;
     m_degree = 0;

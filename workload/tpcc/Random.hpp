@@ -5,9 +5,9 @@
 #include "utils/Random.hpp"
 
 
-class Random : public Loom::Random {
+class Random : public Util::Random {
     public:
-        using Loom::Random::Random;
+        using Util::Random::Random;
 
         uint64_t non_uniform_distribution(uint64_t A, uint64_t x, uint64_t y) {
             return (uniform_dist(0, A) | uniform_dist(x, y)) % (y - x + 1) + x;

@@ -18,7 +18,7 @@ using namespace std;
 void MinWRollback::execute(const Transaction::Ptr& tx, bool isNest) {
     int txid = getId();
     HyperVertex::Ptr hyperVertex = make_shared<HyperVertex>(txid, isNest);
-    Vertex::Ptr rootVertex = make_shared<Vertex>(hyperVertex, txid, to_string(txid));
+    Vertex::Ptr rootVertex = make_shared<Vertex>(hyperVertex, txid, to_string(txid), 0, isNest);
     // 根据事务结构构建超节点
     string txid_str = to_string(txid);
     

@@ -6,8 +6,8 @@
 @Desc: 
 ***************************/
 
-#ifndef CGRAPH_UTASK_H
-#define CGRAPH_UTASK_H
+#ifndef UTIL_UTASK_H
+#define UTIL_UTASK_H
 
 #include <vector>
 #include <memory>
@@ -15,7 +15,7 @@
 
 #include "../UThreadObject.h"
 
-CGRAPH_NAMESPACE_BEGIN
+UTIL_NAMESPACE_BEGIN
 
 class UTask : public CStruct {
     struct TaskBased {
@@ -63,7 +63,7 @@ public:
         return priority_ >= task.priority_;
     }
 
-    CGRAPH_NO_ALLOWED_COPY(UTask)
+    UTIL_NO_ALLOWED_COPY(UTask)
 
 private:
     std::unique_ptr<TaskBased> impl_ = nullptr;
@@ -76,6 +76,6 @@ using UTaskPtr = UTask *;
 using UTaskArr = std::vector<UTask>;
 using UTaskArrRef = std::vector<UTask> &;
 
-CGRAPH_NAMESPACE_END
+UTIL_NAMESPACE_END
 
-#endif //CGRAPH_UTASK_H
+#endif //UTIL_UTASK_H

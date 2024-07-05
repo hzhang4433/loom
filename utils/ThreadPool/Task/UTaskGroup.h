@@ -6,19 +6,19 @@
 @Desc: 任务组，用于批量提交
 ***************************/
 
-#ifndef CGRAPH_UTASKGROUP_H
-#define CGRAPH_UTASKGROUP_H
+#ifndef UTIL_UTASKGROUP_H
+#define UTIL_UTASKGROUP_H
 
 #include <utility>
 
 #include "../UThreadObject.h"
 
-CGRAPH_NAMESPACE_BEGIN
+UTIL_NAMESPACE_BEGIN
 
 class UTaskGroup : public UThreadObject {
 public:
     explicit UTaskGroup() = default;
-    CGRAPH_NO_ALLOWED_COPY(UTaskGroup)
+    UTIL_NO_ALLOWED_COPY(UTaskGroup)
 
     /**
      * 直接通过函数来申明taskGroup
@@ -26,9 +26,9 @@ public:
      * @param ttl
      * @param onFinished
      */
-    explicit UTaskGroup(CGRAPH_DEFAULT_CONST_FUNCTION_REF task,
-                        CMSec ttl = CGRAPH_MAX_BLOCK_TTL,
-                        CGRAPH_CALLBACK_CONST_FUNCTION_REF onFinished = nullptr) noexcept {
+    explicit UTaskGroup(UTIL_DEFAULT_CONST_FUNCTION_REF task,
+                        CMSec ttl = UTIL_MAX_BLOCK_TTL,
+                        UTIL_CALLBACK_CONST_FUNCTION_REF onFinished = nullptr) noexcept {
         this->addTask(task)
             ->setTtl(ttl)
             ->setOnFinished(onFinished);
@@ -38,7 +38,7 @@ public:
      * 添加一个任务
      * @param task
      */
-    UTaskGroup* addTask(CGRAPH_DEFAULT_CONST_FUNCTION_REF task) {
+    UTaskGroup* addTask(UTIL_DEFAULT_CONST_FUNCTION_REF task) {
         task_arr_.emplace_back(task);
         return this;
     }
@@ -57,7 +57,7 @@ public:
      * @param onFinished
      * @return
      */
-    UTaskGroup* setOnFinished(CGRAPH_CALLBACK_CONST_FUNCTION_REF onFinished) {
+    UTaskGroup* setOnFinished(UTIL_CALLBACK_CONST_FUNCTION_REF onFinished) {
         this->on_finished_ = onFinished;
         return this;
     }
@@ -87,9 +87,9 @@ public:
     }
 
 private:
-    std::vector<CGRAPH_DEFAULT_FUNCTION> task_arr_;         // 任务消息
-    CMSec ttl_ = CGRAPH_MAX_BLOCK_TTL;                      // 任务组最大执行耗时(如果是0的话，则表示不阻塞)
-    CGRAPH_CALLBACK_FUNCTION on_finished_ = nullptr;        // 执行函数任务结束
+    std::vector<UTIL_DEFAULT_FUNCTION> task_arr_;         // 任务消息
+    CMSec ttl_ = UTIL_MAX_BLOCK_TTL;                      // 任务组最大执行耗时(如果是0的话，则表示不阻塞)
+    UTIL_CALLBACK_FUNCTION on_finished_ = nullptr;        // 执行函数任务结束
 
     friend class UThreadPool;
 };
@@ -97,6 +97,6 @@ private:
 using UTaskGroupPtr = UTaskGroup *;
 using UTaskGroupRef = UTaskGroup &;
 
-CGRAPH_NAMESPACE_END
+UTIL_NAMESPACE_END
 
-#endif //CGRAPH_UTASKGROUP_H
+#endif //UTIL_UTASKGROUP_H

@@ -6,21 +6,21 @@
 @Desc: 异常处理类
 ***************************/
 
-#ifndef CGRAPH_CEXCEPTION_H
-#define CGRAPH_CEXCEPTION_H
+#ifndef UTIL_CEXCEPTION_H
+#define UTIL_CEXCEPTION_H
 
 #include <string>
 #include <exception>
 
 #include "CStrDefine.h"
 
-CGRAPH_NAMESPACE_BEGIN
-CGRAPH_INTERNAL_NAMESPACE_BEGIN
+UTIL_NAMESPACE_BEGIN
+UTIL_INTERNAL_NAMESPACE_BEGIN
 
 class CEXCEPTION : public std::exception {
 public:
     explicit CEXCEPTION(const std::string& info,
-                        const std::string& locate = CGRAPH_EMPTY) {
+                        const std::string& locate = UTIL_EMPTY) {
         /**
          * 这里的设计，和CStatus有一个联动
          * 如果不了解具体情况，不建议做任何修改
@@ -40,7 +40,7 @@ private:
     std::string exception_info_;            // 异常状态信息
 };
 
-CGRAPH_INTERNAL_NAMESPACE_END
-CGRAPH_NAMESPACE_END
+UTIL_INTERNAL_NAMESPACE_END
+UTIL_NAMESPACE_END
 
-#endif //CGRAPH_CEXCEPTION_H
+#endif //UTIL_CEXCEPTION_H

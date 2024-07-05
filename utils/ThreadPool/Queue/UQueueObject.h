@@ -6,15 +6,15 @@
 @Desc: 
 ***************************/
 
-#ifndef CGRAPH_UQUEUEOBJECT_H
-#define CGRAPH_UQUEUEOBJECT_H
+#ifndef UTIL_UQUEUEOBJECT_H
+#define UTIL_UQUEUEOBJECT_H
 
 #include <mutex>
 
 #include "../UThreadObject.h"
 #include "UQueueDefine.h"
 
-CGRAPH_NAMESPACE_BEGIN
+UTIL_NAMESPACE_BEGIN
 
 class UQueueObject : public UThreadObject {
 protected:
@@ -22,6 +22,6 @@ protected:
     std::condition_variable cv_;
 };
 
-CGRAPH_NAMESPACE_END
+UTIL_NAMESPACE_END
 
-#endif //CGRAPH_UQUEUEOBJECT_H
+#endif //UTIL_UQUEUEOBJECT_H

@@ -6,8 +6,8 @@
 @Desc: 
 ***************************/
 
-#ifndef CGRAPH_UTHREADPOOLINCLUDE_H
-#define CGRAPH_UTHREADPOOLINCLUDE_H
+#ifndef UTIL_UTHREADPOOLINCLUDE_H
+#define UTIL_UTHREADPOOLINCLUDE_H
 
 #include "UThreadObject.h"
 #include "UThreadPool.h"
@@ -19,4 +19,4 @@
 #include "Lock/ULockInclude.h"
 #include "Semaphore/USemaphore.h"
 
-#endif //CGRAPH_UTHREADPOOLINCLUDE_H
+#endif //UTIL_UTHREADPOOLINCLUDE_H

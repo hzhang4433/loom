@@ -6,12 +6,12 @@
 @Desc: 
 ***************************/
 
-#ifndef CGRAPH_CSTRUCT_H
-#define CGRAPH_CSTRUCT_H
+#ifndef UTIL_CSTRUCT_H
+#define UTIL_CSTRUCT_H
 
 #include "CBasicDefine.h"
 
-CGRAPH_NAMESPACE_BEGIN
+UTIL_NAMESPACE_BEGIN
 
 /**
  * 所有框架内部结构体定义的基类
@@ -22,6 +22,6 @@ public:
     ~CStruct() = default;
 };
 
-CGRAPH_NAMESPACE_END
+UTIL_NAMESPACE_END
 
-#endif //CGRAPH_CSTRUCT_H
+#endif //UTIL_CSTRUCT_H

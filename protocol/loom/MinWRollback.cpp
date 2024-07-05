@@ -192,12 +192,12 @@ void MinWRollback::buildGraphNoEdgeC(UThreadPoolPtr& Pool, std::vector<std::futu
     }
 
     size_t totalPairs = rwPairs.size();
-    size_t chunkSize = (totalPairs + CGRAPH_DEFAULT_THREAD_SIZE - 1) / (CGRAPH_DEFAULT_THREAD_SIZE * 1.5);
+    size_t chunkSize = (totalPairs + UTIL_DEFAULT_THREAD_SIZE - 1) / (UTIL_DEFAULT_THREAD_SIZE * 1.5);
     // if (Loom::BLOCK_SIZE == 50) {
     //     chunkSize = 20;
     // } else {
     //     // chunkSize = Loom::BLOCK_SIZE / 2;
-    //     chunkSize = (totalPairs + CGRAPH_DEFAULT_THREAD_SIZE - 1) / (CGRAPH_DEFAULT_THREAD_SIZE * 1.5);
+    //     chunkSize = (totalPairs + UTIL_DEFAULT_THREAD_SIZE - 1) / (UTIL_DEFAULT_THREAD_SIZE * 1.5);
     //     // chunkSize = 20;
     // }
     cout << "totalPairs: " << totalPairs << " chunkSize: " << chunkSize << endl;
@@ -237,7 +237,7 @@ void MinWRollback::buildGraphNoEdgeC(ThreadPool::Ptr& Pool, std::vector<std::fut
         chunkSize = 20;
     } else {
         // chunkSize = Loom::BLOCK_SIZE / 2;
-        chunkSize = (totalPairs + CGRAPH_DEFAULT_THREAD_SIZE - 1) / (CGRAPH_DEFAULT_THREAD_SIZE * 1.5);
+        chunkSize = (totalPairs + UTIL_DEFAULT_THREAD_SIZE - 1) / (UTIL_DEFAULT_THREAD_SIZE * 1.5);
     }
     cout << "totalPairs: " << totalPairs << " chunkSize: " << chunkSize << endl;
 
@@ -276,7 +276,7 @@ void MinWRollback::buildGraphNoEdgeC(threadpool::Ptr& Pool, std::vector<std::fut
         chunkSize = 20;
     } else {
         // chunkSize = Loom::BLOCK_SIZE / 2;
-        chunkSize = (totalPairs + CGRAPH_DEFAULT_THREAD_SIZE - 1) / (CGRAPH_DEFAULT_THREAD_SIZE * 1.5);
+        chunkSize = (totalPairs + UTIL_DEFAULT_THREAD_SIZE - 1) / (UTIL_DEFAULT_THREAD_SIZE * 1.5);
     }
     cout << "totalPairs: " << totalPairs << " chunkSize: " << chunkSize << endl;
 
@@ -330,7 +330,7 @@ void MinWRollback::buildGraphConcurrent(ThreadPool::Ptr& Pool) {
         chunkSize = 20;
     } else {
         chunkSize = Loom::BLOCK_SIZE / 2;
-        // chunkSize = (totalPairs + CGRAPH_DEFAULT_THREAD_SIZE - 1) / (CGRAPH_DEFAULT_THREAD_SIZE * 1);
+        // chunkSize = (totalPairs + UTIL_DEFAULT_THREAD_SIZE - 1) / (UTIL_DEFAULT_THREAD_SIZE * 1);
     }
     cout << "totalPairs: " << totalPairs << " chunkSize: " << chunkSize << endl;
 
@@ -381,7 +381,7 @@ void MinWRollback::buildGraphConcurrent(UThreadPoolPtr& Pool) {
         chunkSize = 20;
     } else {
         // chunkSize = Loom::BLOCK_SIZE / 2;
-        chunkSize = (totalPairs + CGRAPH_DEFAULT_THREAD_SIZE - 1) / (CGRAPH_DEFAULT_THREAD_SIZE * 2);
+        chunkSize = (totalPairs + UTIL_DEFAULT_THREAD_SIZE - 1) / (UTIL_DEFAULT_THREAD_SIZE * 2);
     }
     cout << "totalPairs: " << totalPairs << " chunkSize: " << chunkSize << endl;
 
@@ -422,7 +422,7 @@ void MinWRollback::buildGraphConcurrent(threadpool::Ptr& Pool) {
         chunkSize = 20;
     } else {
         chunkSize = Loom::BLOCK_SIZE / 2;
-        // chunkSize = (totalPairs + CGRAPH_DEFAULT_THREAD_SIZE - 1) / (CGRAPH_DEFAULT_THREAD_SIZE * 1);
+        // chunkSize = (totalPairs + UTIL_DEFAULT_THREAD_SIZE - 1) / (UTIL_DEFAULT_THREAD_SIZE * 1);
     }
 
     cout << "totalPairs: " << totalPairs << " chunkSize: " << chunkSize << endl;

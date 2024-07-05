@@ -52,7 +52,7 @@ class Workload {
         }
 
     private:
-        Random random;
-        Random tx_random;
+        Loom::Random random;
+        Loom::Random tx_random;
         Transaction::Ptr txGenerator;
 };

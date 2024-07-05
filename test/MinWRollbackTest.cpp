@@ -7,7 +7,7 @@
 #include "utils/ThreadPool/UThreadPool.h"
 
 using namespace std;
-using namespace CGraph;
+using namespace Util;
 
 void simulateRow(Transaction::Ptr tx, string txid) {
     tx->addReadRow(txid + "4");
@@ -231,7 +231,7 @@ TEST(MinWRollbackTest, TestExecute) {
 TEST(MinWRollbackTest, TestPerformance) {
     Workload workload;
     MinWRollback minw;
-    Random random(time(0));
+    Loom::Random random(time(0));
     Transaction::Ptr tx;
     chrono::high_resolution_clock::time_point start, end;
 
@@ -277,7 +277,7 @@ TEST(MinWRollbackTest, TestCombine) {
 TEST(MinWRollbackTest, TestSCC) {
     Workload workload;
     MinWRollback minw;
-    Random random;
+    Loom::Random random;
     Transaction::Ptr tx = std::make_shared<NewOrderTransaction>(random);
     chrono::high_resolution_clock::time_point start, end;
 
@@ -476,8 +476,8 @@ TEST(MinWRollbackTest, TestConcurrentBuild) {
     chrono::high_resolution_clock::time_point start, end;
     Transaction::Ptr tx;
     MinWRollback minw1, minw2;
-    Random random(time(0));
-    // Random random(140708984311565);
+    Loom::Random random(time(0));
+    // Loom::Random random(140708984311565);
     int nestCounter = 0;
         
     uint64_t seed = workload.get_seed();
@@ -558,8 +558,8 @@ TEST(MinWRollbackTest, TestThreadPool) {
     chrono::high_resolution_clock::time_point start, end;
     Transaction::Ptr tx;
     MinWRollback minw1, minw2, minw3;
-    Random random(time(0));
-    // Random random(140708984311565);
+    Loom::Random random(time(0));
+    // Loom::Random random(140708984311565);
     int nestCounter = 0;
     std::vector<std::future<void>> futures;
         
@@ -635,7 +635,7 @@ TEST(MinWRollbackTest, TestOptCompare) {
     chrono::high_resolution_clock::time_point start, end;
     Transaction::Ptr tx;
     MinWRollback minw0, minw1, minw2;
-    Random random(time(0));
+    Loom::Random random(time(0));
     int nestCounter = 0;
 
     // uint64_t w_seed = workload.get_seed();
@@ -755,7 +755,7 @@ TEST(MinWRollbackTest, TestFastMode) {
     chrono::high_resolution_clock::time_point start, end;
     Transaction::Ptr tx;
     MinWRollback minw1, minw2;
-    Random random(time(0));
+    Loom::Random random(time(0));
     int nestCounter = 0;
     std::vector<std::future<void>> futures;
 
@@ -835,7 +835,7 @@ TEST(MinWRollbackTest, TestConcurrentRollback) {
     chrono::high_resolution_clock::time_point start, end;
     Transaction::Ptr tx;
     MinWRollback minw1, minw2;
-    Random random(time(0));
+    Loom::Random random(time(0));
     int nestCounter = 0;
 
     UThreadPoolPtr tp = UAllocator::safeMallocTemplateCObject<UThreadPool>();
@@ -926,7 +926,7 @@ TEST(MinWRollbackTest, TestSerialOrder) {
     chrono::high_resolution_clock::time_point start, end;
     Transaction::Ptr tx;
     MinWRollback minw1, minw2;
-    Random random(time(0));
+    Loom::Random random(time(0));
     int nestCounter = 0;
 
     UThreadPoolPtr tp = UAllocator::safeMallocTemplateCObject<UThreadPool>();

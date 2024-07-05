@@ -6,35 +6,35 @@
 @Desc: 
 ***************************/
 
-#ifndef CGRAPH_CVALTYPE_H
-#define CGRAPH_CVALTYPE_H
+#ifndef UTIL_CVALTYPE_H
+#define UTIL_CVALTYPE_H
 
 #include "CBasicDefine.h"
 #include "CStatus.h"
 #include "CException.h"
 
-using CChar = CGraph::internal::CCHAR;
-using CCharPtr = CGraph::internal::CCHAR *;
-using CUint = CGraph::internal::CUINT;
-using CSize = CGraph::internal::CSIZE;
-using CVoid = CGraph::internal::CVOID;
-using CVoidPtr = CGraph::internal::CVOID *;
-using CInt = CGraph::internal::CINT;
-using CLong = CGraph::internal::CLONG;
-using CULong = CGraph::internal::CULONG;
-using CBool = CGraph::internal::CBOOL;
-using CIndex = CGraph::internal::CINT;                // 表示标识信息，可以为负数
-using CFloat = CGraph::internal::CFLOAT;
-using CDouble = CGraph::internal::CDOUBLE;
-using CConStr = CGraph::internal::CCONSTR;             // 表示 const char*
-using CBigBool = CGraph::internal::CBIGBOOL;
+using CChar = Util::internal::CCHAR;
+using CCharPtr = Util::internal::CCHAR *;
+using CUint = Util::internal::CUINT;
+using CSize = Util::internal::CSIZE;
+using CVoid = Util::internal::CVOID;
+using CVoidPtr = Util::internal::CVOID *;
+using CInt = Util::internal::CINT;
+using CLong = Util::internal::CLONG;
+using CULong = Util::internal::CULONG;
+using CBool = Util::internal::CBOOL;
+using CIndex = Util::internal::CINT;                // 表示标识信息，可以为负数
+using CFloat = Util::internal::CFLOAT;
+using CDouble = Util::internal::CDOUBLE;
+using CConStr = Util::internal::CCONSTR;             // 表示 const char*
+using CBigBool = Util::internal::CBIGBOOL;
 
-using CLevel = CGraph::internal::CINT;
-using CSec = CGraph::internal::CLONG;                  // 表示秒信息, for second
-using CMSec = CGraph::internal::CLONG;                 // 表示毫秒信息, for millisecond
-using CFMSec = CGraph::internal::CDOUBLE;              // 表示毫秒信息，包含小数点信息
+using CLevel = Util::internal::CINT;
+using CSec = Util::internal::CLONG;                  // 表示秒信息, for second
+using CMSec = Util::internal::CLONG;                 // 表示毫秒信息, for millisecond
+using CFMSec = Util::internal::CDOUBLE;              // 表示毫秒信息，包含小数点信息
 
-using CStatus = CGraph::internal::CSTATUS;
-using CException = CGraph::internal::CEXCEPTION;
+using CStatus = Util::internal::CSTATUS;
+using CException = Util::internal::CEXCEPTION;
 
-#endif //CGRAPH_CVALTYPE_H
+#endif //UTIL_CVALTYPE_H

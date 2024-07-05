@@ -6,8 +6,8 @@
 @Desc: 
 ***************************/
 
-#ifndef CGRAPH_CBASICINCLUDE_H
-#define CGRAPH_CBASICINCLUDE_H
+#ifndef UTIL_CBASICINCLUDE_H
+#define UTIL_CBASICINCLUDE_H
 
 #include "CObject.h"
 #include "CValType.h"
@@ -20,4 +20,4 @@
 #include "CDescInfo.h"
 #include "CStruct.h"
 
-#endif //CGRAPH_CBASICINCLUDE_H
+#endif //UTIL_CBASICINCLUDE_H

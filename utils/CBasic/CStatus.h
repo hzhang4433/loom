@@ -6,16 +6,16 @@
 @Desc: 命名为 CSTATUS，直接对外提供的是 CStatus 类
 ***************************/
 
-#ifndef CGRAPH_CSTATUS_H
-#define CGRAPH_CSTATUS_H
+#ifndef UTIL_CSTATUS_H
+#define UTIL_CSTATUS_H
 
 #include <string>
 
 #include "CBasicDefine.h"
 #include "CStrDefine.h"
 
-CGRAPH_NAMESPACE_BEGIN
-CGRAPH_INTERNAL_NAMESPACE_BEGIN
+UTIL_NAMESPACE_BEGIN
+UTIL_INTERNAL_NAMESPACE_BEGIN
 
 /**
  * 说明：
@@ -32,14 +32,14 @@ public:
     explicit CSTATUS() = default;
 
     explicit CSTATUS(const std::string &errorInfo,
-                     const std::string &locateInfo = CGRAPH_EMPTY) {
+                     const std::string &locateInfo = UTIL_EMPTY) {
         this->error_code_ = STATUS_ERR;    // 默认的error code信息
         this->error_info_ = errorInfo;
         this->error_locate_ = locateInfo;
     }
 
     explicit CSTATUS(int errorCode, const std::string &errorInfo,
-                     const std::string &locateInfo = CGRAPH_EMPTY) {
+                     const std::string &locateInfo = UTIL_EMPTY) {
         this->error_code_ = errorCode;
         this->error_info_ = errorInfo;
         this->error_locate_ = locateInfo;
@@ -156,7 +156,7 @@ public:
      */
     CSTATUS* setInfo(int code, const std::string& info) {
         error_code_ = code;
-        error_info_ = (STATUS_OK == error_code_) ? CGRAPH_EMPTY : info;
+        error_info_ = (STATUS_OK == error_code_) ? UTIL_EMPTY : info;
         return this;
     }
 
@@ -177,7 +177,7 @@ private:
     std::string error_locate_;                       // 错误发生的具体位置，形如：file|function|line
 };
 
-CGRAPH_INTERNAL_NAMESPACE_END
-CGRAPH_NAMESPACE_END
+UTIL_INTERNAL_NAMESPACE_END
+UTIL_NAMESPACE_END
 
-#endif //CGRAPH_CSTATUS_H
+#endif //UTIL_CSTATUS_H

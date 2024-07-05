@@ -6,13 +6,13 @@
 @Desc: 
 ***************************/
 
-#ifndef CGRAPH_UTHREADOBJECT_H
-#define CGRAPH_UTHREADOBJECT_H
+#ifndef UTIL_UTHREADOBJECT_H
+#define UTIL_UTHREADOBJECT_H
 
 #include "../UtilsObject.h"
 #include "UThreadPoolDefine.h"
 
-CGRAPH_NAMESPACE_BEGIN
+UTIL_NAMESPACE_BEGIN
 
 class UThreadObject : public UtilsObject {
 protected:
@@ -21,10 +21,10 @@ protected:
      * @return
      */
     CStatus run() override {
-        CGRAPH_NO_SUPPORT
+        UTIL_NO_SUPPORT
     }
 };
 
-CGRAPH_NAMESPACE_END
+UTIL_NAMESPACE_END
 
-#endif //CGRAPH_UTHREADOBJECT_H
+#endif //UTIL_UTHREADOBJECT_H

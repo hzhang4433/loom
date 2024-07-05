@@ -6,32 +6,32 @@
 @Desc: 
 ***************************/
 
-#ifndef CGRAPH_UTHREADSECONDARY_H
-#define CGRAPH_UTHREADSECONDARY_H
+#ifndef UTIL_UTHREADSECONDARY_H
+#define UTIL_UTHREADSECONDARY_H
 
 #include "UThreadBase.h"
 
-CGRAPH_NAMESPACE_BEGIN
+UTIL_NAMESPACE_BEGIN
 
 class UThreadSecondary : public UThreadBase {
 public:
     explicit UThreadSecondary() {
         cur_ttl_ = 0;
-        type_ = CGRAPH_THREAD_TYPE_SECONDARY;
+        type_ = UTIL_THREAD_TYPE_SECONDARY;
     }
 
 
 protected:
     CStatus init() override {
-        CGRAPH_FUNCTION_BEGIN
-        CGRAPH_ASSERT_INIT(false)
-        CGRAPH_ASSERT_NOT_NULL(config_)
+        UTIL_FUNCTION_BEGIN
+        UTIL_ASSERT_INIT(false)
+        UTIL_ASSERT_NOT_NULL(config_)
 
         cur_ttl_ = config_->secondary_thread_ttl_;
         is_init_ = true;
         thread_ = std::move(std::thread(&UThreadSecondary::run, this));
         setSchedParam();
-        CGRAPH_FUNCTION_END
+        UTIL_FUNCTION_END
     }
 
 
@@ -45,23 +45,23 @@ protected:
     CStatus setThreadPoolInfo(UAtomicQueue<UTask>* poolTaskQueue,
                               UAtomicPriorityQueue<UTask>* poolPriorityTaskQueue,
                               UThreadPoolConfigPtr config) {
-        CGRAPH_FUNCTION_BEGIN
-        CGRAPH_ASSERT_INIT(false)    // 初始化之前，设置参数
-        CGRAPH_ASSERT_NOT_NULL(poolTaskQueue, poolPriorityTaskQueue, config)
+        UTIL_FUNCTION_BEGIN
+        UTIL_ASSERT_INIT(false)    // 初始化之前，设置参数
+        UTIL_ASSERT_NOT_NULL(poolTaskQueue, poolPriorityTaskQueue, config)
 
         this->pool_task_queue_ = poolTaskQueue;
         this->pool_priority_task_queue_ = poolPriorityTaskQueue;
         this->config_ = config;
-        CGRAPH_FUNCTION_END
+        UTIL_FUNCTION_END
     }
 
 
     CStatus run() final {
-        CGRAPH_FUNCTION_BEGIN
-        CGRAPH_ASSERT_INIT(true)
+        UTIL_FUNCTION_BEGIN
+        UTIL_ASSERT_INIT(true)
 
         status = loopProcess();
-        CGRAPH_FUNCTION_END
+        UTIL_FUNCTION_END
     }
 
 
@@ -123,6 +123,6 @@ private:
 
 using UThreadSecondaryPtr = UThreadSecondary *;
 
-CGRAPH_NAMESPACE_END
+UTIL_NAMESPACE_END
 
-#endif // CGRAPH_UTHREADSECONDARY_H
+#endif // UTIL_UTHREADSECONDARY_H

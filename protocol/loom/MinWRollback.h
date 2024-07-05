@@ -9,7 +9,7 @@
 #include "common.h"
 
 
-using namespace CGraph;
+using namespace Util;
 
 class MinWRollback
 {

@@ -6,8 +6,8 @@
 @Desc: 
 ***************************/
 
-#ifndef CGRAPH_UTILSINCLUDE_H
-#define CGRAPH_UTILSINCLUDE_H
+#ifndef UTIL_UTILSINCLUDE_H
+#define UTIL_UTILSINCLUDE_H
 
 #include "UtilsDefine.h"
 #include "UAllocator.h"
@@ -21,4 +21,4 @@
 #include "Random/URandom.h"
 #include "SerialUniqueArray/USerialUniqueArray.h"
 
-#endif //CGRAPH_UTILSINCLUDE_H
+#endif //UTIL_UTILSINCLUDE_H

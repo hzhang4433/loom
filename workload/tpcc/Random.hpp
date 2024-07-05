@@ -4,10 +4,11 @@
 #include <vector>
 #include "utils/Random.hpp"
 
-
+namespace Loom {
 class Random : public Util::Random {
     public:
         using Util::Random::Random;
+        // Random(uint64_t seed = 0) : Util::Random(seed) {}
 
         uint64_t non_uniform_distribution(uint64_t A, uint64_t x, uint64_t y) {
             return (uniform_dist(0, A) | uniform_dist(x, y)) % (y - x + 1) + x;
@@ -48,3 +49,4 @@ class Random : public Util::Random {
             return numeric_;
         };
 };
+}

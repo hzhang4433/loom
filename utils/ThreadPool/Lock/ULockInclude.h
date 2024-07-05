@@ -6,9 +6,9 @@
 @Desc: 
 ***************************/
 
-#ifndef CGRAPH_ULOCKINCLUDE_H
-#define CGRAPH_ULOCKINCLUDE_H
+#ifndef UTIL_ULOCKINCLUDE_H
+#define UTIL_ULOCKINCLUDE_H
 
 #include "USpinLock.h"
 
-#endif //CGRAPH_ULOCKINCLUDE_H
+#endif //UTIL_ULOCKINCLUDE_H

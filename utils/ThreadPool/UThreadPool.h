@@ -6,8 +6,8 @@
 @Desc: 
 ***************************/
 
-#ifndef CGRAPH_UTHREADPOOL_H
-#define CGRAPH_UTHREADPOOL_H
+#ifndef UTIL_UTHREADPOOL_H
+#define UTIL_UTHREADPOOL_H
 
 #include <vector>
 #include <list>
@@ -24,7 +24,7 @@
 #include "Thread/UThreadInclude.h"
 #include "Task/UTaskInclude.h"
 
-CGRAPH_NAMESPACE_BEGIN
+UTIL_NAMESPACE_BEGIN
 
 class UThreadPool : public UThreadObject {
 public:
@@ -70,7 +70,7 @@ public:
      */
     template<typename FunctionType>
     auto commit(const FunctionType& task,
-                CIndex index = CGRAPH_DEFAULT_TASK_STRATEGY)
+                CIndex index = UTIL_DEFAULT_TASK_STRATEGY)
     -> std::future<decltype(std::declval<FunctionType>()())>;
 
     /**
@@ -107,7 +107,7 @@ public:
      * @return
      */
     CStatus submit(const UTaskGroup& taskGroup,
-                   CMSec ttl = CGRAPH_MAX_BLOCK_TTL);
+                   CMSec ttl = UTIL_MAX_BLOCK_TTL);
 
     /**
      * 针对单个任务的情况，复用任务组信息，实现单个任务直接执行
@@ -116,9 +116,9 @@ public:
      * @param onFinished
      * @return
      */
-    CStatus submit(CGRAPH_DEFAULT_CONST_FUNCTION_REF func,
-                   CMSec ttl = CGRAPH_MAX_BLOCK_TTL,
-                   CGRAPH_CALLBACK_CONST_FUNCTION_REF onFinished = nullptr);
+    CStatus submit(UTIL_DEFAULT_CONST_FUNCTION_REF func,
+                   CMSec ttl = UTIL_MAX_BLOCK_TTL,
+                   UTIL_CALLBACK_CONST_FUNCTION_REF onFinished = nullptr);
 
     /**
      * 获取根据线程id信息，获取线程index信息
@@ -168,7 +168,7 @@ protected:
      */
     CVoid monitor();
 
-    CGRAPH_NO_ALLOWED_COPY(UThreadPool)
+    UTIL_NO_ALLOWED_COPY(UThreadPool)
 
 private:
     CBool is_init_ { false };                                                       // 是否初始化
@@ -185,8 +185,8 @@ private:
 
 using UThreadPoolPtr = UThreadPool *;
 
-CGRAPH_NAMESPACE_END
+UTIL_NAMESPACE_END
 
 #include "UThreadPool.inl"
 
-#endif //CGRAPH_UTHREADPOOL_H
+#endif //UTIL_UTHREADPOOL_H

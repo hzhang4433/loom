@@ -6,26 +6,26 @@
 @Desc:
 ***************************/
 
-#ifndef CGRAPH_CBASICDEFINE_H
-#define CGRAPH_CBASICDEFINE_H
+#ifndef UTIL_CBASICDEFINE_H
+#define UTIL_CBASICDEFINE_H
 
 #include <cstddef>
 
-#define CGRAPH_NAMESPACE_BEGIN                                          \
-namespace CGraph {                                                      \
+#define UTIL_NAMESPACE_BEGIN                                          \
+namespace Util {                                                      \
 
-#define CGRAPH_NAMESPACE_END                                            \
-} /* end of namespace CGraph */                                         \
+#define UTIL_NAMESPACE_END                                            \
+} /* end of namespace Util */                                         \
 
-CGRAPH_NAMESPACE_BEGIN
+UTIL_NAMESPACE_BEGIN
 
-#define CGRAPH_INTERNAL_NAMESPACE_BEGIN                                 \
+#define UTIL_INTERNAL_NAMESPACE_BEGIN                                 \
 namespace internal {                                                    \
 
-#define CGRAPH_INTERNAL_NAMESPACE_END                                   \
+#define UTIL_INTERNAL_NAMESPACE_END                                   \
 } /* end of namespace internal */                                       \
 
-CGRAPH_INTERNAL_NAMESPACE_BEGIN
+UTIL_INTERNAL_NAMESPACE_BEGIN
 
 using CCHAR = char;
 using CUINT = unsigned int;
@@ -40,7 +40,7 @@ using CDOUBLE = double;
 using CCONSTR = const char*;
 using CSIZE = size_t;
 
-CGRAPH_INTERNAL_NAMESPACE_END
-CGRAPH_NAMESPACE_END
+UTIL_INTERNAL_NAMESPACE_END
+UTIL_NAMESPACE_END
 
-#endif //CGRAPH_CBASICDEFINE_H
+#endif //UTIL_CBASICDEFINE_H

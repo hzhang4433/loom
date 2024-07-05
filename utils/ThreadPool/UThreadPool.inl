@@ -6,12 +6,12 @@
 @Desc:
 ***************************/
 
-#ifndef CGRAPH_UTHREADPOOL_INL
-#define CGRAPH_UTHREADPOOL_INL
+#ifndef UTIL_UTHREADPOOL_INL
+#define UTIL_UTHREADPOOL_INL
 
 #include "UThreadPool.h"
 
-CGRAPH_NAMESPACE_BEGIN
+UTIL_NAMESPACE_BEGIN
 
 template<typename FunctionType>
 auto UThreadPool::commit(const FunctionType& task, CIndex index)
@@ -25,13 +25,13 @@ auto UThreadPool::commit(const FunctionType& task, CIndex index)
     if (realIndex >= 0 && realIndex < config_.default_thread_size_) {
         // 如果返回的结果，在主线程数量之间，则放到主线程的queue中执行
         primary_threads_[realIndex]->pushTask(std::move(runnableTask));
-    } else if (CGRAPH_LONG_TIME_TASK_STRATEGY == realIndex) {
+    } else if (UTIL_LONG_TIME_TASK_STRATEGY == realIndex) {
         /**
          * 如果是长时间任务，则交给特定的任务队列，仅由辅助线程处理
          * 目的是防止有很多长时间任务，将所有运行的线程均阻塞
          * 长任务程序，默认优先级较低
          **/
-        priority_task_queue_.push(std::move(runnableTask), CGRAPH_LONG_TIME_TASK_STRATEGY);
+        priority_task_queue_.push(std::move(runnableTask), UTIL_LONG_TIME_TASK_STRATEGY);
     } else {
         // 返回其他结果，放到pool的queue中执行
         task_queue_.push(std::move(runnableTask));
@@ -73,6 +73,6 @@ auto UThreadPool::commitWithPriority(const FunctionType& task, int priority)
     return result;
 }
 
-CGRAPH_NAMESPACE_END
+UTIL_NAMESPACE_END
 
-#endif    // CGRAPH_UTHREADPOOL_INL
+#endif    // UTIL_UTHREADPOOL_INL

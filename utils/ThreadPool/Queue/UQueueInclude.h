@@ -6,8 +6,8 @@
 @Desc: 
 ***************************/
 
-#ifndef CGRAPH_UQUEUEINCLUDE_H
-#define CGRAPH_UQUEUEINCLUDE_H
+#ifndef UTIL_UQUEUEINCLUDE_H
+#define UTIL_UQUEUEINCLUDE_H
 
 #include "UAtomicQueue.h"
 #include "UWorkStealingQueue.h"
@@ -15,4 +15,4 @@
 #include "UAtomicRingBufferQueue.h"
 #include "ULockFreeRingBufferQueue.h"
 
-#endif //CGRAPH_UQUEUEINCLUDE_H
+#endif //UTIL_UQUEUEINCLUDE_H

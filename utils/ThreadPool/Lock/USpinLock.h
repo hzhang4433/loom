@@ -6,14 +6,14 @@
 @Desc: 
 ***************************/
 
-#ifndef CGRAPH_USPINLOCK_H
-#define CGRAPH_USPINLOCK_H
+#ifndef UTIL_USPINLOCK_H
+#define UTIL_USPINLOCK_H
 
 #include <atomic>
 
 #include "../UThreadObject.h"
 
-CGRAPH_NAMESPACE_BEGIN
+UTIL_NAMESPACE_BEGIN
 
 class USpinLock : public UThreadObject {
 public:
@@ -46,6 +46,6 @@ private:
     std::atomic_flag flag_ = ATOMIC_FLAG_INIT;         // 标志位
 };
 
-CGRAPH_NAMESPACE_END
+UTIL_NAMESPACE_END
 
-#endif //CGRAPH_USPINLOCK_H
+#endif //UTIL_USPINLOCK_H

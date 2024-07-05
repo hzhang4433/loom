@@ -6,15 +6,15 @@
 @Desc: 
 ***************************/
 
-#ifndef CGRAPH_UMETRICS_H
-#define CGRAPH_UMETRICS_H
+#ifndef UTIL_UMETRICS_H
+#define UTIL_UMETRICS_H
 
 #include <ostream>
 #include <string>
 
 #include "../UThreadObject.h"
 
-CGRAPH_NAMESPACE_BEGIN
+UTIL_NAMESPACE_BEGIN
 
 class UMetrics : public CStruct {
 protected:
@@ -27,7 +27,7 @@ protected:
      * @return
      */
     inline CVoid calcLocal(CBool result, CSize size) {
-#ifndef _CGRAPH_SHOW_THREAD_METRICS_
+#ifndef _UTIL_SHOW_THREAD_METRICS_
         return;
 #endif
         if (result) {
@@ -43,7 +43,7 @@ protected:
      * @return
      */
     inline CVoid calcPool(CBool result, CSize size) {
-#ifndef _CGRAPH_SHOW_THREAD_METRICS_
+#ifndef _UTIL_SHOW_THREAD_METRICS_
         return;
 #endif
         if (result) {
@@ -59,7 +59,7 @@ protected:
      * @return
      */
     inline CVoid calcSteal(CBool result, CSize size) {
-#ifndef _CGRAPH_SHOW_THREAD_METRICS_
+#ifndef _UTIL_SHOW_THREAD_METRICS_
         return;
 #endif
         if (result) {
@@ -75,7 +75,7 @@ protected:
      * @notice 不确保所有数据完全正确，主要是本人做性能调优分析和使用
      */
     CVoid show(const std::string& tag) const {
-#ifndef _CGRAPH_SHOW_THREAD_METRICS_
+#ifndef _UTIL_SHOW_THREAD_METRICS_
         return;
 #endif
     std::cout << tag
@@ -136,6 +136,6 @@ private:
     friend class UThreadPool;
 };
 
-CGRAPH_NAMESPACE_END
+UTIL_NAMESPACE_END
 
-#endif //CGRAPH_UMETRICS_H
+#endif //UTIL_UMETRICS_H

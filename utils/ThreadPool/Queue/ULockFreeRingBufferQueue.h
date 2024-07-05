@@ -6,17 +6,17 @@
 @Desc: 
 ***************************/
 
-#ifndef CGRAPH_ULOCKFREERINGBUFFERQUEUE_H
-#define CGRAPH_ULOCKFREERINGBUFFERQUEUE_H
+#ifndef UTIL_ULOCKFREERINGBUFFERQUEUE_H
+#define UTIL_ULOCKFREERINGBUFFERQUEUE_H
 
 #include <atomic>
 #include <memory>
 
 #include "UQueueObject.h"
 
-CGRAPH_NAMESPACE_BEGIN
+UTIL_NAMESPACE_BEGIN
 
-template<typename T, CInt CAPACITY = CGRAPH_DEFAULT_RINGBUFFER_SIZE>
+template<typename T, CInt CAPACITY = UTIL_DEFAULT_RINGBUFFER_SIZE>
 class ULockFreeRingBufferQueue : public UQueueObject {
 public:
     explicit ULockFreeRingBufferQueue() {
@@ -39,7 +39,7 @@ public:
 
         while (nextTail == head_.load(std::memory_order_acquire)) {
             // 队列已满，等待其他线程出队
-            CGRAPH_YIELD();
+            UTIL_YIELD();
         }
 
         ring_buffer_[curTail] = std::move(value);
@@ -72,6 +72,6 @@ private:
     std::vector<std::unique_ptr<T> > ring_buffer_;          // 环形队列
 };
 
-CGRAPH_NAMESPACE_END
+UTIL_NAMESPACE_END
 
-#endif //CGRAPH_ULOCKFREERINGBUFFERQUEUE_H
+#endif //UTIL_ULOCKFREERINGBUFFERQUEUE_H

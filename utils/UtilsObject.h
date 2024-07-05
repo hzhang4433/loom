@@ -6,20 +6,20 @@
 @Desc: 
 ***************************/
 
-#ifndef CGRAPH_UTILSOBJECT_H
-#define CGRAPH_UTILSOBJECT_H
+#ifndef UTIL_UTILSOBJECT_H
+#define UTIL_UTILSOBJECT_H
 
 #include "UtilsDefine.h"
 
-CGRAPH_NAMESPACE_BEGIN
+UTIL_NAMESPACE_BEGIN
 
 class UtilsObject : public CObject {
 protected:
     CStatus run() override {
-        CGRAPH_NO_SUPPORT
+        UTIL_NO_SUPPORT
     }
 };
 
-CGRAPH_NAMESPACE_END
+UTIL_NAMESPACE_END
 
-#endif //CGRAPH_UTILSOBJECT_H
+#endif //UTIL_UTILSOBJECT_H

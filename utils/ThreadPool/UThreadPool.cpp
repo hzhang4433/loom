@@ -8,7 +8,7 @@
 
 #include "UThreadPool.h"
 
-CGRAPH_NAMESPACE_BEGIN
+UTIL_NAMESPACE_BEGIN
 
 UThreadPool::UThreadPool(CBool autoInit, const UThreadPoolConfig& config) noexcept {
     cur_index_ = 0;
@@ -31,11 +31,11 @@ UThreadPool::~UThreadPool() {
 
 
 CStatus UThreadPool::setConfig(const UThreadPoolConfig &config) {
-    CGRAPH_FUNCTION_BEGIN
-    CGRAPH_ASSERT_INIT(false)    // 初始化后，无法设置参数信息
+    UTIL_FUNCTION_BEGIN
+    UTIL_ASSERT_INIT(false)    // 初始化后，无法设置参数信息
 
     this->config_ = config;
-    CGRAPH_FUNCTION_END
+    UTIL_FUNCTION_END
 }
 
 
@@ -45,9 +45,9 @@ UThreadPoolConfig UThreadPool::getConfig() const {
 
 
 CStatus UThreadPool::init() {
-    CGRAPH_FUNCTION_BEGIN
+    UTIL_FUNCTION_BEGIN
     if (is_init_) {
-        CGRAPH_FUNCTION_END
+        UTIL_FUNCTION_END
     }
 
     if (config_.monitor_enable_) {
@@ -55,10 +55,10 @@ CStatus UThreadPool::init() {
         monitor_thread_ = std::move(std::thread(&UThreadPool::monitor, this));
     }
     thread_record_map_.clear();
-    thread_record_map_[(CSize)std::hash<std::thread::id>{}(std::this_thread::get_id())] = CGRAPH_MAIN_THREAD_ID;
+    thread_record_map_[(CSize)std::hash<std::thread::id>{}(std::this_thread::get_id())] = UTIL_MAIN_THREAD_ID;
     primary_threads_.reserve(config_.default_thread_size_);
     for (int i = 0; i < config_.default_thread_size_; i++) {
-        auto* pt = CGRAPH_SAFE_MALLOC_COBJECT(UThreadPrimary);    // 创建核心线程数
+        auto* pt = UTIL_SAFE_MALLOC_COBJECT(UThreadPrimary);    // 创建核心线程数
         pt->setThreadPoolInfo(i, &task_queue_, &primary_threads_, &config_);
         // 记录线程和匹配id信息
         primary_threads_.emplace_back(pt);
@@ -73,7 +73,7 @@ CStatus UThreadPool::init() {
          status += primary_threads_[i]->init();
          thread_record_map_[(CSize)std::hash<std::thread::id>{}(primary_threads_[i]->thread_.get_id())] = i;
      }
-    CGRAPH_FUNCTION_CHECK_STATUS
+    UTIL_FUNCTION_CHECK_STATUS
 
     /**
      * 策略更新：
@@ -81,16 +81,16 @@ CStatus UThreadPool::init() {
      * 一般情况下，建议为0。
      */
     status = createSecondaryThread(config_.secondary_thread_size_);
-    CGRAPH_FUNCTION_CHECK_STATUS
+    UTIL_FUNCTION_CHECK_STATUS
 
     is_init_ = true;
-    CGRAPH_FUNCTION_END
+    UTIL_FUNCTION_END
 }
 
 
 CStatus UThreadPool::submit(const UTaskGroup& taskGroup, CMSec ttl) {
-    CGRAPH_FUNCTION_BEGIN
-    CGRAPH_ASSERT_INIT(true)
+    UTIL_FUNCTION_BEGIN
+    UTIL_ASSERT_INIT(true)
 
     std::vector<std::future<CVoid>> futures;
     for (const auto& task : taskGroup.task_arr_) {
@@ -115,18 +115,18 @@ CStatus UThreadPool::submit(const UTaskGroup& taskGroup, CMSec ttl) {
         taskGroup.on_finished_(status);
     }
 
-    CGRAPH_FUNCTION_END
+    UTIL_FUNCTION_END
 }
 
 
-CStatus UThreadPool::submit(CGRAPH_DEFAULT_CONST_FUNCTION_REF func, CMSec ttl,
-                            CGRAPH_CALLBACK_CONST_FUNCTION_REF onFinished) {
+CStatus UThreadPool::submit(UTIL_DEFAULT_CONST_FUNCTION_REF func, CMSec ttl,
+                            UTIL_CALLBACK_CONST_FUNCTION_REF onFinished) {
     return submit(UTaskGroup(func, ttl, onFinished));
 }
 
 
 CIndex UThreadPool::getThreadIndex(CSize tid) {
-    int index = CGRAPH_SECONDARY_THREAD_COMMON_ID;
+    int index = UTIL_SECONDARY_THREAD_COMMON_ID;
     auto result = thread_record_map_.find(tid);
     if (result != thread_record_map_.end()) {
         index = result->second;
@@ -137,16 +137,16 @@ CIndex UThreadPool::getThreadIndex(CSize tid) {
 
 
 CStatus UThreadPool::destroy() {
-    CGRAPH_FUNCTION_BEGIN
+    UTIL_FUNCTION_BEGIN
     if (!is_init_) {
-        CGRAPH_FUNCTION_END
+        UTIL_FUNCTION_END
     }
 
     // primary 线程是普通指针，需要delete
     for (auto &pt : primary_threads_) {
         status += pt->destroy();
     }
-    CGRAPH_FUNCTION_CHECK_STATUS
+    UTIL_FUNCTION_CHECK_STATUS
 
     /**
      * 这里之所以 destroy和 delete分开两个循环执行，
@@ -156,19 +156,19 @@ CStatus UThreadPool::destroy() {
      * 感谢 Ryan大佬(https://github.com/ryanhuang) 提供的帮助
      */
     for (auto &pt : primary_threads_) {
-        CGRAPH_DELETE_PTR(pt)
+        UTIL_DELETE_PTR(pt)
     }
     primary_threads_.clear();
     // secondary 线程是智能指针，不需要delete
     for (auto &st : secondary_threads_) {
         status += st->destroy();
     }
-    CGRAPH_FUNCTION_CHECK_STATUS
+    UTIL_FUNCTION_CHECK_STATUS
     secondary_threads_.clear();
     thread_record_map_.clear();
     is_init_ = false;
 
-    CGRAPH_FUNCTION_END
+    UTIL_FUNCTION_END
 }
 
 
@@ -178,15 +178,15 @@ CBool UThreadPool::isInit() const {
 
 
 CStatus UThreadPool::releaseSecondaryThread(CInt size) {
-    CGRAPH_FUNCTION_BEGIN
+    UTIL_FUNCTION_BEGIN
 
     // 先将所有已经结束的，给删掉
-    CGRAPH_LOCK_GUARD lock(st_mutex_);
+    UTIL_LOCK_GUARD lock(st_mutex_);
     for (auto iter = secondary_threads_.begin(); iter != secondary_threads_.end(); ) {
         !(*iter)->done_ ? secondary_threads_.erase(iter++) : iter++;
     }
 
-    CGRAPH_RETURN_ERROR_STATUS_BY_CONDITION((size > secondary_threads_.size()),    \
+    UTIL_RETURN_ERROR_STATUS_BY_CONDITION((size > secondary_threads_.size()),    \
                                             "cannot release [" + std::to_string(size) + "] secondary thread,"    \
                                             + "only [" + std::to_string(secondary_threads_.size()) + "] left.")
 
@@ -196,13 +196,13 @@ CStatus UThreadPool::releaseSecondaryThread(CInt size) {
         (*iter)->done_ = false;
         iter++;
     }
-    CGRAPH_FUNCTION_END
+    UTIL_FUNCTION_END
 }
 
 
 CIndex UThreadPool::dispatch(CIndex origIndex) {
     CIndex realIndex = 0;
-    if (CGRAPH_DEFAULT_TASK_STRATEGY == origIndex) {
+    if (UTIL_DEFAULT_TASK_STRATEGY == origIndex) {
         /**
          * 如果是默认策略信息，在[0, default_thread_size_) 之间的，通过 thread 中queue来调度
          * 在[default_thread_size_, max_thread_size_) 之间的，通过 pool 中的queue来调度
@@ -220,20 +220,20 @@ CIndex UThreadPool::dispatch(CIndex origIndex) {
 
 
 CStatus UThreadPool::createSecondaryThread(CInt size) {
-    CGRAPH_FUNCTION_BEGIN
+    UTIL_FUNCTION_BEGIN
 
     int leftSize = (int)(config_.max_thread_size_ - config_.default_thread_size_ - secondary_threads_.size());
     int realSize = std::min(size, leftSize);    // 使用 realSize 来确保所有的线程数量之和，不会超过设定max值
 
-    CGRAPH_LOCK_GUARD lock(st_mutex_);
+    UTIL_LOCK_GUARD lock(st_mutex_);
     for (int i = 0; i < realSize; i++) {
-        auto ptr = CGRAPH_MAKE_UNIQUE_COBJECT(UThreadSecondary)
+        auto ptr = UTIL_MAKE_UNIQUE_COBJECT(UThreadSecondary)
         ptr->setThreadPoolInfo(&task_queue_, &priority_task_queue_, &config_);
         status += ptr->init();
         secondary_threads_.emplace_back(std::move(ptr));
     }
 
-    CGRAPH_FUNCTION_END
+    UTIL_FUNCTION_END
 }
 
 
@@ -241,19 +241,19 @@ CVoid UThreadPool::monitor() {
     while (config_.monitor_enable_) {
         while (config_.monitor_enable_ && !is_init_) {
             // 如果没有init，则一直处于空跑状态
-            CGRAPH_SLEEP_SECOND(1)
+            UTIL_SLEEP_SECOND(1)
         }
 
         auto span = config_.monitor_span_;
         while (config_.monitor_enable_ && is_init_ && span--) {
-            CGRAPH_SLEEP_SECOND(1)    // 保证可以快速退出
+            UTIL_SLEEP_SECOND(1)    // 保证可以快速退出
         }
 
         // 如果 primary线程都在执行，则表示忙碌
         bool busy = !primary_threads_.empty() && std::all_of(primary_threads_.begin(), primary_threads_.end(),
                                 [](UThreadPrimaryPtr ptr) { return nullptr != ptr && ptr->is_running_; });
 
-        CGRAPH_LOCK_GUARD lock(st_mutex_);
+        UTIL_LOCK_GUARD lock(st_mutex_);
         // 如果忙碌或者priority_task_queue_中有任务，则需要添加 secondary线程
         if (busy || !priority_task_queue_.empty()) {
             createSecondaryThread(1);
@@ -266,4 +266,4 @@ CVoid UThreadPool::monitor() {
     }
 }
 
-CGRAPH_NAMESPACE_END
+UTIL_NAMESPACE_END

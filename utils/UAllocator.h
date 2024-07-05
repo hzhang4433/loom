@@ -6,15 +6,15 @@
 @Desc: 
 ***************************/
 
-#ifndef CGRAPH_UALLOCATOR_H
-#define CGRAPH_UALLOCATOR_H
+#ifndef UTIL_UALLOCATOR_H
+#define UTIL_UALLOCATOR_H
 
 #include <mutex>
 #include <memory>
 
 #include "CBasic/CBasicInclude.h"
 
-CGRAPH_NAMESPACE_BEGIN
+UTIL_NAMESPACE_BEGIN
 
 /**
  * 仅用于生成CObject类型的类
@@ -88,12 +88,12 @@ private:
 };
 
 
-#define CGRAPH_SAFE_MALLOC_COBJECT(Type)                         \
+#define UTIL_SAFE_MALLOC_COBJECT(Type)                         \
     UAllocator::safeMallocCObject<Type>();                       \
 
-#define CGRAPH_MAKE_UNIQUE_COBJECT(Type)                         \
+#define UTIL_MAKE_UNIQUE_COBJECT(Type)                         \
     UAllocator::makeUniqueCObject<Type>();                       \
 
-CGRAPH_NAMESPACE_END
+UTIL_NAMESPACE_END
 
-#endif //CGRAPH_UALLOCATOR_H
+#endif //UTIL_UALLOCATOR_H

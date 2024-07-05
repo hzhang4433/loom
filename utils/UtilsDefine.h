@@ -6,8 +6,8 @@
 @Desc: 
 ***************************/
 
-#ifndef CGRAPH_UTILSDEFINE_H
-#define CGRAPH_UTILSDEFINE_H
+#ifndef UTIL_UTILSDEFINE_H
+#define UTIL_UTILSDEFINE_H
 
 #include <iostream>
 #include <string>
@@ -22,7 +22,7 @@
 #include "UAllocator.h"
 #include "UtilsFunction.h"
 
-CGRAPH_NAMESPACE_BEGIN
+UTIL_NAMESPACE_BEGIN
 
 #ifdef _ENABLE_LIKELY_
     #define likely(x)   __builtin_expect(!!(x), 1)
@@ -32,28 +32,28 @@ CGRAPH_NAMESPACE_BEGIN
     #define unlikely
 #endif
 
-using CGRAPH_LOCK_GUARD = std::lock_guard<std::mutex>;
-using CGRAPH_UNIQUE_LOCK = std::unique_lock<std::mutex>;
+using UTIL_LOCK_GUARD = std::lock_guard<std::mutex>;
+using UTIL_UNIQUE_LOCK = std::unique_lock<std::mutex>;
 
 /* 判断函数流程是否可以继续 */
-CGRAPH_INTERNAL_NAMESPACE_BEGIN
+UTIL_INTERNAL_NAMESPACE_BEGIN
     static std::mutex g_check_status_mtx;
     static std::mutex g_echo_mtx;
-CGRAPH_INTERNAL_NAMESPACE_END
+UTIL_INTERNAL_NAMESPACE_END
 
 #if __cplusplus >= 201703L
-    using CGRAPH_READ_LOCK = std::shared_lock<std::shared_mutex>;
-    using CGRAPH_WRITE_LOCK = std::unique_lock<std::shared_mutex>;
+    using UTIL_READ_LOCK = std::shared_lock<std::shared_mutex>;
+    using UTIL_WRITE_LOCK = std::unique_lock<std::shared_mutex>;
 #else
-    using CGRAPH_READ_LOCK = CGRAPH_LOCK_GUARD;    // C++14不支持读写锁，使用mutex替代
-    using CGRAPH_WRITE_LOCK = CGRAPH_LOCK_GUARD;
+    using UTIL_READ_LOCK = UTIL_LOCK_GUARD;    // C++14不支持读写锁，使用mutex替代
+    using UTIL_WRITE_LOCK = UTIL_LOCK_GUARD;
 #endif
 
 
 template<typename T>
 CStatus __ASSERT_NOT_NULL(T t) {
     return (unlikely(nullptr == t))
-           ? CErrStatus(CGRAPH_INPUT_IS_NULL)
+           ? CErrStatus(UTIL_INPUT_IS_NULL)
            : CStatus();
 }
 
@@ -69,7 +69,7 @@ CStatus __ASSERT_NOT_NULL(T t, Args... args) {
 template<typename T>
 CVoid __ASSERT_NOT_NULL_THROW_EXCEPTION(T t) {
     if (unlikely(nullptr == t)) {
-        CGRAPH_THROW_EXCEPTION("[CException] " + std::string(CGRAPH_INPUT_IS_NULL))
+        UTIL_THROW_EXCEPTION("[CException] " + std::string(UTIL_INPUT_IS_NULL))
     }
 }
 
@@ -84,7 +84,7 @@ CVoid __ASSERT_NOT_NULL_THROW_EXCEPTION(T t, Args... args) {
 
 
 /** 判断传入的多个指针信息，是否为空 */
-#define CGRAPH_ASSERT_NOT_NULL(ptr, ...)                                                     \
+#define UTIL_ASSERT_NOT_NULL(ptr, ...)                                                     \
     {                                                                                        \
         const CStatus& __cur_status__ = __ASSERT_NOT_NULL(ptr, ##__VA_ARGS__);               \
         if (unlikely(__cur_status__.isErr())) { return __cur_status__; }                     \
@@ -92,40 +92,40 @@ CVoid __ASSERT_NOT_NULL_THROW_EXCEPTION(T t, Args... args) {
 
 
 /** 判断传入的多个指针，是否为空。如果为空，则抛出异常信息 */
-#define CGRAPH_ASSERT_NOT_NULL_THROW_ERROR(ptr, ...)                                         \
+#define UTIL_ASSERT_NOT_NULL_THROW_ERROR(ptr, ...)                                         \
     __ASSERT_NOT_NULL_THROW_EXCEPTION(ptr, ##__VA_ARGS__);                                   \
 
 /* 删除资源信息 */
-#define CGRAPH_DELETE_PTR(ptr)                                                  \
+#define UTIL_DELETE_PTR(ptr)                                                  \
     if (unlikely((ptr) != nullptr)) {                                           \
         delete (ptr);                                                           \
         (ptr) = nullptr;                                                        \
     }                                                                           \
 
-#define CGRAPH_ASSERT_INIT(isInit)                                              \
+#define UTIL_ASSERT_INIT(isInit)                                              \
     if (unlikely((isInit) != is_init_)) {                                       \
-        CGRAPH_RETURN_ERROR_STATUS("init status is not suitable")               \
+        UTIL_RETURN_ERROR_STATUS("init status is not suitable")               \
     }                                                                           \
 
-#define CGRAPH_ASSERT_INIT_THROW_ERROR(isInit)                                  \
+#define UTIL_ASSERT_INIT_THROW_ERROR(isInit)                                  \
     if (unlikely((isInit) != is_init_)) {                                       \
-        CGRAPH_THROW_EXCEPTION("[CException] init status is not suitable") }    \
+        UTIL_THROW_EXCEPTION("[CException] init status is not suitable") }    \
 
-#define CGRAPH_ASSERT_MUTABLE_INIT_THROW_ERROR(isInit)                                  \
+#define UTIL_ASSERT_MUTABLE_INIT_THROW_ERROR(isInit)                                  \
     if (unlikely((isInit) != is_init_) && !isMutable()) {                               \
-        CGRAPH_THROW_EXCEPTION("[CException] mutable init status is not suitable") }    \
+        UTIL_THROW_EXCEPTION("[CException] mutable init status is not suitable") }    \
 
-#define CGRAPH_SLEEP_SECOND(s)                                                  \
+#define UTIL_SLEEP_SECOND(s)                                                  \
     std::this_thread::sleep_for(std::chrono::seconds(s));                       \
 
-#define CGRAPH_SLEEP_MILLISECOND(ms)                                            \
+#define UTIL_SLEEP_MILLISECOND(ms)                                            \
     std::this_thread::sleep_for(std::chrono::milliseconds(ms));                 \
 
-#define CGRAPH_FUNCTION_CHECK_STATUS                                                         \
+#define UTIL_FUNCTION_CHECK_STATUS                                                         \
     if (unlikely(status.isErr())) {                                                          \
         if (status.isCrash()) { throw CException(status.getInfo()); }                        \
-        CGRAPH_LOCK_GUARD lock{ internal::g_check_status_mtx };                              \
-        CGRAPH_ECHO("%s, errorCode = [%d], errorInfo = [%s].",                               \
+        UTIL_LOCK_GUARD lock{ internal::g_check_status_mtx };                              \
+        UTIL_ECHO("%s, errorCode = [%d], errorInfo = [%s].",                               \
             status.getLocate().c_str(), status.getCode(), status.getInfo().c_str());         \
         return status;                                                                       \
     }                                                                                        \
@@ -136,8 +136,8 @@ CVoid __ASSERT_NOT_NULL_THROW_EXCEPTION(T t, Args... args) {
 * @param ...
 * 注：内部包含全局锁，不建议正式上线的时候使用
 */
-inline CVoid CGRAPH_ECHO(const char *cmd, ...) {
-#ifdef _CGRAPH_SILENCE_
+inline CVoid UTIL_ECHO(const char *cmd, ...) {
+#ifdef _UTIL_SILENCE_
     return;
 #endif
 
@@ -155,6 +155,6 @@ inline CVoid CGRAPH_ECHO(const char *cmd, ...) {
     std::cout << "\n";
 }
 
-CGRAPH_NAMESPACE_END
+UTIL_NAMESPACE_END
 
-#endif //CGRAPH_UTILSDEFINE_H
+#endif //UTIL_UTILSDEFINE_H

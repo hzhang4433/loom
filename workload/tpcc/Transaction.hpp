@@ -421,10 +421,10 @@ class PaymentTransaction : public Transaction
             Transaction::Ptr root = std::make_shared<Transaction>(random);
             root->setExecutionTime(TPCC::ConsumptionType::LOW);
             
-            // warehouse子事务
-            Transaction::Ptr wAccess = std::make_shared<Transaction>(random);
-            wAccess->addReadRow(std::to_string(paymentTx->w_id) + "-ytd");
-            wAccess->addUpdateRow(std::to_string(paymentTx->w_id) + "-ytd");
+            // // warehouse子事务
+            // Transaction::Ptr wAccess = std::make_shared<Transaction>(random);
+            // wAccess->addReadRow(std::to_string(paymentTx->w_id) + "-ytd");
+            // wAccess->addUpdateRow(std::to_string(paymentTx->w_id) + "-ytd");
 
             // district子事务
             Transaction::Ptr dAccess = std::make_shared<Transaction>(random);
@@ -461,7 +461,7 @@ class PaymentTransaction : public Transaction
             hAccess->addUpdateRow("H-" + std::to_string(paymentTx->w_id) + "-" + std::to_string(paymentTx->d_id) + "-" + std::to_string(paymentTx->c_id));
 
             // 根节点添加依赖
-            root->addChild(wAccess, Loom::DependencyType::WEAK);
+            // root->addChild(wAccess, Loom::DependencyType::WEAK);
             root->addChild(dAccess, Loom::DependencyType::WEAK);
             root->addChild(cAccess, Loom::DependencyType::WEAK);
 

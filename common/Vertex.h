@@ -113,4 +113,8 @@ class Vertex : public std::enable_shared_from_this<Vertex>
         bool isNested;                                                           // 标记节点是否是嵌套节点
         unordered_set<ChildVertex, ChildVertexHash, ChildVertexEqual> m_children;// 记录子节点
         int scheduledTime;                                                       // 事务执行时刻
+        
+        // 时空图模块,用于事务重调度
+        tbb::concurrent_unordered_set<Vertex::Ptr, Vertex::VertexHash> dependencies_in; // 事务依赖关系
+        tbb::concurrent_unordered_set<Vertex::Ptr, Vertex::VertexHash> dependencies_out; // 事务依赖关系
 };

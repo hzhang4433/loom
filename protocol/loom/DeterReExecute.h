@@ -28,7 +28,8 @@ class DeterReExecute {
         bool canReorder(const Vertex::Ptr& Tx1, const Vertex::Ptr& Tx2); // 判断两个事务是否可调序
 
         // 时空图模块
-        void buildGraph(); // 构建时空图
+        void buildGraph(); // 构建优化时空图
+        void buildGraphOrigin(); // 构建原始时空图,即不考虑嵌套事务结构的时空图
         void buildGraphConcurrent(Util::UThreadPoolPtr& Pool); // 并发构建时空图
         void rescheduleTransactions(); // 重调度事务
         void getCandidateTxSet(const Vertex::Ptr& Tx, std::set<Vertex::Ptr, Loom::lessScheduledTime>& Ts); // 获取候选重调度事务集

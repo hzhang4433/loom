@@ -20,9 +20,44 @@ void DeterReExecute::buildGraph() {
         // 判断本事务与前序事务间冲突
         for (int i = 0; i < m_rbList.size(); i++) {
             auto Ti = m_rbList[i];
-            if (protocol::hasConflict(Ti->writeSet, Tj->readSet) || 
-                protocol::hasConflict(Ti->writeSet, Tj->writeSet) ||
-                protocol::hasConflict(Ti->readSet, Tj->writeSet)) {
+            if ((protocol::hasConflict(Ti->writeSet, Tj->readSet) || protocol::hasConflict(Ti->writeSet, Tj->writeSet) ||
+                protocol::hasConflict(Ti->readSet, Tj->writeSet))) {
+                if (i < j) {
+                    // 输出txid和与它冲突事务的id
+                    // cout << "Tx" << m_rbList[j]->id << " conflicts with Tx" << m_rbList[i]->id << endl;
+
+                    // 本事务记录前序事务
+                    Tj->dependencies_in.insert(Ti);
+                    
+                    // 所有前序事务记录本事务
+                    Ti->dependencies_out.insert(Tj);
+                    
+                    // 本事务调度时间为前序事务结束时间
+                    int newScheduledTime = Ti->scheduledTime + Ti->m_cost;
+                    Tj->scheduledTime = std::max(Tj->scheduledTime, newScheduledTime);
+                }
+            } else {
+                // 添加到本事务的无冲突事务集合
+                unflictTxs.push_back(Ti);
+            }
+        }
+    }
+}
+
+/* 构建初始时空图
+    即不考虑嵌套事务结构的时空图 => 为了做对比
+*/
+void DeterReExecute::buildGraphOrigin() {
+    // 按队列顺序，依次遍历事务
+    for (int j = 0; j < m_rbList.size(); j++) {
+        m_rbList[j]->scheduledTime = 0;
+        auto Tj = m_rbList[j];
+        auto& unflictTxs = m_unConflictTxMap[m_rbList[j]->m_id];
+        // 判断本事务与前序事务间冲突
+        for (int i = 0; i < m_rbList.size(); i++) {
+            auto Ti = m_rbList[i];
+            if ((protocol::hasConflict(Ti->writeSet, Tj->readSet) || protocol::hasConflict(Ti->writeSet, Tj->writeSet) ||
+                protocol::hasConflict(Ti->readSet, Tj->writeSet))) {
                 if (i < j) {
                     // 输出txid和与它冲突事务的id
                     // cout << "Tx" << m_rbList[j]->id << " conflicts with Tx" << m_rbList[i]->id << endl;
@@ -254,6 +289,11 @@ int DeterReExecute::calculateExecutionTime(Vertex::Ptr& Tx) {
 
 // 判断两个事务是否可调序
 bool DeterReExecute::canReorder(const Vertex::Ptr& Tx1, const Vertex::Ptr& Tx2) {
+    // // 检查Tx1或Tx2是否不在m_orderIndex中 => 无需检查, 因为非嵌套事务无需判断肯定canReorder
+    // if (m_orderIndex.find(Tx1->m_hyperId) == m_orderIndex.end() || m_orderIndex.find(Tx2->m_hyperId) == m_orderIndex.end()) {
+    //     return true; // Tx1或Tx2不在m_orderIndex中，可以调序
+    // }
+
     // 两个事务在同一个集合中，无法调序
     return m_orderIndex[Tx1->m_hyperId] != m_orderIndex[Tx2->m_hyperId];
 }

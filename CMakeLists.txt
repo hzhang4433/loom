@@ -1,7 +1,7 @@
 set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
 
 cmake_minimum_required(VERSION 3.12)
-project(minWRollback)
+project(loom)
 
 # 指定c++标准
 set(CMAKE_CXX_STANDARD 17)
@@ -30,6 +30,6 @@ file(GLOB_RECURSE HEADERS "*.h" "*.hpp")
 # 禁止tbb的deprecated警告
 add_definitions(-DTBB_SUPPRESS_DEPRECATED_MESSAGES=1)
 
-add_executable(minWRollback ${SRC_LIST} ${HEADERS})
-target_link_libraries(minWRollback ${GTEST_LIBRARIES} ${TBB_LIBRARIES} ${Boost_LIBRARIES} pthread)
-target_compile_options(minWRollback PRIVATE -Wno-deprecated -Wpedantic -Wno-unused-variable -Wno-unused-parameter -Wno-comment -Wno-sign-compare -Wno-pedantic -Wno-return-type -Wno-uninitialized)
+add_executable(loom ${SRC_LIST} ${HEADERS})
+target_link_libraries(loom ${GTEST_LIBRARIES} ${TBB_LIBRARIES} ${Boost_LIBRARIES} pthread)
+target_compile_options(loom PRIVATE -Wno-deprecated -Wpedantic -Wno-unused-variable -Wno-unused-parameter -Wno-comment -Wno-sign-compare -Wno-pedantic -Wno-return-type -Wno-uninitialized)

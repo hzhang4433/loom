@@ -34,7 +34,7 @@ class DeterReExecute {
         void rescheduleTransactions(); // 重调度事务
         void getCandidateTxSet(const Vertex::Ptr& Tx, std::set<Vertex::Ptr, Loom::lessScheduledTime>& Ts); // 获取候选重调度事务集
         void reschedule(Vertex::Ptr& Tx, int startTime); // 重调度事务，移动至时空图目标位置
-        void recursiveRescheduleTxs(const Vertex::Ptr& Ti, const Vertex::Ptr& Tx, std::set<string>& movedTxIds, std::set<Vertex::Ptr>& originalDependencies); // 递归重调度事务
+        void recursiveRescheduleTxs(const Vertex::Ptr& Ti, const Vertex::Ptr& Tx, std::set<string>& movedTxIds, const std::set<Vertex::Ptr>& originalDependencies); // 递归重调度事务
 
 
         // 时间计算模块

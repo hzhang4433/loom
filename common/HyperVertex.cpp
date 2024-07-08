@@ -63,6 +63,7 @@ int HyperVertex::buildVertexs(const Transaction::Ptr& tx, HyperVertex::Ptr& hype
             if (child.dependency == Loom::DependencyType::STRONG) {
                 vertex->hasStrong = true;
                 vertex->m_strongChildren.insert(childVertex);
+                childVertex->m_strongParent = vertex;
             }
             // 递归添加级联回滚节点
             vertex->cascadeVertices.insert(childVertex->cascadeVertices.begin(), childVertex->cascadeVertices.end());

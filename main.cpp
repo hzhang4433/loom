@@ -4,6 +4,7 @@
 #include "test/MinWRollbackTest.cpp"
 #include "test/FabricPPTest.cpp"
 #include "test/CompareTest.cpp"
+#include "test/DeterReExecuteTest.cpp"
 
 
 using namespace std;
@@ -13,9 +14,11 @@ int main(int argc, char** argv) {
     testing::InitGoogleTest(&argc, argv);
     // ::testing::GTEST_FLAG(filter) = "TpccTest.MultiWarehouseTEST";
     // ::testing::GTEST_FLAG(filter) = "MinWRollbackTest.TestLoopPerformance";
-    ::testing::GTEST_FLAG(filter) = "MinWRollbackTest.TestSerialOrder";
+    // ::testing::GTEST_FLAG(filter) = "MinWRollbackTest.TestSerialOrder";
     // ::testing::GTEST_FLAG(filter) = "FabricPPTest.TestRollback";
     // ::testing::GTEST_FLAG(filter) = "CompareTest.TestRollback";
+    ::testing::GTEST_FLAG(filter) = "DeterReExecuteTest.TestTimeSpaceGraph";
+    
     int result = RUN_ALL_TESTS();
 
     if (result == 0) {

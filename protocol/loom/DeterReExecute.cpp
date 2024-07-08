@@ -6,6 +6,42 @@ using namespace std;
 
 /* 时空图模块 */
 
+/* 构建初始时空图
+    即不考虑嵌套事务结构的时空图 => 为了做对比
+*/
+void DeterReExecute::buildGraphOrigin() {
+    // 按队列顺序，依次遍历事务
+    for (int j = 0; j < m_rbList.size(); j++) {
+        m_rbList[j]->scheduledTime = 0;
+        auto Tj = m_rbList[j];
+        auto& unflictTxs = m_unConflictTxMap[m_rbList[j]->m_id];
+        // 判断本事务与前序事务间冲突
+        for (int i = 0; i < m_rbList.size(); i++) {
+            auto Ti = m_rbList[i];
+            if ((protocol::hasConflict(Ti->writeSet, Tj->readSet) || protocol::hasConflict(Ti->writeSet, Tj->writeSet) ||
+                protocol::hasConflict(Ti->readSet, Tj->writeSet))) {
+                if (i < j) {
+                    // 输出txid和与它冲突事务的id
+                    // cout << "Tx" << m_rbList[j]->id << " conflicts with Tx" << m_rbList[i]->id << endl;
+
+                    // 本事务记录前序事务
+                    Tj->dependencies_in.insert(Ti);
+                    
+                    // 所有前序事务记录本事务
+                    Ti->dependencies_out.insert(Tj);
+                    
+                    // 本事务调度时间为前序事务结束时间
+                    int newScheduledTime = Ti->scheduledTime + Ti->m_cost;
+                    Tj->scheduledTime = std::max(Tj->scheduledTime, newScheduledTime);
+                }
+            } else {
+                // 添加到本事务的无冲突事务集合
+                unflictTxs.insert(Ti);
+            }
+        }
+    }
+}
+
 /* 构建时空图
 1. 为每个事务设置调度时间
 2. 为每个事务添加依赖关系
@@ -56,42 +92,9 @@ void DeterReExecute::buildGraph() {
                 Tj->scheduledTime = std::max(Tj->scheduledTime, newScheduledTime);
                 unflictTxs.erase(Ti);
             }
-        }
-    }
-}
-
-/* 构建初始时空图
-    即不考虑嵌套事务结构的时空图 => 为了做对比
-*/
-void DeterReExecute::buildGraphOrigin() {
-    // 按队列顺序，依次遍历事务
-    for (int j = 0; j < m_rbList.size(); j++) {
-        m_rbList[j]->scheduledTime = 0;
-        auto Tj = m_rbList[j];
-        auto& unflictTxs = m_unConflictTxMap[m_rbList[j]->m_id];
-        // 判断本事务与前序事务间冲突
-        for (int i = 0; i < m_rbList.size(); i++) {
-            auto Ti = m_rbList[i];
-            if ((protocol::hasConflict(Ti->writeSet, Tj->readSet) || protocol::hasConflict(Ti->writeSet, Tj->writeSet) ||
-                protocol::hasConflict(Ti->readSet, Tj->writeSet))) {
-                if (i < j) {
-                    // 输出txid和与它冲突事务的id
-                    // cout << "Tx" << m_rbList[j]->id << " conflicts with Tx" << m_rbList[i]->id << endl;
-
-                    // 本事务记录前序事务
-                    Tj->dependencies_in.insert(Ti);
-                    
-                    // 所有前序事务记录本事务
-                    Ti->dependencies_out.insert(Tj);
-                    
-                    // 本事务调度时间为前序事务结束时间
-                    int newScheduledTime = Ti->scheduledTime + Ti->m_cost;
-                    Tj->scheduledTime = std::max(Tj->scheduledTime, newScheduledTime);
-                }
-            } else {
-                // 添加到本事务的无冲突事务集合
-                unflictTxs.insert(Ti);
-            }
+        } else if (Tj->m_strongParent != nullptr) {
+            // 有必要删除吗？不管删除不删除，在判断idIdle时都无法通过的
+            unflictTxs.erase(Tj->m_strongParent);
         }
     }
 }
@@ -102,8 +105,7 @@ void DeterReExecute::buildGraphConcurrent(Util::UThreadPoolPtr& Pool) {
 
 }
 
-/* 重调度事务
-*/
+/* 重调度事务 */
 void DeterReExecute::rescheduleTransactions() {
     int lastTime = -1;
     for (int i = 0; i < N; i++) {
@@ -153,7 +155,7 @@ void DeterReExecute::rescheduleTransactions() {
             // 3.1若Ti有足够的空闲时间前移至Tx时刻执行
             if (isIdle(Ti, tx->scheduledTime)) {
                 // 3.1.0深拷贝Ti依赖边depedencies_out
-                std::set<Vertex::Ptr> originalDependencies(Ti->dependencies_out.begin(), Ti->dependencies_out.end());
+                const std::set<Vertex::Ptr> originalDependencies(Ti->dependencies_out.begin(), Ti->dependencies_out.end());
                 // 3.1.1移动Ti至目标位置
                 reschedule(Ti, tx->scheduledTime);
                 // 3.1.2贪心: 递归遍历与Ti有直接依赖的事务，尝试一起前移
@@ -162,12 +164,10 @@ void DeterReExecute::rescheduleTransactions() {
             // 3.2若不可以，则继续遍历Ts
         }
         // 4.重复N轮
-    }
-    
+    }   
 }
 
-/* 获取候选重调度事务集
-*/
+/* 获取候选重调度事务集 */
 void DeterReExecute::getCandidateTxSet(const Vertex::Ptr& Tx, std::set<Vertex::Ptr, Loom::lessScheduledTime>& Ts) {
     for (auto candidateTx : m_unConflictTxMap[Tx->m_id]) {
         // 事务执行时刻在tx之后
@@ -219,7 +219,7 @@ void DeterReExecute::reschedule(Vertex::Ptr& Tx, int startTime) {
 
 /* 递归重调度事务
 */
-void DeterReExecute::recursiveRescheduleTxs(const Vertex::Ptr& Ti, const Vertex::Ptr& Tx, std::set<string>& movedTxIds, std::set<Vertex::Ptr>& originalDependencies) {
+void DeterReExecute::recursiveRescheduleTxs(const Vertex::Ptr& Ti, const Vertex::Ptr& Tx, std::set<string>& movedTxIds, const std::set<Vertex::Ptr>& originalDependencies) {
     // 0. 若Ti没有依赖事务，则直接返回
     if (originalDependencies.empty()) {
         return;
@@ -231,8 +231,8 @@ void DeterReExecute::recursiveRescheduleTxs(const Vertex::Ptr& Ti, const Vertex:
             continue;
         }
         // cout << "Tj:" << Tj->id << " scheduleTime:" << Tj->scheduledTime << endl;
-        // 1.2 若Tj可以前移至Tx执行时刻
-        if (isIdle(Tj, Tx->scheduledTime)) {
+// 1.2 若Tj可以前移至Tx执行时刻  ==> 若Tj不是Ti的强依赖父节点？添加会提高性能吗？ —— 待测试性能影响 
+        if (Tj != Ti->m_strongParent && isIdle(Tj, Tx->scheduledTime)) {
             //1.2.0深拷贝Tj依赖边depedencies_out
             std::set<Vertex::Ptr> m_originalDependencies(Tj->dependencies_out.begin(), Tj->dependencies_out.end());
             //1.2.1移动至Tx执行时刻执行

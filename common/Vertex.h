@@ -115,6 +115,7 @@ class Vertex : public std::enable_shared_from_this<Vertex>
         int scheduledTime;                                                       // 记录事务执行时刻
         bool hasStrong;                                                          // 记录是否有强依赖
         unordered_set<Vertex::Ptr, VertexHash> m_strongChildren;                 // 记录强依赖子节点
+        Vertex::Ptr m_strongParent;                                              // 记录强依赖父节点
 
         
         // 时空图模块,用于事务重调度

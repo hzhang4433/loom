@@ -317,6 +317,9 @@ bool DeterReExecute::isIdle(const Vertex::Ptr& tx, int startTime) {
 */
 int DeterReExecute::calculateTotalExecutionTime() {
     // cout << "====calculateTotalExecutionTime====" << endl;
+    // 按scheduledTime，从小到大排序
+    std::sort(m_rbList.begin(), m_rbList.end(), Loom::lessScheduledTime());
+    // 计算每笔事务的执行时间
     int endTime = 0;
     for (auto& txn : m_rbList) {
         int txnEndTime = calculateExecutionTime(txn) + txn->m_self_cost;

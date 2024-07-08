@@ -22,7 +22,7 @@ class MinWRollback
             return id_counter.fetch_add(1, std::memory_order_relaxed) + 1;
         }
 
-        void execute(const Transaction::Ptr& tx, bool isNest = true);
+        HyperVertex::Ptr execute(const Transaction::Ptr& tx, bool isNest = true);
 
         void onWarm2RWIndex();
 

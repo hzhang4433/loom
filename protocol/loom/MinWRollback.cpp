@@ -15,7 +15,7 @@ using namespace std;
         2. 判断执行完成的事务与其它执行完成事务间的rw依赖，构建rw依赖图
     状态: 测试完成，待优化...
 */
-void MinWRollback::execute(const Transaction::Ptr& tx, bool isNest) {
+HyperVertex::Ptr MinWRollback::execute(const Transaction::Ptr& tx, bool isNest) {
     int txid = getId();
     HyperVertex::Ptr hyperVertex = make_shared<HyperVertex>(txid, isNest);
     Vertex::Ptr rootVertex = make_shared<Vertex>(hyperVertex, txid, to_string(txid), 0, isNest);

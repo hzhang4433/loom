@@ -41,6 +41,8 @@ HyperVertex::Ptr MinWRollback::execute(const Transaction::Ptr& tx, bool isNest) 
 
     // 记录超节点
     m_hyperVertices.insert(hyperVertex);
+    
+    return hyperVertex;
 }
 
 /* 利用倒排索引进一步构建rw索引 */

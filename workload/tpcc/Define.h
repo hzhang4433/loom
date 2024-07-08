@@ -12,8 +12,8 @@ enum TransactionType {
 };
 
 enum ConsumptionType {
-    HIGH = 100,
-    MEDIUM = 60,
+    HIGH = 80,
+    MEDIUM = 50,
     LOW = 20,
 };
 

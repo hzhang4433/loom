@@ -3,6 +3,17 @@
 using namespace std;
 
 
+/* 构造函数 */
+DeterReExecute::DeterReExecute(std::vector<Vertex::Ptr> rbList, const vector<vector<int>>& serialOrders) { // 构造函数
+    this->m_rbList = rbList;
+    for (int i = 0; i < serialOrders.size(); i++) {
+        for (auto txId : serialOrders[i]) {
+            this->m_orderIndex[txId] = i;
+        }
+    }
+    // 重排序轮次定义为事务数的20%
+    this->N = rbList.size() * 0.2;
+}
 
 /* 时空图模块 */
 
@@ -18,8 +29,9 @@ void DeterReExecute::buildGraphOrigin() {
         // 判断本事务与前序事务间冲突
         for (int i = 0; i < m_rbList.size(); i++) {
             auto Ti = m_rbList[i];
-            if ((protocol::hasConflict(Ti->writeSet, Tj->readSet) || protocol::hasConflict(Ti->writeSet, Tj->writeSet) ||
-                protocol::hasConflict(Ti->readSet, Tj->writeSet))) {
+            if (protocol::hasConflict(Ti->writeSet, Tj->readSet) ||
+                protocol::hasConflict(Ti->writeSet, Tj->writeSet) ||
+                protocol::hasConflict(Ti->readSet, Tj->writeSet)) {
                 if (i < j) {
                     // 输出txid和与它冲突事务的id
                     // cout << "Tx" << m_rbList[j]->id << " conflicts with Tx" << m_rbList[i]->id << endl;
@@ -31,7 +43,7 @@ void DeterReExecute::buildGraphOrigin() {
                     Ti->dependencies_out.insert(Tj);
                     
                     // 本事务调度时间为前序事务结束时间
-                    int newScheduledTime = Ti->scheduledTime + Ti->m_cost;
+                    int newScheduledTime = Ti->scheduledTime + Ti->m_self_cost;
                     Tj->scheduledTime = std::max(Tj->scheduledTime, newScheduledTime);
                 }
             } else {
@@ -71,7 +83,7 @@ void DeterReExecute::buildGraph() {
                     Ti->dependencies_out.insert(Tj);
                     
                     // 本事务调度时间为前序事务结束时间
-                    int newScheduledTime = Ti->scheduledTime + Ti->m_cost;
+                    int newScheduledTime = Ti->scheduledTime + Ti->m_self_cost;
                     Tj->scheduledTime = std::max(Tj->scheduledTime, newScheduledTime);
                 }
             } else {
@@ -88,7 +100,7 @@ void DeterReExecute::buildGraph() {
                 // 子事务记录强依赖父事务
                 Ti->dependencies_out.insert(Tj);
                 // 父事务调度时间为前序事务结束时间
-                int newScheduledTime = Ti->scheduledTime + Ti->m_cost;
+                int newScheduledTime = Ti->scheduledTime + Ti->m_self_cost;
                 Tj->scheduledTime = std::max(Tj->scheduledTime, newScheduledTime);
                 unflictTxs.erase(Ti);
             }
@@ -217,8 +229,7 @@ void DeterReExecute::reschedule(Vertex::Ptr& Tx, int startTime) {
     
 }
 
-/* 递归重调度事务
-*/
+/* 递归重调度事务 */
 void DeterReExecute::recursiveRescheduleTxs(const Vertex::Ptr& Ti, const Vertex::Ptr& Tx, std::set<string>& movedTxIds, const std::set<Vertex::Ptr>& originalDependencies) {
     // 0. 若Ti没有依赖事务，则直接返回
     if (originalDependencies.empty()) {
@@ -241,15 +252,15 @@ void DeterReExecute::recursiveRescheduleTxs(const Vertex::Ptr& Ti, const Vertex:
             movedTxIds.insert(Tj->m_id);
             //1.2.3从Tj出发继续选取并尝试前移事务
             recursiveRescheduleTxs(Tj, Tx, movedTxIds, m_originalDependencies);
-        } else if (Tj->scheduledTime == Ti->scheduledTime + Ti->m_cost) {
+        } else if (Tj->scheduledTime == Ti->scheduledTime + Ti->m_self_cost) {
             //1.3.1 如果Tj执行时间就在Ti执行完成后的时刻，直接遍历下一个事务
             continue;
         // 1.4 若Tj可以前移至Tj执行完成后时刻
-        } else if (isIdle(Tj, Ti->scheduledTime + Ti->m_cost)) {
+        } else if (isIdle(Tj, Ti->scheduledTime + Ti->m_self_cost)) {
             //1.4.0深拷贝Tj依赖边depedencies_out
             std::set<Vertex::Ptr> m_originalDependencies(Tj->dependencies_out.begin(), Tj->dependencies_out.end());
             //1.4.1移动至Ti执行完成后时刻执行
-            reschedule(Tj, Ti->scheduledTime + Ti->m_cost);
+            reschedule(Tj, Ti->scheduledTime + Ti->m_self_cost);
             //1.4.2记录已移动事务
             movedTxIds.insert(Tj->m_id);
             //1.4.3从Tj出发继续选取并尝试前移事务
@@ -263,19 +274,43 @@ void DeterReExecute::recursiveRescheduleTxs(const Vertex::Ptr& Ti, const Vertex:
 
 /* 时间计算模块 */ 
 
-/* 判断事务是否能够在startTime时刻执行
-*/
+/* 判断事务是否能够在startTime时刻执行 */
 bool DeterReExecute::isIdle(const Vertex::Ptr& tx, int startTime) {
     // 1.计算事务Tx的执行结束时间,获取执行区间[startTime, endTime]
-    int endTime = startTime + tx->m_cost;
+    int endTime = startTime + tx->m_self_cost;
     // 2.遍历Tx的冲突事务，判断目标时间区间是否空闲
-    for (auto& conflictTx : tx->dependencies_in) {
-        // !(事务冲突事务的执行时间在Tx之后 或 事务在startTime前执行完成) -> !(无冲突)
-        if (!(conflictTx->scheduledTime >= endTime || conflictTx->scheduledTime + conflictTx->m_cost <= startTime)) {
-            return false;
+    if (tx->isNested) {
+        auto txOrderIndex = m_orderIndex[tx->m_hyperId];
+        // 若移动的是嵌套子事务，对依赖的嵌套子事务，首先判断其所属嵌套事务ID是否属于同一个m_orderIndex
+        for (auto& conflictTx : tx->dependencies_in) {
+            // 若冲突事务属于同一个m_orderIndex
+            if (conflictTx->isNested && txOrderIndex == m_orderIndex[conflictTx->m_hyperId]) {
+                return false;
+            }
+            // 若冲突事务的执行时间在Tx之后 或 事务在startTime前执行完成
+            if (!(conflictTx->scheduledTime >= endTime || conflictTx->scheduledTime + conflictTx->m_self_cost <= startTime)) {
+                return false;
+            }
+        }
+    } else {
+        // 若移动的是普通事务，直接判断有无空隙即可
+        for (auto& conflictTx : tx->dependencies_in) {
+            // !(事务冲突事务的执行时间在Tx之后 或 事务在startTime前执行完成) -> !(无冲突)
+            if (!(conflictTx->scheduledTime >= endTime || conflictTx->scheduledTime + conflictTx->m_self_cost <= startTime)) {
+                return false;
+            }
         }
     }
     return true;
+
+    // // 简洁写法，但是未必高效
+    // for (auto& conflictTx : tx->dependencies_in) {
+    //     // 不能重排序 || !(事务冲突事务的执行时间在Tx之后 或 事务在startTime前执行完成) -> !(无冲突)
+    //     if (!canReorder(tx, conflictTx) || !(conflictTx->scheduledTime >= endTime || conflictTx->scheduledTime + conflictTx->m_self_cost <= startTime)) {
+    //         return false;
+    //     }
+    // }
+    // return true;
 }
 
 /* 计算事务总执行时间
@@ -284,7 +319,7 @@ int DeterReExecute::calculateTotalExecutionTime() {
     // cout << "====calculateTotalExecutionTime====" << endl;
     int endTime = 0;
     for (auto& txn : m_rbList) {
-        int txnEndTime = calculateExecutionTime(txn) + txn->m_cost;
+        int txnEndTime = calculateExecutionTime(txn) + txn->m_self_cost;
         endTime = std::max(endTime, txnEndTime);
     }
     m_totalExecTime = endTime;
@@ -296,7 +331,7 @@ int DeterReExecute::calculateTotalExecutionTime() {
 int DeterReExecute::calculateExecutionTime(Vertex::Ptr& Tx) {
     int executionTime = 0;
     for (auto& conflictTx : Tx->dependencies_in) {
-        executionTime = std::max(executionTime, conflictTx->scheduledTime + conflictTx->m_cost);
+        executionTime = std::max(executionTime, conflictTx->scheduledTime + conflictTx->m_self_cost);
     }
     Tx->scheduledTime = executionTime;
     return executionTime;
@@ -305,13 +340,14 @@ int DeterReExecute::calculateExecutionTime(Vertex::Ptr& Tx) {
 
 // 判断两个事务是否可调序
 bool DeterReExecute::canReorder(const Vertex::Ptr& Tx1, const Vertex::Ptr& Tx2) {
-    // // 检查Tx1或Tx2是否不在m_orderIndex中 => 无需检查, 因为非嵌套事务无需判断肯定canReorder
-    // if (m_orderIndex.find(Tx1->m_hyperId) == m_orderIndex.end() || m_orderIndex.find(Tx2->m_hyperId) == m_orderIndex.end()) {
-    //     return true; // Tx1或Tx2不在m_orderIndex中，可以调序
+    // // 检查Tx1或Tx2是否都是嵌套事务
+    // if (Tx1->isNested && Tx2->isNested) {
+    //     // 若两个事务在同一个集合中，无法调序
+    //     return m_orderIndex[Tx1->m_hyperId] != m_orderIndex[Tx2->m_hyperId];
     // }
+    // return true;
 
-    // 两个事务在同一个集合中，无法调序
-    return m_orderIndex[Tx1->m_hyperId] != m_orderIndex[Tx2->m_hyperId];
+    return !(Tx1->isNested && Tx2->isNested) || m_orderIndex[Tx1->m_hyperId] != m_orderIndex[Tx2->m_hyperId];
 }
 
 std::vector<Vertex::Ptr>& DeterReExecute::getRbList() { // 获取事务列表

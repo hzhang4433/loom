@@ -10,16 +10,7 @@ using namespace Loom;
 class DeterReExecute {
     // 定义公有函数
     public:
-        DeterReExecute(std::vector<Vertex::Ptr> rbList, const vector<vector<int>>& serialOrders) { // 构造函数
-            this->m_rbList = rbList;
-            for (int i = 0; i < serialOrders.size(); i++) {
-                for (auto txId : serialOrders[i]) {
-                    this->m_orderIndex[txId] = i;
-                }
-            }
-            // 重排序轮次定义为事务数的20%
-            this->N = rbList.size() * 0.2;
-        }
+        DeterReExecute(std::vector<Vertex::Ptr> rbList, const vector<vector<int>>& serialOrders); // 构造函数
 
         ~DeterReExecute(){}; // 析构函数
 

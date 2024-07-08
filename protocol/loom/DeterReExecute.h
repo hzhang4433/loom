@@ -48,7 +48,7 @@ class DeterReExecute {
 
         std::vector<Vertex::Ptr> m_rbList;                          // 事务列表
         std::unordered_map<int, int> m_orderIndex;                  // 事务顺序索引,用于判断两个事务是否在一个集合中.在一个集合代表无法调序,不在一个集合代表可以调序
-        tbb::concurrent_unordered_map<string, std::vector<Vertex::Ptr>> m_unConflictTxMap;  // 无冲突事务映射，记录与每个事务不冲突的事务集合
+        tbb::concurrent_unordered_map<string, std::unordered_set<Vertex::Ptr, Vertex::VertexHash>> m_unConflictTxMap;  // 无冲突事务映射，记录与每个事务不冲突的事务集合
         std::vector<int> originalOrder;                             // 事务原始执行顺序
         std::vector<int> executionOrder;                            // 根据scheduledTime排序的事务执行顺序
         int N;                                                      // 重排序轮次

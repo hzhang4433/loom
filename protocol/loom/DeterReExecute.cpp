@@ -20,8 +20,10 @@ void DeterReExecute::buildGraph() {
         // 判断本事务与前序事务间冲突
         for (int i = 0; i < m_rbList.size(); i++) {
             auto Ti = m_rbList[i];
-            if ((protocol::hasConflict(Ti->writeSet, Tj->readSet) || protocol::hasConflict(Ti->writeSet, Tj->writeSet) ||
-                protocol::hasConflict(Ti->readSet, Tj->writeSet))) {
+
+            // 判断事务间冲突关系(同属于一个超节点的子事务无需判断冲突关系)
+            if (Ti->m_hyperId != Tj->m_hyperId && (protocol::hasConflict(Ti->writeSet, Tj->readSet) ||
+                protocol::hasConflict(Ti->writeSet, Tj->writeSet) || protocol::hasConflict(Ti->readSet, Tj->writeSet))) {
                 if (i < j) {
                     // 输出txid和与它冲突事务的id
                     // cout << "Tx" << m_rbList[j]->id << " conflicts with Tx" << m_rbList[i]->id << endl;
@@ -38,7 +40,21 @@ void DeterReExecute::buildGraph() {
                 }
             } else {
                 // 添加到本事务的无冲突事务集合
-                unflictTxs.push_back(Ti);
+                unflictTxs.insert(Ti);
+            }
+        }
+
+        // 若存在强依赖子节点，则将其添加至依赖关系
+        if (Tj->hasStrong) {
+            for (auto Ti : Tj->m_strongChildren) {
+                // 父事务记录强依赖子事务
+                Tj->dependencies_in.insert(Ti);
+                // 子事务记录强依赖父事务
+                Ti->dependencies_out.insert(Tj);
+                // 父事务调度时间为前序事务结束时间
+                int newScheduledTime = Ti->scheduledTime + Ti->m_cost;
+                Tj->scheduledTime = std::max(Tj->scheduledTime, newScheduledTime);
+                unflictTxs.erase(Ti);
             }
         }
     }
@@ -74,7 +90,7 @@ void DeterReExecute::buildGraphOrigin() {
                 }
             } else {
                 // 添加到本事务的无冲突事务集合
-                unflictTxs.push_back(Ti);
+                unflictTxs.insert(Ti);
             }
         }
     }

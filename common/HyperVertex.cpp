@@ -54,10 +54,16 @@ int HyperVertex::buildVertexs(const Transaction::Ptr& tx, HyperVertex::Ptr& hype
         // 递归计算子节点权重 级联回滚权重和级联子节点
         auto& children = tx->getChildren();
         for (int i = 1; i <= children.size(); i++) {
+            auto child = children[i - 1];
             string subTxid = txid + "_" + to_string(i);
             Vertex::Ptr childVertex = make_shared<Vertex>(hyperVertex, this->m_hyperId, subTxid, vertex->m_layer + 1, true);
             // 递归添加级联回滚代价
-            execTime += buildVertexs(children[i - 1].transaction, hyperVertex, childVertex, subTxid, invertedIndex);
+            execTime += buildVertexs(child.transaction, hyperVertex, childVertex, subTxid, invertedIndex);
+            // 若为强依赖，则记录强依赖子节点
+            if (child.dependency == Loom::DependencyType::STRONG) {
+                vertex->hasStrong = true;
+                vertex->m_strongChildren.insert(childVertex);
+            }
             // 递归添加级联回滚节点
             vertex->cascadeVertices.insert(childVertex->cascadeVertices.begin(), childVertex->cascadeVertices.end());
             // 添加子节点

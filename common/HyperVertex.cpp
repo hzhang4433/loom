@@ -40,7 +40,7 @@ void HyperVertex::recognizeCascades(Vertex::Ptr vertex) {
 }
 
 // 构建嵌套事务超节点
-int HyperVertex::buildVertexs(const Transaction::Ptr& tx, HyperVertex::Ptr& hyperVertex, Vertex::Ptr& vertex, string& txid, tbb::concurrent_unordered_map<string, protocol::RWSets<Vertex::Ptr>>& invertedIndex) {
+int HyperVertex::buildVertexs(const Transaction::Ptr& tx, HyperVertex::Ptr& hyperVertex, Vertex::Ptr& vertex, string& txid, std::unordered_map<string, protocol::RWSets<Vertex::Ptr>>& invertedIndex) {
     // 获取执行时间
     int execTime = tx->getExecutionTime();
     vertex->m_self_cost = execTime;
@@ -92,7 +92,7 @@ int HyperVertex::buildVertexs(const Transaction::Ptr& tx, HyperVertex::Ptr& hype
 }
 
 // 构建普通事务节点
-void HyperVertex::buildVertexs(const Transaction::Ptr& tx, Vertex::Ptr& vertex, tbb::concurrent_unordered_map<string, protocol::RWSets<Vertex::Ptr>>& invertedIndex) {
+void HyperVertex::buildVertexs(const Transaction::Ptr& tx, Vertex::Ptr& vertex, std::unordered_map<string, protocol::RWSets<Vertex::Ptr>>& invertedIndex) {
     // 获取执行时间
     int execTime = tx->getExecutionTime();
     vertex->m_self_cost += execTime;

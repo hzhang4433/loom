@@ -11,11 +11,16 @@ using namespace std;
 TEST(DeterReExecuteTest, TestTimeSpaceGraph) {
     // 定义变量
     Workload workload;
-    MinWRollback normal_minw, nested_minw;
+    MinWRollback minw_normal, minw_nested;
     vector<Vertex::Ptr> rbList_normal, rbList_nested;
     vector<vector<int>> serialOrders;
     int executionTime_origin = 0;
     
+    // auto seed = uint64_t(140703301942157);
+    // workload.set_seed(seed);
+    auto seed = workload.get_seed();
+    cout << "workload seed: " << seed << endl;
+
     // 模拟生成事务执行顺序
     vector<int> serialOrder;
     for (int j = 1; j <= Loom::BLOCK_SIZE; j++) {
@@ -29,10 +34,10 @@ TEST(DeterReExecuteTest, TestTimeSpaceGraph) {
         // 产生交易
         auto tx = workload.NextTransaction();
         // 记录嵌套事务
-        auto nested_rbs = nested_minw.execute(tx, true)->m_vertices;
+        auto nested_rbs = minw_nested.execute(tx, true)->m_vertices;
         rollbackTxs.insert(nested_rbs.begin(), nested_rbs.end());
         // 记录嵌套事务的正常形式
-        auto normal_rb = normal_minw.execute(tx, false)->m_rootVertex;
+        auto normal_rb = minw_normal.execute(tx, false)->m_rootVertex;
         rbList_normal.push_back(normal_rb);
         executionTime_origin += normal_rb->m_cost;
     }
@@ -40,20 +45,33 @@ TEST(DeterReExecuteTest, TestTimeSpaceGraph) {
         rbList_nested.push_back(vertex);
     }
     
-    // 构造DeterReExecute对象
-    DeterReExecute deterReExecute_normal(rbList_normal, serialOrders);
-    DeterReExecute deterReExecute_nested(rbList_nested, serialOrders);
-    // 构建初始时空图
+    // 构造只有普通交易的DeterReExecute对象
     auto start = chrono::high_resolution_clock::now();
-    deterReExecute_normal.buildGraphOrigin();
+    DeterReExecute deterReExecute_normal(rbList_normal, serialOrders, minw_normal.m_invertedIndex);
     auto end = chrono::high_resolution_clock::now();
-    auto duration_normal = chrono::duration_cast<chrono::milliseconds>(end - start);
+    auto duration_init = chrono::duration_cast<chrono::milliseconds>(end - start);
+    cout << "Normal Initial Time: " << duration_init.count() << "ms" << endl;
+
+    // 构造只有嵌套交易的DeterReExecute对象
+    start = chrono::high_resolution_clock::now();
+    DeterReExecute deterReExecute_nested(rbList_nested, serialOrders, minw_nested.m_invertedIndex);
+    end = chrono::high_resolution_clock::now();
+    duration_init = chrono::duration_cast<chrono::milliseconds>(end - start);
+    cout << "Nested Initial Time: " << duration_init.count() << "ms" << endl;
+    
+    // 构建初始时空图
+    start = chrono::high_resolution_clock::now();
+    // deterReExecute_normal.buildGraphOrigin();
+    deterReExecute_normal.buildGraphOriginByIndex();
+    end = chrono::high_resolution_clock::now();
+    auto duration_normal = chrono::duration_cast<chrono::microseconds>(end - start);
     // 构建优化时空图
     start = chrono::high_resolution_clock::now();
-    deterReExecute_nested.buildGraph();
+    // deterReExecute_nested.buildGraph();
+    deterReExecute_nested.buildGraphByIndex();
     end = chrono::high_resolution_clock::now();
     auto duration_nested = chrono::duration_cast<chrono::milliseconds>(end - start);
-    cout << "Normal Build Time: " << duration_normal.count() << "ms" << endl;
+    cout << "Normal Build Time: " << duration_normal.count() << "us" << endl;
     cout << "Nested Build Time: " << duration_nested.count() << "ms" << endl;
     // 计算重执行时间
     auto executionTime_normal = deterReExecute_normal.calculateTotalExecutionTime();
@@ -63,6 +81,8 @@ TEST(DeterReExecuteTest, TestTimeSpaceGraph) {
     cout << "Nested Execution Time: " << executionTime_nested << endl;
 
     // 计算优化效率
+    double originOptimizedPercent = (1.0/executionTime_normal - 1.0/executionTime_origin) * 100.0 / (1.0/executionTime_origin);
+    cout << "Origin Optimized Percent: " << originOptimizedPercent << "%" << endl;
     double optimizedPercent = (1.0/executionTime_nested - 1.0/executionTime_normal) * 100.0 / (1.0/executionTime_normal);
     cout << "Optimized Percent: " << optimizedPercent << "%" << endl;
 }

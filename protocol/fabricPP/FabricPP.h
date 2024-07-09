@@ -50,5 +50,5 @@ class FabricPP {
         vector<set<Vertex::Ptr, Vertex::VertexCompare>> m_cycles;   
         int testCounter = 0; 
         // 建立倒排索引
-        tbb::concurrent_unordered_map<string, protocol::RWSets<Vertex::Ptr>> m_invertedIndex;
+        std::unordered_map<string, protocol::RWSets<Vertex::Ptr>> m_invertedIndex;
 };

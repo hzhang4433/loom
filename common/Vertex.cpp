@@ -10,6 +10,7 @@ Vertex::Vertex(shared_ptr<HyperVertex> hyperVertex, int hyperId, string id, int 
     m_self_cost = 0;
     hasStrong = false;
     m_strongParent = nullptr;
+    scheduledTime = 0;
 }
 
 Vertex::~Vertex() {}

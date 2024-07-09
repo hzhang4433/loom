@@ -10,7 +10,7 @@ using namespace Loom;
 class DeterReExecute {
     // 定义公有函数
     public:
-        DeterReExecute(std::vector<Vertex::Ptr> rbList, const vector<vector<int>>& serialOrders); // 构造函数
+        DeterReExecute(std::vector<Vertex::Ptr> rbList, const vector<vector<int>>& serialOrders, const std::unordered_map<string, protocol::RWSets<Vertex::Ptr>> m_invertedIndex); // 构造函数
 
         ~DeterReExecute(){}; // 析构函数
 
@@ -20,7 +20,9 @@ class DeterReExecute {
 
         // 时空图模块
         void buildGraph(); // 构建优化时空图
+        void buildGraphOriginByIndex();
         void buildGraphOrigin(); // 构建原始时空图,即不考虑嵌套事务结构的时空图
+        void buildGraphByIndex();
         void buildGraphConcurrent(Util::UThreadPoolPtr& Pool); // 并发构建时空图
         void rescheduleTransactions(); // 重调度事务
         void getCandidateTxSet(const Vertex::Ptr& Tx, std::set<Vertex::Ptr, Loom::lessScheduledTime>& Ts); // 获取候选重调度事务集
@@ -39,6 +41,8 @@ class DeterReExecute {
 
         std::vector<Vertex::Ptr> m_rbList;                          // 事务列表
         std::unordered_map<int, int> m_orderIndex;                  // 事务顺序索引,用于判断两个事务是否在一个集合中.在一个集合代表无法调序,不在一个集合代表可以调序
+        std::unordered_map<Vertex::Ptr, unordered_set<Vertex::Ptr, Vertex::VertexHash>, Vertex::VertexHash> m_conflictIndex; // 读写冲突索引
+        std::unordered_map<Vertex::Ptr, int> m_rb2order;            // 事务到顺序的映射
         tbb::concurrent_unordered_map<string, std::unordered_set<Vertex::Ptr, Vertex::VertexHash>> m_unConflictTxMap;  // 无冲突事务映射，记录与每个事务不冲突的事务集合
         std::vector<int> originalOrder;                             // 事务原始执行顺序
         std::vector<int> executionOrder;                            // 根据scheduledTime排序的事务执行顺序

@@ -85,7 +85,6 @@ class MinWRollback
 
         // 计算超节点间一条依赖的回滚代价
         void calculateVertexRollback(HyperVertex::Ptr& hv1, HyperVertex::Ptr hv2, Loom::EdgeType type);
-        
         // 计算边权重
         void calculateEdgeRollback(tbb::concurrent_unordered_map<Vertex::Ptr, tbb::concurrent_unordered_set<Vertex::Ptr, Vertex::VertexHash>, Vertex::VertexHash>& edges, tbb::concurrent_unordered_set<Vertex::Ptr, Vertex::VertexHash>& rollbackVertex);
         
@@ -144,7 +143,7 @@ class MinWRollback
         // 记录所有回滚事务
         tbb::concurrent_unordered_set<Vertex::Ptr, Vertex::VertexHash> m_rollbackTxs;
         // 建立倒排索引
-        tbb::concurrent_unordered_map<string, protocol::RWSets<Vertex::Ptr>> m_invertedIndex;
+        unordered_map<string, protocol::RWSets<Vertex::Ptr>> m_invertedIndex;
         unordered_map<Vertex::Ptr, unordered_set<Vertex::Ptr, Vertex::VertexHash>, Vertex::VertexHash> m_RWIndex;
         // 记录图中所有强连通分量
         vector<unordered_set<HyperVertex::Ptr, HyperVertex::HyperVertexHash>> m_sccs;

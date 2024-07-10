@@ -5,6 +5,7 @@
 #include "test/FabricPPTest.cpp"
 #include "test/CompareTest.cpp"
 #include "test/DeterReExecuteTest.cpp"
+#include "test/LoomTest.cpp"
 
 
 using namespace std;

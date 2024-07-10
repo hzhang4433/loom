@@ -16,9 +16,9 @@ TEST(DeterReExecuteTest, TestTimeSpaceGraph) {
     vector<vector<int>> serialOrders;
     int executionTime_origin = 0;
     
-    // auto seed = uint64_t(140703301942157);
-    // workload.set_seed(seed);
-    auto seed = workload.get_seed();
+    auto seed = uint64_t(140718071595805);
+    workload.set_seed(seed);
+    // auto seed = workload.get_seed();
     cout << "workload seed: " << seed << endl;
 
     // 模拟生成事务执行顺序
@@ -49,30 +49,32 @@ TEST(DeterReExecuteTest, TestTimeSpaceGraph) {
     auto start = chrono::high_resolution_clock::now();
     DeterReExecute deterReExecute_normal(rbList_normal, serialOrders, minw_normal.m_invertedIndex);
     auto end = chrono::high_resolution_clock::now();
-    auto duration_init = chrono::duration_cast<chrono::milliseconds>(end - start);
-    cout << "Normal Initial Time: " << duration_init.count() << "ms" << endl;
+    auto duration_init = chrono::duration_cast<chrono::microseconds>(end - start);
+    cout << "Normal Initial Time: " << duration_init.count() / 1000.0 << "ms" << endl;
 
     // 构造只有嵌套交易的DeterReExecute对象
     start = chrono::high_resolution_clock::now();
     DeterReExecute deterReExecute_nested(rbList_nested, serialOrders, minw_nested.m_invertedIndex);
     end = chrono::high_resolution_clock::now();
-    duration_init = chrono::duration_cast<chrono::milliseconds>(end - start);
-    cout << "Nested Initial Time: " << duration_init.count() << "ms" << endl;
+    duration_init = chrono::duration_cast<chrono::microseconds>(end - start);
+    cout << "Nested Initial Time: " << duration_init.count() / 1000.0 << "ms" << endl;
     
     // 构建初始时空图
     start = chrono::high_resolution_clock::now();
-    // deterReExecute_normal.buildGraphOrigin();
-    deterReExecute_normal.buildGraphOriginByIndex();
+    deterReExecute_normal.buildGraphOrigin();
+    // deterReExecute_normal.buildGraphOriginByIndex();
     end = chrono::high_resolution_clock::now();
     auto duration_normal = chrono::duration_cast<chrono::microseconds>(end - start);
     // 构建优化时空图
     start = chrono::high_resolution_clock::now();
-    // deterReExecute_nested.buildGraph();
-    deterReExecute_nested.buildGraphByIndex();
+    deterReExecute_nested.buildGraph();
+    // deterReExecute_nested.buildGraphByIndex();
     end = chrono::high_resolution_clock::now();
-    auto duration_nested = chrono::duration_cast<chrono::milliseconds>(end - start);
-    cout << "Normal Build Time: " << duration_normal.count() << "us" << endl;
-    cout << "Nested Build Time: " << duration_nested.count() << "ms" << endl;
+    auto duration_nested = chrono::duration_cast<chrono::microseconds>(end - start);
+    cout << "Normal Build Time: " << duration_normal.count() / 1000.0 << "ms" << endl;
+    cout << "Nested Build Time: " << duration_nested.count() / 1000.0 << "ms" << endl;
+   
+   
     // 计算重执行时间
     auto executionTime_normal = deterReExecute_normal.calculateTotalExecutionTime();
     auto executionTime_nested = deterReExecute_nested.calculateTotalExecutionTime();

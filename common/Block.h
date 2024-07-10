@@ -10,7 +10,7 @@ class Block {
         typedef std::shared_ptr<Block> Ptr;
         
         // 构造函数
-        Block(std::vector<HyperVertex::Ptr> txs, unordered_map<string, protocol::RWSets<Vertex::Ptr>> invertedIndex, 
+        Block(std::unordered_set<HyperVertex::Ptr, HyperVertex::HyperVertexHash> txs, unordered_map<string, protocol::RWSets<Vertex::Ptr>> invertedIndex, 
         unordered_map<Vertex::Ptr, unordered_set<Vertex::Ptr, Vertex::VertexHash>, Vertex::VertexHash> RWIndex, 
         unordered_map<Vertex::Ptr, unordered_set<Vertex::Ptr, Vertex::VertexHash>, Vertex::VertexHash> conflictIndex)
          : m_txs(txs), m_invertedIndex(invertedIndex), m_RWIndex(RWIndex), m_conflictIndex(conflictIndex) {}
@@ -18,9 +18,11 @@ class Block {
 
         ~Block() = default; // 析构函数
 
-        void setTxs(const std::vector<HyperVertex::Ptr>& txs); // 设置区块内事务
+        // 设置区块内事务
+        void setTxs(const std::unordered_set<HyperVertex::Ptr, HyperVertex::HyperVertexHash>& txs) {m_txs = txs;}
 
-        std::vector<HyperVertex::Ptr> getTxs(); // 获取区块内事务
+        // 获取区块内事务
+        std::unordered_set<HyperVertex::Ptr, HyperVertex::HyperVertexHash> getTxs() {return m_txs;}
 
         // 设置倒排索引
         void setInvertedIndex(const std::unordered_map<string, protocol::RWSets<Vertex::Ptr>>& invertedIndex) {m_invertedIndex = invertedIndex;} 
@@ -42,7 +44,7 @@ class Block {
 
     private:
         // 区块内事务
-        std::vector<HyperVertex::Ptr> m_txs;
+        std::unordered_set<HyperVertex::Ptr, HyperVertex::HyperVertexHash> m_txs;
         // 倒排索引
         unordered_map<string, protocol::RWSets<Vertex::Ptr>> m_invertedIndex;
         // rw冲突索引

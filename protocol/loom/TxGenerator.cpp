@@ -19,7 +19,7 @@ std::vector<Block::Ptr> TxGenerator::generateWorkload() {
 Block::Ptr TxGenerator::generateBlock() {
     Workload workload;
     vector<Vertex::Ptr> txLists;
-    vector<HyperVertex::Ptr> txs;   
+    std::unordered_set<HyperVertex::Ptr, HyperVertex::HyperVertexHash> txs;   
     unordered_map<string, protocol::RWSets<Vertex::Ptr>> invertedIndex;// 倒排索引
     unordered_map<Vertex::Ptr, unordered_set<Vertex::Ptr, Vertex::VertexHash>, Vertex::VertexHash> RWIndex;// rw冲突索引
     unordered_map<Vertex::Ptr, unordered_set<Vertex::Ptr, Vertex::VertexHash>, Vertex::VertexHash> conflictIndex;// 冲突索引
@@ -33,7 +33,7 @@ Block::Ptr TxGenerator::generateBlock() {
         // 记录所有子事务
         txLists.insert(txLists.end(), txVertex->m_vertices.begin(), txVertex->m_vertices.end());
         // 记录所有事务
-        txs.push_back(txVertex);
+        txs.insert(txVertex);
     }
 
     // 生成索引

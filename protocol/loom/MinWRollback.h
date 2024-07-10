@@ -16,7 +16,7 @@ class MinWRollback
     public:
         MinWRollback() : id_counter(0) {}
         
-        MinWRollback(unordered_map<Vertex::Ptr, unordered_set<Vertex::Ptr, Vertex::VertexHash>, Vertex::VertexHash> RWIndex) : id_counter(0), m_RWIndex(RWIndex) {}
+        MinWRollback(std::unordered_set<HyperVertex::Ptr, HyperVertex::HyperVertexHash> hyperVertices, unordered_map<Vertex::Ptr, unordered_set<Vertex::Ptr, Vertex::VertexHash>, Vertex::VertexHash> RWIndex) : id_counter(0), m_hyperVertices(hyperVertices), m_RWIndex(RWIndex) {}
 
         ~MinWRollback() = default;
 
@@ -58,9 +58,9 @@ class MinWRollback
 
         void buildGraphConcurrent(threadpool::Ptr& Pool);
 
-        bool recognizeSCC(tbb::concurrent_unordered_set<HyperVertex::Ptr, HyperVertex::HyperVertexHash>& hyperVertexs, vector<unordered_set<HyperVertex::Ptr, HyperVertex::HyperVertexHash>>& sccs);
+        bool recognizeSCC(unordered_set<HyperVertex::Ptr, HyperVertex::HyperVertexHash>& hyperVertexs, vector<unordered_set<HyperVertex::Ptr, HyperVertex::HyperVertexHash>>& sccs);
 
-        void strongconnect(tbb::concurrent_unordered_set<HyperVertex::Ptr, HyperVertex::HyperVertexHash>& hyperVertexs, const HyperVertex::Ptr& v, int& index, stack<HyperVertex::Ptr>& S, unordered_map<HyperVertex::Ptr, int, HyperVertex::HyperVertexHash>& indices,
+        void strongconnect(unordered_set<HyperVertex::Ptr, HyperVertex::HyperVertexHash>& hyperVertexs, const HyperVertex::Ptr& v, int& index, stack<HyperVertex::Ptr>& S, unordered_map<HyperVertex::Ptr, int, HyperVertex::HyperVertexHash>& indices,
                    unordered_map<HyperVertex::Ptr, int, HyperVertex::HyperVertexHash>& lowlinks, unordered_map<HyperVertex::Ptr, bool, HyperVertex::HyperVertexHash>& onStack, vector<unordered_set<HyperVertex::Ptr, HyperVertex::HyperVertexHash>>& components);
 
         // void handleNewEdge(Vertex::Ptr& v, tbb::concurrent_unordered_set<Vertex::Ptr, Vertex::VertexHash>& edges);
@@ -139,9 +139,9 @@ class MinWRollback
         // 超图中所有事务节点
         unordered_set<Vertex::Ptr, Vertex::VertexHash> m_vertices; 
         // 超图中所有超节点
-        tbb::concurrent_unordered_set<HyperVertex::Ptr, HyperVertex::HyperVertexHash> m_hyperVertices; 
+        std::unordered_set<HyperVertex::Ptr, HyperVertex::HyperVertexHash> m_hyperVertices; 
         // 记录所有可能的scc
-        tbb::concurrent_unordered_map<long long, tbb::concurrent_unordered_set<HyperVertex::Ptr, HyperVertex::HyperVertexHash>> m_min2HyperVertex;
+        tbb::concurrent_unordered_map<long long, std::unordered_set<HyperVertex::Ptr, HyperVertex::HyperVertexHash>> m_min2HyperVertex;
         // 记录所有回滚事务
         tbb::concurrent_unordered_set<Vertex::Ptr, Vertex::VertexHash> m_rollbackTxs;
         // 建立倒排索引

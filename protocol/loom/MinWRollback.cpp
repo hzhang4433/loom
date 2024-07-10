@@ -708,7 +708,7 @@ void MinWRollback::recursiveUpdate(HyperVertex::Ptr hyperVertex, int min_value, 
 
     // 更新前需要把这个Hypervertex从原有m_min2HyperVertex中删除 (前提:他们都不是初始值)
     if (hyperVertex->m_min_in != INT_MAX && hyperVertex->m_min_out != INT_MAX) {
-        m_min2HyperVertex[combine(hyperVertex->m_min_in, hyperVertex->m_min_out)].unsafe_erase(hyperVertex);
+        m_min2HyperVertex[combine(hyperVertex->m_min_in, hyperVertex->m_min_out)].erase(hyperVertex);
     }
     
     if (type == Loom::EdgeType::OUT) {
@@ -1106,7 +1106,7 @@ void MinWRollback::rollbackNoEdgeConcurrent(UThreadPoolPtr& Pool, std::vector<st
 /* 识别强连通分量
     1. 利用Tarjan算法识别强连通分量，并返回size大于1的强连通分量
 */
-bool MinWRollback::recognizeSCC(tbb::concurrent_unordered_set<HyperVertex::Ptr, HyperVertex::HyperVertexHash>& hyperVertexs, vector<unordered_set<HyperVertex::Ptr, HyperVertex::HyperVertexHash>>& sccs) {
+bool MinWRollback::recognizeSCC(unordered_set<HyperVertex::Ptr, HyperVertex::HyperVertexHash>& hyperVertexs, vector<unordered_set<HyperVertex::Ptr, HyperVertex::HyperVertexHash>>& sccs) {
     int index = 0;
     stack<HyperVertex::Ptr> S;
     unordered_map<HyperVertex::Ptr, int, HyperVertex::HyperVertexHash> indices;
@@ -1130,7 +1130,7 @@ bool MinWRollback::recognizeSCC(tbb::concurrent_unordered_set<HyperVertex::Ptr, 
     return !sccs.empty();
 }
 
-void MinWRollback::strongconnect(tbb::concurrent_unordered_set<HyperVertex::Ptr, HyperVertex::HyperVertexHash>& hyperVertexs, const HyperVertex::Ptr& v, int& index, stack<HyperVertex::Ptr>& S, unordered_map<HyperVertex::Ptr, int, HyperVertex::HyperVertexHash>& indices,
+void MinWRollback::strongconnect(unordered_set<HyperVertex::Ptr, HyperVertex::HyperVertexHash>& hyperVertexs, const HyperVertex::Ptr& v, int& index, stack<HyperVertex::Ptr>& S, unordered_map<HyperVertex::Ptr, int, HyperVertex::HyperVertexHash>& indices,
                    unordered_map<HyperVertex::Ptr, int, HyperVertex::HyperVertexHash>& lowlinks, unordered_map<HyperVertex::Ptr, bool, HyperVertex::HyperVertexHash>& onStack,
                    vector<unordered_set<HyperVertex::Ptr, HyperVertex::HyperVertexHash>>& components) {
     indices[v] = lowlinks[v] = ++index;

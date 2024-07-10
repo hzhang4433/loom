@@ -3,7 +3,7 @@
 #include "workload/tpcc/Workload.hpp"
 #include "protocol/loom/MinWRollback.h"
 #include "protocol/loom/common.h"
-
+#include "protocol/loom/TxGenerator.h"
 #include "protocol/loom/DeterReExecute.h"
 
 using namespace std;
@@ -16,9 +16,9 @@ TEST(DeterReExecuteTest, TestTimeSpaceGraph) {
     vector<vector<int>> serialOrders;
     int executionTime_origin = 0;
     
-    auto seed = uint64_t(140718071595805);
-    workload.set_seed(seed);
-    // auto seed = workload.get_seed();
+    // auto seed = uint64_t(140718071595805);
+    // workload.set_seed(seed);
+    auto seed = workload.get_seed();
     cout << "workload seed: " << seed << endl;
 
     // 模拟生成事务执行顺序
@@ -46,29 +46,36 @@ TEST(DeterReExecuteTest, TestTimeSpaceGraph) {
     }
     
     // 构造只有普通交易的DeterReExecute对象
+    TxGenerator txGenerator_normal(Loom::BLOCK_SIZE), txGenerator_nested(Loom::BLOCK_SIZE);
+    unordered_map<Vertex::Ptr, unordered_set<Vertex::Ptr, Vertex::VertexHash>, Vertex::VertexHash> RWIndex_normal, RWIndex_nested;// rw冲突索引
+    unordered_map<Vertex::Ptr, unordered_set<Vertex::Ptr, Vertex::VertexHash>, Vertex::VertexHash> conflictIndex_normal, conflictIndex_nested;// 冲突索引
+    txGenerator_normal.generateIndex(rbList_normal, minw_normal.m_invertedIndex, RWIndex_normal, conflictIndex_normal);
+
     auto start = chrono::high_resolution_clock::now();
-    DeterReExecute deterReExecute_normal(rbList_normal, serialOrders, minw_normal.m_invertedIndex);
+    DeterReExecute deterReExecute_normal(rbList_normal, serialOrders, conflictIndex_normal);
     auto end = chrono::high_resolution_clock::now();
     auto duration_init = chrono::duration_cast<chrono::microseconds>(end - start);
     cout << "Normal Initial Time: " << duration_init.count() / 1000.0 << "ms" << endl;
 
     // 构造只有嵌套交易的DeterReExecute对象
+    txGenerator_nested.generateIndex(rbList_nested, minw_nested.m_invertedIndex, RWIndex_nested, conflictIndex_nested);
+
     start = chrono::high_resolution_clock::now();
-    DeterReExecute deterReExecute_nested(rbList_nested, serialOrders, minw_nested.m_invertedIndex);
+    DeterReExecute deterReExecute_nested(rbList_nested, serialOrders, conflictIndex_nested);
     end = chrono::high_resolution_clock::now();
     duration_init = chrono::duration_cast<chrono::microseconds>(end - start);
     cout << "Nested Initial Time: " << duration_init.count() / 1000.0 << "ms" << endl;
     
     // 构建初始时空图
     start = chrono::high_resolution_clock::now();
-    deterReExecute_normal.buildGraphOrigin();
-    // deterReExecute_normal.buildGraphOriginByIndex();
+    // deterReExecute_normal.buildGraphOrigin();
+    deterReExecute_normal.buildGraphOriginByIndex();
     end = chrono::high_resolution_clock::now();
     auto duration_normal = chrono::duration_cast<chrono::microseconds>(end - start);
     // 构建优化时空图
     start = chrono::high_resolution_clock::now();
-    deterReExecute_nested.buildGraph();
-    // deterReExecute_nested.buildGraphByIndex();
+    // deterReExecute_nested.buildGraph();
+    deterReExecute_nested.buildGraphByIndex();
     end = chrono::high_resolution_clock::now();
     auto duration_nested = chrono::duration_cast<chrono::microseconds>(end - start);
     cout << "Normal Build Time: " << duration_normal.count() / 1000.0 << "ms" << endl;

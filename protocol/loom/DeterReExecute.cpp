@@ -4,33 +4,19 @@ using namespace std;
 
 
 /* 构造函数 */
-DeterReExecute::DeterReExecute(std::vector<Vertex::Ptr> rbList, const vector<vector<int>>& serialOrders, const std::unordered_map<string, protocol::RWSets<Vertex::Ptr>> m_invertedIndex) { // 构造函数
-    int counter = 0;
-    this->m_rbList = rbList;
-    // cout << "rbList size: " << m_rbList.size() << endl;
-
+DeterReExecute::DeterReExecute(std::vector<Vertex::Ptr> rbList, const vector<vector<int>>& serialOrders, const std::unordered_map<Vertex::Ptr, unordered_set<Vertex::Ptr, Vertex::VertexHash>, Vertex::VertexHash> conflictIndex) : m_rbList(rbList), m_conflictIndex(conflictIndex) { // 构造函数
     // 构建串行化序索引
     for (int i = 0; i < serialOrders.size(); i++) {
         for (auto txId : serialOrders[i]) {
             this->m_orderIndex[txId] = i;
         }
     }
-    // 利用倒排索引构建m_conflictIndex
+    // 记录事务顺序
+    int counter = 0;
+    std::unordered_set<std::shared_ptr<Vertex>, Vertex::VertexHash> rbSet(rbList.begin(), rbList.end());
     for (auto& tx : m_rbList) {
-        m_rb2order[tx] = counter;
-        counter++;
-        // 遍历交易写集，获得并保存与写集冲突的所有交易
-        for (auto& wKey : tx->writeSet) {
-            auto [readSet, writeSet] = m_invertedIndex.at(wKey);
-            m_conflictIndex[tx].insert(writeSet.begin(), writeSet.end());
-            m_conflictIndex[tx].insert(readSet.begin(), readSet.end());
-        }
-        for (auto& rKey : tx->readSet) {
-            auto [readSet, writeSet] = m_invertedIndex.at(rKey);
-            m_conflictIndex[tx].insert(writeSet.begin(), writeSet.end());
-        }
-        // 排除自己
-        m_conflictIndex[tx].erase(tx);
+        m_txOrder[tx] = counter++;
+        m_unConflictTxMap[tx->m_id] = rbSet;
     }
     // 重排序轮次定义为事务数的20%
     this->N = rbList.size() * 0.2;
@@ -85,7 +71,8 @@ void DeterReExecute::buildGraphOriginByIndex() {
         auto Tj = m_rbList[j];
         auto& unflictTxs = m_unConflictTxMap[m_rbList[j]->m_id];
         for (auto& Ti : m_conflictIndex[Tj]) {
-            if (m_rb2order[Ti] < j) {
+            unflictTxs.erase(Ti);
+            if (m_txOrder[Ti] < j) {
                 // 本事务记录前序事务
                 Tj->dependencies_in.insert(Ti);
                 
@@ -97,6 +84,8 @@ void DeterReExecute::buildGraphOriginByIndex() {
                 Tj->scheduledTime = std::max(Tj->scheduledTime, newScheduledTime);
             }
         }
+        // 移除自己
+        unflictTxs.erase(Tj);
     }
 }
 
@@ -162,15 +151,14 @@ void DeterReExecute::buildGraph() {
 }
 
 void DeterReExecute::buildGraphByIndex() {
-    int loopCounter = 0;
     // 按队列顺序，依次遍历事务
     for (int j = 0; j < m_rbList.size(); j++) {
         auto Tj = m_rbList[j];
         auto& unflictTxs = m_unConflictTxMap[m_rbList[j]->m_id];
         // 遍历本事务的所有冲突事务
         for (auto& Ti : m_conflictIndex[Tj]) {
-            loopCounter++;
-            if (m_rb2order[Ti] < j) {
+            unflictTxs.erase(Ti);
+            if (m_txOrder[Ti] < j) {
                 // 本事务记录前序事务
                 Tj->dependencies_in.insert(Ti);
                 
@@ -195,9 +183,14 @@ void DeterReExecute::buildGraphByIndex() {
                 Tj->scheduledTime = std::max(Tj->scheduledTime, newScheduledTime);
                 unflictTxs.erase(Ti);
             }
+        } else if (Tj->m_strongParent != nullptr) {
+            // 有必要删除吗？不管删除不删除，在判断idIdle时都无法通过的
+            unflictTxs.erase(Tj->m_strongParent);
         }
+
+        // 移除自己
+        unflictTxs.erase(Tj);
     }
-    cout << "counter: " << loopCounter << endl;
 }
 
 /* 并发构建时空图 

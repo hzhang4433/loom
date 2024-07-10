@@ -15,6 +15,8 @@ class MinWRollback
 {
     public:
         MinWRollback() : id_counter(0) {}
+        
+        MinWRollback(unordered_map<Vertex::Ptr, unordered_set<Vertex::Ptr, Vertex::VertexHash>, Vertex::VertexHash> RWIndex) : id_counter(0), m_RWIndex(RWIndex) {}
 
         ~MinWRollback() = default;
 

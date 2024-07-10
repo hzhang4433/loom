@@ -20,7 +20,7 @@ class TxGenerator {
         ~TxGenerator(){}; // 析构函数
 
         // 生成负载
-        void generateWorkload(); 
+        std::vector<Block::Ptr> generateWorkload(); 
         // 生成区块
         Block::Ptr generateBlock(); 
         // 生成事务

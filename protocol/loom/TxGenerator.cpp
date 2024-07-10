@@ -6,12 +6,13 @@
 TxGenerator::TxGenerator(int txNum) : id_counter(0), m_txNum(txNum), m_blockSize(Loom::BLOCK_SIZE) {}  
 
 // 生成事务
-void TxGenerator::generateWorkload() {
+std::vector<Block::Ptr> TxGenerator::generateWorkload() {
     auto blockNum = m_txNum / m_blockSize;
     for (int i = 0; i < blockNum; i++) {
         auto block = generateBlock();
         m_blocks.push_back(block);
     }
+    return m_blocks;
 }
 
 // 生成区块

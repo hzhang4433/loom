@@ -811,17 +811,23 @@ void MinWRollback::rollback() {
 
 /* 确定性回滚(优化1:剪枝): 支持多线程 */
 Loom::ReExecuteInfo MinWRollback::rollbackOpt1(unordered_set<HyperVertex::Ptr, HyperVertex::HyperVertexHash>& scc) {
-
-    cout << "===== 输出scc中的每一个元素的详细信息 =====" << endl;
-    cout << "size = " << scc.size() << ", all vertexs:"; 
-    for (auto hv : scc) {
-        cout << hv->m_hyperId << " ";
-    }
-    cout << endl;
-
-
     // 统计每个scc rollback耗时
     auto start = std::chrono::high_resolution_clock::now();
+    
+    // cout << "===== 输出scc中的每一个元素的详细信息 =====" << endl;
+    // cout << "size = " << scc.size() << ", all vertexs:"; 
+    // for (auto hv : scc) {
+    //     cout << hv->m_hyperId << " ";
+    // }
+    // cout << endl;
+
+    Loom::ReExecuteInfo reExecuteInfo;
+    // 回滚事务集合
+    unordered_set<Vertex::Ptr, Vertex::VertexHash> rollbackTxs;
+    // 回滚嵌套事务序
+    vector<int> queueOrder;
+    // out回滚嵌套事务
+    stack<int> stackOrder;
 
 // 可尝试使用fibonacci堆优化更新效率，带测试，看效果
     // 定义有序集合，以hyperVertex.m_cost为key从小到大排序
@@ -831,14 +837,30 @@ Loom::ReExecuteInfo MinWRollback::rollbackOpt1(unordered_set<HyperVertex::Ptr, H
     calculateHyperVertexWeight(scc, pq);
 
     // 贪心获取最小回滚代价的节点集
-    GreedySelectVertexOpt1(scc, pq, m_rollbackTxs);
+    GreedySelectVertexOpt1(scc, pq, rollbackTxs, queueOrder, stackOrder);
+
+    if (!pq.empty()) {
+        // 把pq中剩余的节点加入到回滚集合中
+        queueOrder.push_back((*pq.begin())->m_hyperId);
+    }
+
+    // 将stackOrder中的元素放入queueOrder中
+    while (!stackOrder.empty()) {
+        queueOrder.push_back(stackOrder.top());
+        stackOrder.pop();
+    }
+
+    reExecuteInfo.m_rollbackTxs = rollbackTxs;
+    reExecuteInfo.m_serialOrder = queueOrder;
+
     auto end = std::chrono::high_resolution_clock::now();
     cout << "scc rollback time: " << (double)chrono::duration_cast<chrono::microseconds>(end - start).count() / 1000 << "ms" << endl;
     
+    return reExecuteInfo;
 }
 
 /* 确定性并发回滚(优化1:剪枝): 多线程版 */
-void MinWRollback::rollbackOpt1Concurrent(UThreadPoolPtr& Pool, std::vector<std::future<void>>& futures) {
+void MinWRollback::rollbackOpt1Concurrent(UThreadPoolPtr& Pool, std::vector<std::future<Loom::ReExecuteInfo>>& futures) {
     // 拿到所有scc
     vector<unordered_set<HyperVertex::Ptr, HyperVertex::HyperVertexHash>> sccs;
     
@@ -849,13 +871,19 @@ void MinWRollback::rollbackOpt1Concurrent(UThreadPoolPtr& Pool, std::vector<std:
 
     // 遍历所有scc回滚节点
     for (auto& scc : sccs) {
-
         futures.emplace_back(Pool->commit([this, scc] {
             auto scc_copy = scc;
             // 统计每个scc rollback耗时
             auto start = std::chrono::high_resolution_clock::now();
 
-    // 可尝试使用fibonacci堆优化更新效率，带测试，看效果
+            Loom::ReExecuteInfo reExecuteInfo;
+            // 回滚事务集合
+            unordered_set<Vertex::Ptr, Vertex::VertexHash> rollbackTxs;
+            // 回滚嵌套事务序
+            vector<int> queueOrder;
+            // out回滚嵌套事务
+            stack<int> stackOrder;
+
             // 定义有序集合，以hyperVertex.m_cost为key从小到大排序
             set<HyperVertex::Ptr, Loom::cmp> pq;
 
@@ -863,14 +891,30 @@ void MinWRollback::rollbackOpt1Concurrent(UThreadPoolPtr& Pool, std::vector<std:
             calculateHyperVertexWeight(scc_copy, pq);
 
             // 贪心获取最小回滚代价的节点集
-            GreedySelectVertexOpt1(scc_copy, pq, m_rollbackTxs);
+            GreedySelectVertexOpt1(scc_copy, pq, rollbackTxs, queueOrder, stackOrder);
+            
+            if (!pq.empty()) {
+                // 把pq中剩余的节点加入到回滚集合中
+                queueOrder.push_back((*pq.begin())->m_hyperId);
+            }
+
+            // 将stackOrder中的元素放入queueOrder中
+            while (!stackOrder.empty()) {
+                queueOrder.push_back(stackOrder.top());
+                stackOrder.pop();
+            }
+
+            reExecuteInfo.m_rollbackTxs = rollbackTxs;
+            reExecuteInfo.m_serialOrder = queueOrder;
+            
             auto end = std::chrono::high_resolution_clock::now();
             cout << "scc size: " << scc.size() << " scc rollback time: " << (double)chrono::duration_cast<chrono::microseconds>(end - start).count() / 1000 << "ms" << endl;
+            return reExecuteInfo;
         }));
     }
 }
 
-/* 确定性回滚(优化2:去边): 不支持多线程 */
+/* 确定性回滚(优化2:去边): 不支持多线程和fast模式 */
 void MinWRollback::rollbackNoEdge() {
     long totalSCC = 0;
 
@@ -1450,36 +1494,30 @@ void MinWRollback::GreedySelectVertex(unordered_set<HyperVertex::Ptr, HyperVerte
     }
 }
 
-
-void MinWRollback::GreedySelectVertexOpt1(unordered_set<HyperVertex::Ptr, HyperVertex::HyperVertexHash>& scc, set<HyperVertex::Ptr, Loom::cmp>& pq, tbb::concurrent_unordered_set<Vertex::Ptr, Vertex::VertexHash>& result) {
+/* 贪心回滚节点,并记录回滚事务序 */
+void MinWRollback::GreedySelectVertexOpt1(unordered_set<HyperVertex::Ptr, HyperVertex::HyperVertexHash>& scc, set<HyperVertex::Ptr, Loom::cmp>& pq, unordered_set<Vertex::Ptr, Vertex::VertexHash>& result, vector<int>& queueOrder, stack<int>& stackOrder) {
     auto rb = *pq.begin();
-
-    // // 打印pq
-    // cout << "pq init: ";
-    // for (auto v : pq) {
-    //     cout << v->m_hyperId << " " << v->m_cost << " ";
-    // }
-    // cout << endl;
 
     // 记录rb需要回滚的（子）事务
     if (rb->m_rollback_type == Loom::EdgeType::OUT) {
-        // result.insert(rb->m_out_allRB.begin(), rb->m_out_allRB.end());
         std::transform(rb->m_out_allRB.begin(), rb->m_out_allRB.end(), std::inserter(result, result.end()), [](const std::pair<const Vertex::Ptr, int>& pair) {
             return pair.first;
         });
+        stackOrder.push(rb->m_hyperId);
     } else {
         result.insert(rb->m_in_allRB.begin(), rb->m_in_allRB.end());
+        queueOrder.push_back(rb->m_hyperId);
     }
 
     // 从scc中删除rb
     scc.erase(rb);
     pq.erase(rb);
-    updateSCCandDependencyOpt1(scc, rb, pq, result);
+    updateSCCandDependencyOpt1(scc, rb, pq, result, queueOrder, stackOrder);
     
     // 若scc中只剩下一个超节点，则无需回滚
     if (scc.size() > 1) {
         // 递归调用GreedySelectVertex获取回滚节点集合
-        GreedySelectVertexOpt1(scc, pq, result);
+        GreedySelectVertexOpt1(scc, pq, result, queueOrder, stackOrder);
     }
 }
 
@@ -1524,14 +1562,14 @@ void MinWRollback::GreedySelectVertexNoEdge(unordered_set<HyperVertex::Ptr, Hype
         std::transform(rb->m_out_allRB.begin(), rb->m_out_allRB.end(), std::inserter(result, result.end()), [](const std::pair<const Vertex::Ptr, int>& pair) {
             return pair.first;
         });
-        if (rb->m_isNested) {
+        // if (rb->m_isNested) {
             stackOrder.push(rb->m_hyperId);
-        }
+        // }
     } else {
         result.insert(rb->m_in_allRB.begin(), rb->m_in_allRB.end());
-        if (rb->m_isNested) {
+        // if (rb->m_isNested) {
             queueOrder.push_back(rb->m_hyperId);
-        }
+        // }
     }
 
     // 从scc中删除rb
@@ -1552,7 +1590,6 @@ void MinWRollback::GreedySelectVertexNoEdge(unordered_set<HyperVertex::Ptr, Hype
         GreedySelectVertexNoEdge(scc, pq, result, queueOrder, stackOrder, fastMode);
     }
 }
-
 
 void MinWRollback::GreedySelectVertexNoEdge(unordered_set<HyperVertex::Ptr, HyperVertex::HyperVertexHash>& scc, boost::heap::fibonacci_heap<HyperVertex::Ptr, boost::heap::compare<HyperVertex::compare>>& heap, std::unordered_map<HyperVertex::Ptr, typename std::remove_reference<decltype(heap)>::type::handle_type, HyperVertex::HyperVertexHash>& handles, tbb::concurrent_unordered_set<Vertex::Ptr, Vertex::VertexHash>& result) {
     auto rb = heap.top();
@@ -1757,24 +1794,21 @@ void MinWRollback::updateSCCandDependency(unordered_set<HyperVertex::Ptr, HyperV
     }
 }
 
-/*  递归更新scc超节点和scc中依赖节点状态 -- new version
+/*  递归更新scc超节点和scc中依赖节点状态，并记录回滚事务序  -- new version
     1. 删除所有要删除的节点
     2. 更新删除节点关联节点的度
     3. 重新计算相关节点的回滚代价
 */
-void MinWRollback::updateSCCandDependencyOpt1(unordered_set<HyperVertex::Ptr, HyperVertex::HyperVertexHash>& scc, const HyperVertex::Ptr& rb, set<HyperVertex::Ptr, Loom::cmp>& pq, const tbb::concurrent_unordered_set<Vertex::Ptr, Vertex::VertexHash>& rbVertexs) {
+void MinWRollback::updateSCCandDependencyOpt1(unordered_set<HyperVertex::Ptr, HyperVertex::HyperVertexHash>& scc, const HyperVertex::Ptr& rb, set<HyperVertex::Ptr, Loom::cmp>& pq, const unordered_set<Vertex::Ptr, Vertex::VertexHash>& rbVertexs, vector<int>& queueOrder, stack<int>& stackOrder) {
     if (scc.size() <= 1) {
         return;
     }
-    
-    // cout << "In updateSCCandDependency " << rb->m_hyperId << " is deleted, now begin to update scc, " << "scc size = " << scc.size() << endl;
-
-    
+        
     // 记录要更新的超节点
     unordered_map<HyperVertex::Ptr, Loom::EdgeType, HyperVertex::HyperVertexHash> waitToUpdate;
     
     // 递归删除并获取可以直接删除的节点 并 更新删除超节点关联超节点的子节点的度
-    recursiveDelete(scc, pq, rb, rbVertexs, waitToUpdate);
+    recursiveDelete(scc, pq, rb, rbVertexs, waitToUpdate, queueOrder, stackOrder);
 
     // 重新计算相关节点的回滚代价
     if (scc.size() > 1) {
@@ -1791,18 +1825,13 @@ void MinWRollback::updateSCCandDependencyOpt1(unordered_set<HyperVertex::Ptr, Hy
             }
         }
     }
-    
-    // // 遍历并输出更新过后的pq
-    // cout << "now pq: " << endl;
-    // for (auto v : pq) {
-    //     cout << "hyperId: " << v->m_hyperId << " cost: " << v->m_cost << " in_cost: " << v->m_in_cost << " out_cost: " << v->m_out_cost << endl;
-    // }
 }
 
 
 /* 递归删除scc中可删除的节点 */
 void MinWRollback::recursiveDelete(unordered_set<HyperVertex::Ptr, HyperVertex::HyperVertexHash>& scc, set<HyperVertex::Ptr, Loom::cmp>& pq, const HyperVertex::Ptr& rb,
-                                   const tbb::concurrent_unordered_set<Vertex::Ptr, Vertex::VertexHash>& rbVertexs, unordered_map<HyperVertex::Ptr, Loom::EdgeType, HyperVertex::HyperVertexHash>& waitToUpdate) {
+                                   const unordered_set<Vertex::Ptr, Vertex::VertexHash>& rbVertexs, unordered_map<HyperVertex::Ptr, Loom::EdgeType, HyperVertex::HyperVertexHash>& waitToUpdate, 
+                                   vector<int>& queueOrder, stack<int>& stackOrder) {
     auto rbIdx = rb->m_hyperId;
     // 递归删除出边超节点
     for (auto& out_vertex : rb->m_out_hv) {
@@ -1813,10 +1842,11 @@ void MinWRollback::recursiveDelete(unordered_set<HyperVertex::Ptr, HyperVertex::
             // 判断是否可以无需代价直接删除
             if (rb->m_rollback_type == Loom::EdgeType::OUT && protocol::hasContain(rbVertexs, out_vertex->m_in_allRB)) {
                 // cout << "can delete without cost out loop: " << out_vertex->m_hyperId << endl;
+                queueOrder.push_back(out_vertex_idx);
                 scc.erase(out_vertex);
                 pq.erase(out_vertex);
                 // 递归删除
-                recursiveDelete(scc, pq, out_vertex, rbVertexs, waitToUpdate);
+                recursiveDelete(scc, pq, out_vertex, rbVertexs, waitToUpdate, queueOrder, stackOrder);
             }
 
             // 更新事务回滚事务集
@@ -1827,10 +1857,11 @@ void MinWRollback::recursiveDelete(unordered_set<HyperVertex::Ptr, HyperVertex::
             // 不存在入边，删除该超节点，递归更新scc
             if (out_vertex->m_in_allRB.size() == 0) { 
                 // cout << "can delete without in: " << out_vertex->m_hyperId << endl;
+                queueOrder.push_back(out_vertex_idx);
                 scc.erase(out_vertex);
                 pq.erase(out_vertex);
                 // 递归删除
-                recursiveDelete(scc, pq, out_vertex, rbVertexs, waitToUpdate);
+                recursiveDelete(scc, pq, out_vertex, rbVertexs, waitToUpdate, queueOrder, stackOrder);
             }
 
             /* 更新waitToUpdate
@@ -1860,10 +1891,11 @@ void MinWRollback::recursiveDelete(unordered_set<HyperVertex::Ptr, HyperVertex::
             // 判断是否可以无需代价直接删除 —— 可以删除
             if (rb->m_rollback_type == Loom::EdgeType::IN && protocol::hasContain(rbVertexs, in_vertex->m_out_allRB)) {
                 // cout << "can delete without cost in loop: " << in_vertex->m_hyperId << endl;
+                stackOrder.push(in_vertex_idx);
                 scc.erase(in_vertex);
                 pq.erase(in_vertex);
                 // 递归删除
-                recursiveDelete(scc, pq, in_vertex, rbVertexs, waitToUpdate);
+                recursiveDelete(scc, pq, in_vertex, rbVertexs, waitToUpdate, queueOrder, stackOrder);
             }
             
             // 更新事务回滚事务集
@@ -1879,10 +1911,11 @@ void MinWRollback::recursiveDelete(unordered_set<HyperVertex::Ptr, HyperVertex::
 
                 if (in_vertex->m_out_allRB.size() == 0) {
                     // cout << "can delete without out: " << in_vertex->m_hyperId << endl;
+                    stackOrder.push(in_vertex_idx);
                     scc.erase(in_vertex);
                     pq.erase(in_vertex);
                     // 递归删除
-                    recursiveDelete(scc, pq, in_vertex, rbVertexs, waitToUpdate);
+                    recursiveDelete(scc, pq, in_vertex, rbVertexs, waitToUpdate, queueOrder, stackOrder);
                 }
 
                 // 更新依赖子事务(出)度
@@ -1913,8 +1946,7 @@ void MinWRollback::recursiveDelete(unordered_set<HyperVertex::Ptr, HyperVertex::
     }
 }
 
-/* 不考虑度数更新scc，仍有逻辑漏洞待考虑：rbvertex的使用？
-*/
+/* 不考虑度数更新scc */
 void MinWRollback::updateSCCandDependencyNoEdge(unordered_set<HyperVertex::Ptr, HyperVertex::HyperVertexHash>& scc, const HyperVertex::Ptr& rb, set<HyperVertex::Ptr, Loom::cmp>& pq) { 
     auto rbIdx = rb->m_hyperId;
     // 递归删除出边超节点
@@ -2007,6 +2039,7 @@ void MinWRollback::updateSCCandDependencyNoEdge(unordered_set<HyperVertex::Ptr, 
     }
 }
 
+/* 递归更新scc超节点并记录回滚事务序 */
 void MinWRollback::updateSCCandDependencyNoEdge(unordered_set<HyperVertex::Ptr, HyperVertex::HyperVertexHash>& scc, const HyperVertex::Ptr& rb, set<HyperVertex::Ptr, Loom::cmp>& pq, vector<int>& queueOrder, stack<int>& stackOrder) { 
     auto rbIdx = rb->m_hyperId;
     // 递归删除出边超节点

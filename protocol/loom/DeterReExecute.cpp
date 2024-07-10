@@ -6,17 +6,17 @@ using namespace std;
 /* 构造函数 */
 DeterReExecute::DeterReExecute(std::vector<Vertex::Ptr> rbList, const vector<vector<int>>& serialOrders, const std::unordered_map<Vertex::Ptr, unordered_set<Vertex::Ptr, Vertex::VertexHash>, Vertex::VertexHash> conflictIndex) : m_rbList(rbList), m_conflictIndex(conflictIndex) { // 构造函数
     // 构建串行化序索引
-    for (int i = 0; i < serialOrders.size(); i++) {
+    for (int i = 1; i <= serialOrders.size(); i++) {
         for (auto txId : serialOrders[i]) {
             this->m_orderIndex[txId] = i;
         }
     }
     // 记录事务顺序
     int counter = 0;
-    std::unordered_set<std::shared_ptr<Vertex>, Vertex::VertexHash> rbSet(rbList.begin(), rbList.end());
+    // std::unordered_set<std::shared_ptr<Vertex>, Vertex::VertexHash> rbSet(rbList.begin(), rbList.end());
     for (auto& tx : m_rbList) {
         m_txOrder[tx] = counter++;
-        m_unConflictTxMap[tx->m_id] = rbSet;
+        // m_unConflictTxMap[tx->m_id] = rbSet;
     }
     // 重排序轮次定义为事务数的20%
     this->N = rbList.size() * 0.2;

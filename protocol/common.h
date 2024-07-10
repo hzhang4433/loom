@@ -97,9 +97,37 @@ namespace protocol {
         return true;
     }
 
+    template <typename T, typename Hash>
+    bool hasContain(const std::unordered_set<T, Hash>& set1, const tbb::concurrent_unordered_set<T, Hash>& set2) {
+        if (set1.size() < set2.size()) {
+            return false;
+        }
+
+        for (const auto& item : set2) {
+            if (set1.find(item) == set1.end()) {
+                return false;
+            }
+        }
+        return true;
+    }
+
     // 判断set1是否包含map2的key
     template <typename T, typename Hash, typename U>
     bool hasContain(const tbb::concurrent_unordered_set<T, Hash>& set1, const tbb::concurrent_unordered_map<T, U, Hash>& map2) {
+        if (set1.size() < map2.size()) {
+            return false;
+        }
+
+        for (const auto& pair : map2) {
+            if (set1.find(pair.first) == set1.end()) {
+                return false;
+            }
+        }
+        return true;
+    }
+
+    template <typename T, typename Hash, typename U>
+    bool hasContain(const std::unordered_set<T, Hash>& set1, const tbb::concurrent_unordered_map<T, U, Hash>& map2) {
         if (set1.size() < map2.size()) {
             return false;
         }

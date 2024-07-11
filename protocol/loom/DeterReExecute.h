@@ -10,7 +10,7 @@ using namespace Loom;
 class DeterReExecute {
     // 定义公有函数
     public:
-        DeterReExecute(std::vector<Vertex::Ptr> rbList, const vector<vector<int>>& serialOrders, const std::unordered_map<Vertex::Ptr, unordered_set<Vertex::Ptr, Vertex::VertexHash>, Vertex::VertexHash> conflictIndex); // 构造函数
+        DeterReExecute(std::vector<Vertex::Ptr>& rbList, const vector<vector<int>>& serialOrders, const std::unordered_map<Vertex::Ptr, unordered_set<Vertex::Ptr, Vertex::VertexHash>, Vertex::VertexHash>& conflictIndex); // 构造函数
 
         ~DeterReExecute(){}; // 析构函数
 

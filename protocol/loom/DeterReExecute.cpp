@@ -4,11 +4,11 @@ using namespace std;
 
 
 /* 构造函数 */
-DeterReExecute::DeterReExecute(std::vector<Vertex::Ptr> rbList, const vector<vector<int>>& serialOrders, const std::unordered_map<Vertex::Ptr, unordered_set<Vertex::Ptr, Vertex::VertexHash>, Vertex::VertexHash> conflictIndex) : m_rbList(rbList), m_conflictIndex(conflictIndex) { // 构造函数
+DeterReExecute::DeterReExecute(std::vector<Vertex::Ptr>& rbList, const vector<vector<int>>& serialOrders, const std::unordered_map<Vertex::Ptr, unordered_set<Vertex::Ptr, Vertex::VertexHash>, Vertex::VertexHash>& conflictIndex) : m_rbList(rbList), m_conflictIndex(conflictIndex) { // 构造函数
     // 构建串行化序索引
-    for (int i = 1; i <= serialOrders.size(); i++) {
+    for (int i = 0; i < serialOrders.size(); i++) {
         for (auto txId : serialOrders[i]) {
-            this->m_orderIndex[txId] = i;
+            this->m_orderIndex[txId] = i + 1;
         }
     }
     // 记录事务顺序

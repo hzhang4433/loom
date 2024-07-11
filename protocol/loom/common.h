@@ -21,16 +21,12 @@ namespace Loom {
         }
     };
 
-    // 重执行信息
-    struct ReExecuteInfo {
-        unordered_set<Vertex::Ptr, Vertex::VertexHash> m_rollbackTxs;
-        vector<int> m_serialOrder;       // 回滚事务串行化顺序
-    };
-
     // 自定义比较函数: 根据给定的顺序对Vertex进行排序
     struct customCompare {
         unordered_map<int, int> idToOrder;
 
+        customCompare() = default;
+        
         // 修改构造函数以接受unordered_map类型的参数
         customCompare(vector<int>& serialOrder) {
             for (int i = 0; i < serialOrder.size(); i++) {
@@ -47,6 +43,13 @@ namespace Loom {
             // 如果数字部分相同，比较整个字符串
             return a->m_id > b->m_id; // 注意这里是按字典序比较
         }
+    };
+
+    // 重执行信息
+    struct ReExecuteInfo {
+        vector<int> m_serialOrder;                                    // 回滚事务串行化顺序
+        unordered_set<Vertex::Ptr, Vertex::VertexHash> m_rollbackTxs; // 回滚事务集合
+        set<Vertex::Ptr, customCompare> m_orderedRollbackTxs;         // 排序后的回滚事务集合
     };
 
     // 输出回滚子事务

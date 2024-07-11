@@ -1019,7 +1019,7 @@ void MinWRollback::rollbackNoEdge(bool fastMode) {
 /* 确定性回滚(优化2:去边): 支持多线程和fast模式 */
 Loom::ReExecuteInfo MinWRollback::rollbackNoEdge(unordered_set<HyperVertex::Ptr, HyperVertex::HyperVertexHash>& scc, bool fastMode) {
     
-    auto start = std::chrono::high_resolution_clock::now();
+    // auto start = std::chrono::high_resolution_clock::now();
 
     // cout << "===== 输出scc中的每一个元素的详细信息 =====" << endl;
     // cout << "size = " << scc.size() << ", all vertexs:"; 
@@ -1057,8 +1057,8 @@ Loom::ReExecuteInfo MinWRollback::rollbackNoEdge(unordered_set<HyperVertex::Ptr,
     reExecuteInfo.m_rollbackTxs = rollbackTxs;
     reExecuteInfo.m_serialOrder = queueOrder;
 
-    auto end = std::chrono::high_resolution_clock::now();
-    cout << "scc rollback time: " << (double)chrono::duration_cast<chrono::microseconds>(end - start).count() / 1000 << "ms" << endl;
+    // auto end = std::chrono::high_resolution_clock::now();
+    // cout << "scc rollback time: " << (double)chrono::duration_cast<chrono::microseconds>(end - start).count() / 1000 << "ms" << endl;
     
     return reExecuteInfo;
 }

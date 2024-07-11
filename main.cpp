@@ -19,7 +19,7 @@ int main(int argc, char** argv) {
     // ::testing::GTEST_FLAG(filter) = "FabricPPTest.TestRollback";
     // ::testing::GTEST_FLAG(filter) = "CompareTest.TestRollback";
     // ::testing::GTEST_FLAG(filter) = "DeterReExecuteTest.TestTimeSpaceGraph";
-    ::testing::GTEST_FLAG(filter) = "LoomTest.TestTxGenerator2MinW";
+    ::testing::GTEST_FLAG(filter) = "LoomTest.TestTxGenerator2ReExecute";
     
     int result = RUN_ALL_TESTS();
 

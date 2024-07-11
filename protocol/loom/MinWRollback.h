@@ -55,6 +55,7 @@ class MinWRollback
         void buildGraphConcurrent(ThreadPool::Ptr& Pool);
 
         void buildGraphConcurrent(UThreadPoolPtr& Pool);
+        void buildGraphConcurrent(UThreadPoolPtr& Pool, std::vector<std::future<void>>& futures);
 
         void buildGraphConcurrent(threadpool::Ptr& Pool);
 

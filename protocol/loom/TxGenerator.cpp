@@ -24,12 +24,22 @@ Block::Ptr TxGenerator::generateBlock() {
     unordered_map<Vertex::Ptr, unordered_set<Vertex::Ptr, Vertex::VertexHash>, Vertex::VertexHash> RWIndex;// rw冲突索引
     unordered_map<Vertex::Ptr, unordered_set<Vertex::Ptr, Vertex::VertexHash>, Vertex::VertexHash> conflictIndex;// 冲突索引
 
+    workload.set_seed(uint64_t(140712672230029));
+    auto seed = workload.get_seed();
+    cout << "seed: " << seed << endl;
+
     // 生成事务
     for (int i = 0; i < m_blockSize; i++) {
         // 生成TPCC事务
         auto tx = workload.NextTransaction();
+        // cout << "tx type: " << TPCC::transactionTypeToString(tx->getType()) << endl;
         // 构建事务 -- 控制嵌套事务比例
-        auto txVertex = generateTransaction(tx, true, invertedIndex);
+        HyperVertex::Ptr txVertex;
+        if (tx->getType() == TPCC::TransactionType::PAYMENT) {
+            txVertex = generateTransaction(tx, false, invertedIndex);
+        } else {
+            txVertex = generateTransaction(tx, true, invertedIndex);
+        }
         // 记录所有子事务
         txLists.insert(txLists.end(), txVertex->m_vertices.begin(), txVertex->m_vertices.end());
         // 记录所有事务

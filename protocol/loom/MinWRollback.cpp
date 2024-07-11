@@ -194,14 +194,8 @@ void MinWRollback::buildGraphNoEdgeC(UThreadPoolPtr& Pool, std::vector<std::futu
     }
 
     size_t totalPairs = rwPairs.size();
-    size_t chunkSize = (totalPairs + UTIL_DEFAULT_THREAD_SIZE - 1) / (UTIL_DEFAULT_THREAD_SIZE * 1.5);
-    // if (Loom::BLOCK_SIZE == 50) {
-    //     chunkSize = 20;
-    // } else {
-    //     // chunkSize = Loom::BLOCK_SIZE / 2;
-    //     chunkSize = (totalPairs + UTIL_DEFAULT_THREAD_SIZE - 1) / (UTIL_DEFAULT_THREAD_SIZE * 1.5);
-    //     // chunkSize = 20;
-    // }
+    // size_t chunkSize = (totalPairs + UTIL_DEFAULT_THREAD_SIZE - 1) / (UTIL_DEFAULT_THREAD_SIZE * 0.9);
+    size_t chunkSize = 20;
     cout << "totalPairs: " << totalPairs << " chunkSize: " << chunkSize << endl;
 
     for (size_t i = 0; i < totalPairs; i += chunkSize) {
@@ -371,9 +365,6 @@ void MinWRollback::buildGraphConcurrent(UThreadPoolPtr& Pool) {
         for (auto& wTx : wTxs) {
             // 构建超图
             rwPairs.emplace_back(rTx, wTx);
-            // futures.emplace_back(Pool->commit([this, rTx, wTx] {
-            //     onRWC(rTx, wTx);
-            // }));
         }
     }
 
@@ -385,6 +376,41 @@ void MinWRollback::buildGraphConcurrent(UThreadPoolPtr& Pool) {
         // chunkSize = Loom::BLOCK_SIZE / 2;
         chunkSize = (totalPairs + UTIL_DEFAULT_THREAD_SIZE - 1) / (UTIL_DEFAULT_THREAD_SIZE * 2);
     }
+    cout << "totalPairs: " << totalPairs << " chunkSize: " << chunkSize << endl;
+
+    for (size_t i = 0; i < totalPairs; i += chunkSize) {
+        futures.emplace_back(Pool->commit([this, &rwPairs, i, chunkSize, totalPairs] {
+            size_t end = std::min(i + chunkSize, totalPairs);
+            for (size_t j = i; j < end; ++j) {
+                onRWC(rwPairs[j].first, rwPairs[j].second);
+            }
+        }));
+    }
+
+    // 等待所有任务完成
+    for (auto &future : futures) {
+        future.get();
+    }
+}
+
+void MinWRollback::buildGraphConcurrent(UThreadPoolPtr& Pool, std::vector<std::future<void>>& futures) {
+    edgeCounter = 0;
+
+    // 将多个onRW的处理作为一个任务
+    std::vector<std::pair<Vertex::Ptr, Vertex::Ptr>> rwPairs;
+
+    for (auto& rTxs : m_RWIndex) {
+        auto& rTx = rTxs.first;
+        auto& wTxs = rTxs.second;
+        for (auto& wTx : wTxs) {
+            // 构建超图
+            rwPairs.emplace_back(rTx, wTx);
+        }
+    }
+
+    size_t totalPairs = rwPairs.size();
+    // size_t chunkSize = (totalPairs + UTIL_DEFAULT_THREAD_SIZE - 1) / (UTIL_DEFAULT_THREAD_SIZE * 0.9);
+    size_t chunkSize = 20;
     cout << "totalPairs: " << totalPairs << " chunkSize: " << chunkSize << endl;
 
     for (size_t i = 0; i < totalPairs; i += chunkSize) {
@@ -551,12 +577,6 @@ void MinWRollback::onRWC(const Vertex::Ptr &rTx, const Vertex::Ptr &wTx) {
     auto rhvIdx = rTx->m_hyperId;
     auto whvIdx = wTx->m_hyperId;
 
-    // // 若该rw依赖已经存在，则直接返回
-    // if (rHyperVertex->m_out_map[whvIdx].count(wTx) && 
-    //     wHyperVertex->m_in_map[rhvIdx].count(rTx)) {
-    //     return;
-    // }
-
     edgeCounter.fetch_add(1);
 
     // 更新newV对应的hyperVertex的out_edges
@@ -574,8 +594,8 @@ void MinWRollback::onRWC(const Vertex::Ptr &rTx, const Vertex::Ptr &wTx) {
     // 更新依赖数
     wTx->m_degree++;
     // 更新回滚集合
-    // wHyperVertex->m_in_rollback[rhvIdx].insert(rTx->cascadeVertices.cbegin(), rTx->cascadeVertices.cend());
-    wHyperVertex->m_in_allRB.insert(rTx->cascadeVertices.cbegin(), rTx->cascadeVertices.cend());
+    // // wHyperVertex->m_in_rollback[rhvIdx].insert(rTx->cascadeVertices.cbegin(), rTx->cascadeVertices.cend());
+    // wHyperVertex->m_in_allRB.insert(rTx->cascadeVertices.cbegin(), rTx->cascadeVertices.cend());
 }
 
 void MinWRollback::onRW(const Vertex::Ptr &rTx, const Vertex::Ptr &wTx) {
@@ -635,7 +655,6 @@ void MinWRollback::onRWCNoEdge(const Vertex::Ptr &rTx, const Vertex::Ptr &wTx) {
 
     // 更新newV对应的hyperVertex的out_edges
     rHyperVertex->m_out_hv.insert(wHyperVertex);
-    // rHyperVertex->m_out_edges[whvIdx].insert(wTx);
 
     // 更新回滚集合
     rHyperVertex->m_out_rollback[whvIdx].insert(rTx->cascadeVertices.cbegin(), rTx->cascadeVertices.cend());
@@ -644,7 +663,6 @@ void MinWRollback::onRWCNoEdge(const Vertex::Ptr &rTx, const Vertex::Ptr &wTx) {
 
     // 更新oldV对应的hyperVertex的in_edges
     wHyperVertex->m_in_hv.insert(rHyperVertex);
-    // wHyperVertex->m_in_edges[rhvIdx].insert(rTx);
     
     // 更新回滚集合
     wHyperVertex->m_in_allRB.insert(rTx->cascadeVertices.cbegin(), rTx->cascadeVertices.cend());
@@ -814,12 +832,12 @@ Loom::ReExecuteInfo MinWRollback::rollbackOpt1(unordered_set<HyperVertex::Ptr, H
     // 统计每个scc rollback耗时
     auto start = std::chrono::high_resolution_clock::now();
     
-    // cout << "===== 输出scc中的每一个元素的详细信息 =====" << endl;
-    // cout << "size = " << scc.size() << ", all vertexs:"; 
-    // for (auto hv : scc) {
-    //     cout << hv->m_hyperId << " ";
-    // }
-    // cout << endl;
+    cout << "===== 输出scc中的每一个元素的详细信息 =====" << endl;
+    cout << "size = " << scc.size() << ", all vertexs:"; 
+    for (auto hv : scc) {
+        cout << hv->m_hyperId << " ";
+    }
+    cout << endl;
 
     Loom::ReExecuteInfo reExecuteInfo;
     // 回滚事务集合
@@ -1019,14 +1037,14 @@ void MinWRollback::rollbackNoEdge(bool fastMode) {
 /* 确定性回滚(优化2:去边): 支持多线程和fast模式 */
 Loom::ReExecuteInfo MinWRollback::rollbackNoEdge(unordered_set<HyperVertex::Ptr, HyperVertex::HyperVertexHash>& scc, bool fastMode) {
     
-    // auto start = std::chrono::high_resolution_clock::now();
+    auto start = std::chrono::high_resolution_clock::now();
 
-    // cout << "===== 输出scc中的每一个元素的详细信息 =====" << endl;
-    // cout << "size = " << scc.size() << ", all vertexs:"; 
-    // for (auto hv : scc) {
-    //     cout << hv->m_hyperId << " ";
-    // }
-    // cout << endl;
+    cout << "===== 输出scc中的每一个元素的详细信息 =====" << endl;
+    cout << "size = " << scc.size() << ", all vertexs:"; 
+    for (auto hv : scc) {
+        cout << hv->m_hyperId << " ";
+    }
+    cout << endl;
 
     Loom::ReExecuteInfo reExecuteInfo;
     // 回滚事务集合
@@ -1057,8 +1075,8 @@ Loom::ReExecuteInfo MinWRollback::rollbackNoEdge(unordered_set<HyperVertex::Ptr,
     reExecuteInfo.m_rollbackTxs = rollbackTxs;
     reExecuteInfo.m_serialOrder = queueOrder;
 
-    // auto end = std::chrono::high_resolution_clock::now();
-    // cout << "scc rollback time: " << (double)chrono::duration_cast<chrono::microseconds>(end - start).count() / 1000 << "ms" << endl;
+    auto end = std::chrono::high_resolution_clock::now();
+    cout << "scc rollback time: " << (double)chrono::duration_cast<chrono::microseconds>(end - start).count() / 1000 << "ms" << endl;
     
     return reExecuteInfo;
 }
@@ -1191,35 +1209,29 @@ void MinWRollback::calculateHyperVertexWeight(const unordered_set<HyperVertex::P
                     }                    
                 }
             }
-            //  else {
-            //     waitToDel.push_back(out_hv);
-            // }
         }
         hyperVertex->m_out_cost /= out_degree;
-        // for (auto& v : waitToDel) {
-        //     hyperVertex->m_out_hv.unsafe_erase(v);
-        // }
         
 
         // 计算m_in_cost
         int in_degree = 0;
-        // for (auto& in_hv : hyperVertex->m_in_hv) {
-        //     // 同属于一个scc
-        //     if (scc.find(in_hv) != scc.cend()) {
-        //         auto idx = hyperVertex->m_hyperId;
-        //         auto rbs = in_hv->m_out_rollback[idx];
-        //         for (auto& rb : rbs) {
-        //             hyperVertex->m_in_cost += rb->m_self_cost;
-        //             in_degree += rb->m_degree;
-        //         }
-        //         hyperVertex->m_in_allRB.insert(rbs.cbegin(), rbs.cend());
-        //     }
-        // }
-
-        for (auto v : hyperVertex->m_in_allRB) {            
-            hyperVertex->m_in_cost += v->m_self_cost;
-            in_degree += v->m_degree;
+        for (auto& in_hv : hyperVertex->m_in_hv) {
+            // 同属于一个scc
+            if (scc.find(in_hv) != scc.cend()) {
+                auto idx = hyperVertex->m_hyperId;
+                auto rbs = in_hv->m_out_rollback[idx];
+                for (auto& rb : rbs) {
+                    hyperVertex->m_in_cost += rb->m_self_cost;
+                    in_degree += rb->m_degree;
+                }
+                hyperVertex->m_in_allRB.insert(rbs.cbegin(), rbs.cend());
+            }
         }
+
+        // for (auto v : hyperVertex->m_in_allRB) {            
+        //     hyperVertex->m_in_cost += v->m_self_cost;
+        //     in_degree += v->m_degree;
+        // }
         hyperVertex->m_in_cost /= in_degree;
 
 

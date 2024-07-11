@@ -55,12 +55,51 @@ namespace Loom {
     // 输出回滚子事务
     template <typename T, typename Cmp>
     int printRollbackTxs(set<T, Cmp>& rollbackTxs) {
+        cout << "================Ordered Rollback Transactions================" << endl;
+        cout << "total size: " << rollbackTxs.size() << endl;
+        int totalRollbackCost = 0;
+        for (auto& tx : rollbackTxs) {
+            totalRollbackCost += tx->m_self_cost;
+            cout << "id: " << tx->m_id << " cost: " << tx->m_self_cost << endl;
+        }
+        cout << "rollback cost: " << totalRollbackCost << endl;
+        cout << "=============================================================" << endl;
+        return totalRollbackCost;
+    }
+
+    template <typename T, typename Hash>
+    int printRollbackTxs(unordered_set<T, Hash>& rollbackTxs) {
         cout << "====================Rollback Transactions====================" << endl;
         cout << "total size: " << rollbackTxs.size() << endl;
         int totalRollbackCost = 0;
         for (auto& tx : rollbackTxs) {
             totalRollbackCost += tx->m_self_cost;
             cout << "id: " << tx->m_id << " cost: " << tx->m_self_cost << endl;
+        }
+        cout << "rollback cost: " << totalRollbackCost << endl;
+        cout << "=============================================================" << endl;
+        return totalRollbackCost;
+    }
+
+    // 输出回滚子事务
+    template <typename T>
+    int printRollbackTxs(vector<T>& rollbackTxs) {
+        cout << "====================Rollback Transactions====================" << endl;
+        cout << "total size: " << rollbackTxs.size() << endl;
+        int totalRollbackCost = 0;
+        for (auto& tx : rollbackTxs) {
+            cout << "======== Tx =========" << endl;
+            totalRollbackCost += tx->m_self_cost;
+            cout << "id: " << tx->m_id << " cost: " << tx->m_self_cost << " scheduledTime: " << tx->scheduledTime << endl;
+            // cout << "tx read set: ";
+            // for (auto& readKey : tx->readSet) {
+            //     cout << readKey << " ";
+            // }
+            // cout << endl << "tx write set: ";
+            // for (auto& writeKey : tx->writeSet) {
+            //     cout << writeKey << " ";
+            // }
+            // cout << endl;
         }
         cout << "rollback cost: " << totalRollbackCost << endl;
         cout << "=============================================================" << endl;

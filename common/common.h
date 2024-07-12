@@ -30,6 +30,6 @@ static std::string edgeTypeToString(Loom::EdgeType type) {
 }
 
 // 定义区块大小
-static size_t BLOCK_SIZE = 100;
+static size_t BLOCK_SIZE = 400;
 
 }

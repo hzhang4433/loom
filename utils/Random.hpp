@@ -1,11 +1,12 @@
 #pragma once
 
 #include <string>
+#include <random>
 
 namespace Util {
 class Random {
     public:
-        Random(uint64_t seed = 0) { init_seed(seed); }
+        Random(uint64_t seed = 0) : distribution(0, 1000000), rng(seed) { init_seed(seed); }
 
         void init_seed(uint64_t seed) {
             seed_ = (seed ^ 0x5DEECE66DULL) & ((1ULL << 48) - 1);
@@ -16,6 +17,7 @@ class Random {
         uint64_t get_seed() { return seed_; }
 
         uint64_t next() { return ((uint64_t)next(32) << 32) + next(32); }
+        // uint64_t next() { return distribution(rng); }
 
         uint64_t next(unsigned int bits) {
             seed_ = (seed_ * 0x5DEECE66DULL + 0xBULL) & ((1ULL << 48) - 1);
@@ -56,6 +58,9 @@ class Random {
         };
 
         uint64_t seed_;
+
+        std::mt19937 rng;
+        std::uniform_int_distribution<size_t> distribution;
 };
 
 }

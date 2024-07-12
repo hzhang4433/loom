@@ -42,6 +42,10 @@ class Workload {
             return random.get_seed();
         }
 
+        Loom::Random get_random() {
+            return tx_random;
+        }
+
         void set_seed(uint64_t seed) {
             // 重置静态变量的值
             txGenerator->resetStatic();

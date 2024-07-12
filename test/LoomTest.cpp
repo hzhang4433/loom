@@ -94,6 +94,8 @@ TEST(LoomTest, TestTxGenerator2ReExecute) {
         std::vector<Vertex::Ptr> rbList;
         serialOrders.reserve(minw.m_sccs.size());
         // 回滚事务
+
+        start = chrono::high_resolution_clock::now();
         for (auto& scc : minw.m_sccs) {
             // 回滚事务
             auto reExecuteInfo = minw.rollbackNoEdge(scc, true);
@@ -106,11 +108,14 @@ TEST(LoomTest, TestTxGenerator2ReExecute) {
             rollbackTxs.insert(reExecuteInfo.m_rollbackTxs.begin(), reExecuteInfo.m_rollbackTxs.end());
             // 更新m_orderedRollbackTxs
             reExecuteInfo.m_orderedRollbackTxs = std::move(rollbackTxs);
-            Loom::printRollbackTxs(reExecuteInfo.m_orderedRollbackTxs);
+            // Loom::printRollbackTxs(reExecuteInfo.m_rollbackTxs);
 
             // 将排序后的交易插入rbList
             rbList.insert(rbList.end(), reExecuteInfo.m_orderedRollbackTxs.begin(), reExecuteInfo.m_orderedRollbackTxs.end());
         }
+        end = chrono::high_resolution_clock::now();
+        duration = chrono::duration_cast<chrono::microseconds>(end - start);
+        cout << "Rollback Time: " << duration.count() / 1000.0 << "ms" << endl;
 
 
         // 重调度

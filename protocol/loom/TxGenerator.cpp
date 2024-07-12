@@ -24,22 +24,30 @@ Block::Ptr TxGenerator::generateBlock() {
     unordered_map<Vertex::Ptr, unordered_set<Vertex::Ptr, Vertex::VertexHash>, Vertex::VertexHash> RWIndex;// rw冲突索引
     unordered_map<Vertex::Ptr, unordered_set<Vertex::Ptr, Vertex::VertexHash>, Vertex::VertexHash> conflictIndex;// 冲突索引
 
-    workload.set_seed(uint64_t(140712672230029));
+    // workload.set_seed(uint64_t(140706062229245));
     auto seed = workload.get_seed();
     cout << "seed: " << seed << endl;
 
     // 生成事务
+    Loom::Random random = workload.get_random();
+    // auto txGenerator = std::make_shared<NewOrderTransaction>(random);
+    auto txGenerator = std::make_shared<PaymentTransaction>(random);
+
     for (int i = 0; i < m_blockSize; i++) {
-        // 生成TPCC事务
-        auto tx = workload.NextTransaction();
-        // cout << "tx type: " << TPCC::transactionTypeToString(tx->getType()) << endl;
-        // 构建事务 -- 控制嵌套事务比例
-        HyperVertex::Ptr txVertex;
-        if (tx->getType() == TPCC::TransactionType::PAYMENT) {
-            txVertex = generateTransaction(tx, false, invertedIndex);
-        } else {
-            txVertex = generateTransaction(tx, true, invertedIndex);
-        }
+        // // 生成TPCC事务
+        // auto tx = workload.NextTransaction();
+        // cout << "tx " << i + 1 << " type: " << TPCC::transactionTypeToString(tx->getType()) << endl;
+        // // 构建事务 -- 控制嵌套事务比例
+        // HyperVertex::Ptr txVertex;
+        // if (tx->getType() == TPCC::TransactionType::PAYMENT) {
+        //     txVertex = generateTransaction(tx, false, invertedIndex);
+        // } else {
+        //     txVertex = generateTransaction(tx, true, invertedIndex);
+        // }
+
+        // 全部生成NewOrder事务
+        auto tx = txGenerator->makeTransaction();
+        HyperVertex::Ptr txVertex = generateTransaction(tx, true, invertedIndex);
         // 记录所有子事务
         txLists.insert(txLists.end(), txVertex->m_vertices.begin(), txVertex->m_vertices.end());
         // 记录所有事务

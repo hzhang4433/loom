@@ -11,6 +11,7 @@
 #include "Random.hpp"
 #include "Define.h"
 #include "common/common.h"
+#include "utils/ConditionalOutputStream.h"
 
 
 #include <iostream>
@@ -21,6 +22,9 @@ class Transaction : public std::enable_shared_from_this<Transaction>
 {
     public:
         typedef std::shared_ptr<Transaction> Ptr;
+        
+        // 使用自定义输出流代替std::cout
+        Util::ConditionalOutputStream coutConditional;
 
         struct ChildTransaction {
             Transaction::Ptr transaction;
@@ -110,20 +114,20 @@ class Transaction : public std::enable_shared_from_this<Transaction>
         }
 
         void printCustomerInfo() {
-            cout << "c_lasts: ";
+            coutConditional << "c_lasts: ";
             for (int i = 0; i < 3000; i++) {
-                cout << Transaction::c_lasts[i] << " ";
+                coutConditional << Transaction::c_lasts[i] << " ";
             }
-            cout << endl;
+            coutConditional << endl;
         }
 
         // 打印订单行频率
         void printOrderLineInfo() {
-            cout << "ol_i_id_num: " << endl;
+            coutConditional << "ol_i_id_num: " << endl;
             for (auto& it : ol_i_id_num) {
-                cout << it.first << ":" << it.second << "\t";
+                coutConditional << it.first << ":" << it.second << "\t";
             }
-            cout << endl;
+            coutConditional << endl;
         }
 
         Random& random;                                          // random generator
@@ -191,7 +195,7 @@ class NewOrderTransaction : public Transaction
 
         // 生成嵌套事务
         Transaction::Ptr makeTransaction() override {
-            cout << "======= making new order transaction =======" << endl;
+            // coutConditional << "======= making new order transaction =======" << endl;
 
             auto newOrderTx = makeNewOrder();
             /* 事务逻辑：
@@ -225,19 +229,20 @@ class NewOrderTransaction : public Transaction
 
             // 获取下一个订单号
             uint64_t next_o_id = increment_order(newOrderTx->d_id - 1);
-            cout << "In NewOrderTransaction, w_id = " << newOrderTx->w_id
-                 << " d_id = " << newOrderTx->d_id 
-                 << " next_o_id = " << next_o_id 
-                 << " ol_cnt = " << newOrderTx->o_ol_cnt 
-                 << " c_id = " << newOrderTx->c_id << endl;
-            cout << "item ids: ";
-            for (auto i = 0; i < newOrderTx->o_ol_cnt; i++) {
-                cout << newOrderTx->orderLines[i].ol_i_id << " ";
-            }
-            cout << endl;
+            // coutConditional << "In NewOrderTransaction, w_id = " << newOrderTx->w_id
+            //      << " d_id = " << newOrderTx->d_id 
+            //      << " next_o_id = " << next_o_id 
+            //      << " ol_cnt = " << newOrderTx->o_ol_cnt 
+            //      << " c_id = " << newOrderTx->c_id << endl;
+            // coutConditional << "item ids: ";
+            // for (auto i = 0; i < newOrderTx->o_ol_cnt; i++) {
+            //     coutConditional << newOrderTx->orderLines[i].ol_i_id << " ";
+            // }
+            // coutConditional << endl;
             
             // newOrder子事务
             Transaction::Ptr noAccess = std::make_shared<Transaction>(random);
+            noAccess->addReadRow("NO-" + std::to_string(newOrderTx->w_id) + "-" + std::to_string(newOrderTx->d_id) + "-" + std::to_string(next_o_id));
             noAccess->addUpdateRow("NO-" + std::to_string(newOrderTx->w_id) + "-" + std::to_string(newOrderTx->d_id) + "-" + std::to_string(next_o_id));
             
             // order子事务
@@ -285,7 +290,7 @@ class NewOrderTransaction : public Transaction
                 } else {
                     wd_latestOrderLines[wd_key][wd_orderLineCounters[newOrderTx->w_id - 1][newOrderTx->d_id - 1] % 20] = {next_o_id, newOrderTx->orderLines[i].ol_i_id, i};
                 }
-                // cout << "In neworderTx, wd_orderLineCounters[" << newOrderTx->d_id << "] = " << wd_orderLineCounters[newOrderTx->w_id - 1][newOrderTx->d_id - 1] << endl;
+                // coutConditional << "In neworderTx, wd_orderLineCounters[" << newOrderTx->d_id << "] = " << wd_orderLineCounters[newOrderTx->w_id - 1][newOrderTx->d_id - 1] << endl;
 
                 wd_orderLineCounters[newOrderTx->w_id - 1][newOrderTx->d_id - 1]++;
 
@@ -309,12 +314,12 @@ class NewOrderTransaction : public Transaction
 
             // 更新wdc_latestOrder
             string wdc_key = std::to_string(newOrderTx->w_id) + "-" + std::to_string(newOrderTx->d_id) + "-" + std::to_string(newOrderTx->c_id);
-            // cout << "In NewOrderTransaction, before wdc_latestOrder[" << wdc_key << "] = {" 
+            // coutConditional << "In NewOrderTransaction, before wdc_latestOrder[" << wdc_key << "] = {" 
             //      << "o_id: " << wdc_latestOrder[wdc_key].o_id << ", " 
             //      << "o_ol_cnt: " << wdc_latestOrder[wdc_key].o_ol_cnt << ", "
             //      << "o_c_id: " << wdc_latestOrder[wdc_key].o_c_id << "}" << endl;
             wdc_latestOrder[wdc_key] = {next_o_id, newOrderTx->o_ol_cnt, newOrderTx->c_id};
-            // cout << "In NewOrderTransaction, now wdc_latestOrder[" << wdc_key << "] = {" 
+            // coutConditional << "In NewOrderTransaction, now wdc_latestOrder[" << wdc_key << "] = {" 
             //      << "o_id: " << wdc_latestOrder[wdc_key].o_id << ", " 
             //      << "o_ol_cnt: " << wdc_latestOrder[wdc_key].o_ol_cnt << ", "
             //      << "o_c_id: " << wdc_latestOrder[wdc_key].o_c_id << "}" << endl;
@@ -373,13 +378,13 @@ class PaymentTransaction : public Transaction
 
         // 生成嵌套事务
         Transaction::Ptr makeTransaction() override {
-            cout << "======= making payment transaction =======" << endl;
+            // coutConditional << "======= making payment transaction =======" << endl;
 
             auto paymentTx = makePayment();
-            cout << "paymentTx: w_id = " << paymentTx->w_id << 
-                                ", d_id = " << paymentTx->d_id <<
-                                ", c_id = " << paymentTx->c_id << 
-                                ", c_last = " << paymentTx->c_last << endl;
+            // coutConditional << "paymentTx: w_id = " << paymentTx->w_id << 
+            //                     ", d_id = " << paymentTx->d_id <<
+            //                     ", c_id = " << paymentTx->c_id << 
+            //                     ", c_last = " << paymentTx->c_last << endl;
             
             /* 事务逻辑：
                 1. warehouse表: 读取并更新w_ytd字段
@@ -416,24 +421,25 @@ class PaymentTransaction : public Transaction
                 auto& c_ids = c_last_to_c_id.at(paymentTx->c_last);
                 
                 for (auto& c_id : c_ids) {
-                    cAccess->addReadRow("C" + std::to_string(paymentTx->w_id) + "-" + std::to_string(paymentTx->d_id) + "-" + std::to_string(c_id) + "-balance");
+                    cAccess->addReadRow("Cbalance-" + std::to_string(paymentTx->w_id) + "-" + std::to_string(paymentTx->d_id) + "-" + std::to_string(c_id));
                 }
                 
                 paymentTx->c_id = c_ids[(c_ids.size() - 1) / 2];
-                cout << "now have paymentTx->c_id: " << paymentTx->c_id << endl;
+                // coutConditional << "now have paymentTx->c_id: " << paymentTx->c_id << endl;
 
                 cAccess->setExecutionTime(TPCC::ConsumptionType::HIGH);
                 // 该情况下history子事务依赖customer子事务
                 cAccess->addChild(hAccess, Loom::DependencyType::WEAK);
             } else {
-                // cout << "already have paymentTx->c_id: " << paymentTx->c_id << endl;
+                // coutConditional << "already have paymentTx->c_id: " << paymentTx->c_id << endl;
                 cAccess->addReadRow("Cbalance-" + std::to_string(paymentTx->w_id) + "-" + std::to_string(paymentTx->d_id) + "-" + std::to_string(paymentTx->c_id));
                 // 否则history子事务独立
                 root->addChild(hAccess, Loom::DependencyType::WEAK);
             }
-            // cout << endl;
+            // coutConditional << endl;
 
-            cAccess->addUpdateRow("Cbalance-" + std::to_string(paymentTx->w_id) + "-" + std::to_string(paymentTx->d_id) + "-" + std::to_string(paymentTx->c_id));
+            // cAccess->addUpdateRow("Cbalance-" + std::to_string(paymentTx->w_id) + "-" + std::to_string(paymentTx->d_id) + "-" + std::to_string(paymentTx->c_id));
+            cAccess->addUpdateRow("C-" + std::to_string(paymentTx->w_id) + "-" + std::to_string(paymentTx->d_id) + "-" + std::to_string(paymentTx->c_id));
             hAccess->addUpdateRow("H-" + std::to_string(paymentTx->w_id) + "-" + std::to_string(paymentTx->d_id) + "-" + std::to_string(paymentTx->c_id));
 
             // 根节点添加依赖
@@ -494,13 +500,13 @@ class OrderStatusTransaction : public Transaction
 
         // 生成嵌套事务
         Transaction::Ptr makeTransaction() override {
-            // cout << "======= making order status transaction =======" << endl;
+            coutConditional << "======= making order status transaction =======" << endl;
 
             auto orderStatusTx = makeOrderStatus();
-            // cout << "orderStatusTx: w_id = " << orderStatusTx->w_id << 
-            //                         ", d_id = " << orderStatusTx->d_id <<
-            //                         ", c_id = " << orderStatusTx->c_id << 
-            //                         ", c_last = " << orderStatusTx->c_last << endl;
+            coutConditional << "orderStatusTx: w_id = " << orderStatusTx->w_id << 
+                                    ", d_id = " << orderStatusTx->d_id <<
+                                    ", c_id = " << orderStatusTx->c_id << 
+                                    ", c_last = " << orderStatusTx->c_last << endl;
 
             /* 事务逻辑：
                 1. customer表: 读取c_balance, c_first, c_middle, c_last字段
@@ -526,7 +532,7 @@ class OrderStatusTransaction : public Transaction
                 }
 
                 orderStatusTx->c_id = c_ids[(c_ids.size() - 1) / 2];
-                // cout << "now have orderStatusTx->c_id: " << orderStatusTx->c_id << endl;
+                // coutConditional << "now have orderStatusTx->c_id: " << orderStatusTx->c_id << endl;
 
                 // 设置customer子事务执行时间
                 cAccess->setExecutionTime(TPCC::ConsumptionType::HIGH);
@@ -535,7 +541,7 @@ class OrderStatusTransaction : public Transaction
                 // 根节点为customer子事务
                 root = cAccess;
             } else {
-                // cout << "already have orderStatusTx->c_id: " << orderStatusTx->c_id << endl;
+                // coutConditional << "already have orderStatusTx->c_id: " << orderStatusTx->c_id << endl;
                 cAccess->addReadRow("C-" + std::to_string(orderStatusTx->w_id) + "-" + std::to_string(orderStatusTx->d_id) + "-" + std::to_string(orderStatusTx->c_id));
 
                 // 新建根子事务
@@ -548,15 +554,14 @@ class OrderStatusTransaction : public Transaction
             string wdc_key = std::to_string(orderStatusTx->w_id) + "-" + std::to_string(orderStatusTx->d_id) + "-" + std::to_string(orderStatusTx->c_id);
             // 没有order则直接返回
             if (wdc_latestOrder.count(wdc_key) == 0) {
-                // cout << "\tWARNING: wdc_latestOrder[" << wdc_key << "] is empty..." << endl << endl;
+                // coutConditional << "\tWARNING: wdc_latestOrder[" << wdc_key << "] is empty..." << endl << endl;
                 return root;
             }
 
             // 有则继续添加子事务和读写集
             auto& latestOrder = wdc_latestOrder.at(wdc_key);
-            auto wdoc_key = std::to_string(orderStatusTx->w_id) + "-" + std::to_string(orderStatusTx->d_id) + "-" + std::to_string(latestOrder.o_id) + "-" + std::to_string(orderStatusTx->c_id);
-            oAccess->addReadRow("O-" + wdoc_key);
-            // cout << "latestOrder[" << wdc_key << "] " << 
+            oAccess->addReadRow("O-" + wdc_key);
+            // coutConditional << "latestOrder[" << wdc_key << "] " << 
             //         ": o_id: " << latestOrder.o_id << 
             //         ", o_ol_cnt: " << latestOrder.o_ol_cnt << 
             //         ", o_c_id: " << latestOrder.o_c_id << endl << endl;
@@ -564,7 +569,7 @@ class OrderStatusTransaction : public Transaction
             for (int i = 0; i < latestOrder.o_ol_cnt; i++) {
                 // orderLine子事务
                 Transaction::Ptr olAccess = std::make_shared<Transaction>(random);
-                olAccess->addReadRow("OL-" + std::to_string(orderStatusTx->w_id) + "-" + std::to_string(orderStatusTx->d_id) + "-" + std::to_string(latestOrder.o_id) + "-" + std::to_string(i));
+                olAccess->addReadRow("OL-" + std::to_string(orderStatusTx->w_id) + "-" + std::to_string(orderStatusTx->d_id) + "-" + std::to_string(latestOrder.o_id));
                 
                 // order子事务添加依赖
                 oAccess->addChild(olAccess, Loom::DependencyType::WEAK);
@@ -595,18 +600,18 @@ class DeliveryTransaction : public Transaction
             DeliveryTransaction::Ptr deliveryTx = std::make_shared<DeliveryTransaction>(random);
             deliveryTx->w_id = random.uniform_dist(1, TPCC::N_WAREHOUSES);
             deliveryTx->o_carrier_id = random.uniform_dist(1, TPCC::N_CARRIERS);
-            deliveryTx->ol_delivery_d = std::time(nullptr);
+            deliveryTx->ol_delivery_d = std::time(0);
             return deliveryTx;
         }
 
         // 生成嵌套事务
         Transaction::Ptr makeTransaction() override {
-            // cout << "======= making delivery transaction =======" << endl;
+            coutConditional << "======= making delivery transaction =======" << endl;
 
             auto deliveryTx = makeDelivery();
-            // cout << "deliveryTx: w_id = " << deliveryTx->w_id << 
-            //         ", o_carrier_id = " << deliveryTx->o_carrier_id <<
-            //         ", ol_delivery_d = " << deliveryTx->ol_delivery_d << endl;
+            coutConditional << "deliveryTx: w_id = " << deliveryTx->w_id << 
+                    ", o_carrier_id = " << deliveryTx->o_carrier_id <<
+                    ", ol_delivery_d = " << deliveryTx->ol_delivery_d << endl;
 
             /* 事务逻辑：对warehouse中每个district进行如下操作：(如果和前面的delivery事务有冲突，则需等待)
                 1. newOrder表: 根据w_id, d_id查找, 读取no_o_id字段最小的一条记录, 删除该记录 => 通过wd_oldestNewOrder表
@@ -628,29 +633,30 @@ class DeliveryTransaction : public Transaction
                 auto wd_key = std::to_string(deliveryTx->w_id) + "-" + std::to_string(i);
                 // 若不存在了，则跳过
                 if (wd_oldestNewOrder.count(wd_key) == 0 || wd_oldestNewOrder.at(wd_key).empty()) {
-                    // cout << "\tWARNING: warehouse: " << deliveryTx->w_id << " distirct: " << i << " has no new order..." << endl;
-                    // if (i == 10) cout << endl;
+                    coutConditional << "\tWARNING: warehouse: " << deliveryTx->w_id << " distirct: " << i << " has no new order..." << endl;
+                    if (i == 10) coutConditional << endl;
                     continue;
                 }
                 // 取出最旧的一条记录
-                auto& oldestNewOrder = wd_oldestNewOrder.at(wd_key).front();
-                // cout << "wd_oldestNewOrder[" << wd_key << "] " << 
+                const auto oldestNewOrder = wd_oldestNewOrder.at(wd_key).front();
+
+                // coutConditional << "wd_oldestNewOrder[" << wd_key << "] " << 
                 //         ": o_id: " << oldestNewOrder.o_id << 
                 //         ", o_ol_cnt: " << oldestNewOrder.o_ol_cnt << 
                 //         ", o_c_id: " << oldestNewOrder.o_c_id << endl;
 
                 wd_oldestNewOrder.at(wd_key).pop();
                 // if (!wd_oldestNewOrder.at(wd_key).empty()) {
-                //     cout << "new wd_oldestNewOrder[" << wd_key << "] " << 
+                //     coutConditional << "new wd_oldestNewOrder[" << wd_key << "] " << 
                 //             ": o_id: " << wd_oldestNewOrder.at(wd_key).front().o_id << 
                 //             ", o_ol_cnt: " << wd_oldestNewOrder.at(wd_key).front().o_ol_cnt << 
                 //             ", o_c_id: " << wd_oldestNewOrder.at(wd_key).front().o_c_id << endl;
                 // }
-                // cout << endl;
+                // coutConditional << endl;
 
 
                 // 添加newOrder子事务读写集
-                no_cAccess->addReadRow("NO-" + wd_key + "-" + std::to_string(oldestNewOrder.o_id));
+                no_cAccess->addReadRow("NO-" + wd_key);
                 no_cAccess->addUpdateRow("NO-" + wd_key + "-" + std::to_string(oldestNewOrder.o_id));
                 no_cAccess->setExecutionTime(TPCC::ConsumptionType::HIGH);
 
@@ -664,8 +670,9 @@ class DeliveryTransaction : public Transaction
                 for (int j = 0; j < oldestNewOrder.o_ol_cnt; j++) {
                     // orderLine子事务
                     Transaction::Ptr olAccess = std::make_shared<Transaction>(random);
-                    olAccess->addReadRow("OL-" + wd_key + "-" + std::to_string(oldestNewOrder.o_id) + "-" + std::to_string(j));
-                    // olAccess->addUpdateRow("OL-" + wd_key + "-" + std::to_string(oldestNewOrder.o_id) + "-" + std::to_string(j));
+                    // olAccess->addReadRow("OL-" + wd_key + "-" + std::to_string(oldestNewOrder.o_id) + "-" + std::to_string(j));
+                    olAccess->addReadRow("OL-" + wd_key + "-" + std::to_string(oldestNewOrder.o_id));
+                    olAccess->addUpdateRow("OLdelivery-" + wd_key + "-" + std::to_string(oldestNewOrder.o_id) + "-" + std::to_string(j));
                     // orderlines子事务添加依赖
                     olsAccess->addChild(olAccess, Loom::DependencyType::STRONG);
                 }
@@ -675,8 +682,10 @@ class DeliveryTransaction : public Transaction
                 no_cAccess->addChild(olsAccess, Loom::DependencyType::STRONG);
 
                 // 添加customer子事务读写集
-                no_cAccess->addReadRow("Cbalance-" + wd_key + "-" + std::to_string(oldestNewOrder.o_c_id));
+                no_cAccess->addReadRow("C-" + wd_key + "-" + std::to_string(oldestNewOrder.o_c_id));
                 no_cAccess->addUpdateRow("Cbalance-" + wd_key + "-" + std::to_string(oldestNewOrder.o_c_id));
+                no_cAccess->addReadRow("Cdelivery-" + wd_key + "-" + std::to_string(oldestNewOrder.o_c_id));
+                no_cAccess->addUpdateRow("Cdelivery-" + wd_key + "-" + std::to_string(oldestNewOrder.o_c_id));
 
                 // root添加依赖
                 root->addChild(no_cAccess, Loom::DependencyType::WEAK);
@@ -715,12 +724,12 @@ class StockLevelTransaction : public Transaction
 
         // 生成嵌套事务
         Transaction::Ptr makeTransaction() override {
-            // cout << "======= making stock level transaction =======" << endl;
+            coutConditional << "======= making stock level transaction =======" << endl;
 
             auto stockLevelTx = makeStockLevel();
-            // cout << "deliveryTx: w_id = " << stockLevelTx->w_id << 
-            //         ", d_id = " << stockLevelTx->d_id <<
-            //         ", threshold = " << stockLevelTx->threshold << endl;
+            coutConditional << "deliveryTx: w_id = " << stockLevelTx->w_id << 
+                    ", d_id = " << stockLevelTx->d_id <<
+                    ", threshold = " << stockLevelTx->threshold << endl;
 
             /* 事务逻辑：(顺序执行可看成一笔事务)
                 1. district表: 根据w_id, d_id查找, 读取d_next_o_id字段
@@ -733,33 +742,32 @@ class StockLevelTransaction : public Transaction
             // district子事务
             Transaction::Ptr dAccess = std::make_shared<Transaction>(random);
             dAccess->setType(TPCC::TransactionType::STOCK_LEVEL);
-            dAccess->addReadRow("D-" + std::to_string(stockLevelTx->w_id) + "-" + std::to_string(stockLevelTx->d_id) + "-next_o_id");
+            dAccess->addReadRow("D-" + std::to_string(stockLevelTx->w_id) + "-" + std::to_string(stockLevelTx->d_id));
             // 获取d_next_o_id
             uint64_t d_next_o_id = get_order(stockLevelTx->d_id - 1);
-            // cout << "In StockLevelTransaction, now next_o_id: " << d_next_o_id << endl;
+            // coutConditional << "In StockLevelTransaction, now next_o_id: " << d_next_o_id << endl;
 
             // orderLine子事务
             Transaction::Ptr olAccess = std::make_shared<Transaction>(random);
             auto wd_key = std::to_string(stockLevelTx->w_id) + "-" + std::to_string(stockLevelTx->d_id);
             // 获取最近的20条orderLine记录
             if (wd_latestOrderLines.count(wd_key) == 0) {
-                cout << "\tERROR: distirct " << stockLevelTx->d_id << " has no orderLine..." << endl;
+                coutConditional << "\tERROR: distirct " << stockLevelTx->d_id << " has no orderLine..." << endl;
                 return nullptr;
             }
 
-            auto& latestOrderLines = wd_latestOrderLines.at(wd_key);            
+            const auto latestOrderLines = wd_latestOrderLines.at(wd_key);            
             for (auto& orderLine : latestOrderLines) {
-                // cout << "orderLine: o_id = " << orderLine.o_id << ", ol_i_id = " << orderLine.ol_i_id << endl;
+                // coutConditional << "orderLine: o_id = " << orderLine.o_id << ", ol_i_id = " << orderLine.ol_i_id << endl;
 
                 // stock子事务
                 Transaction::Ptr sAccess = std::make_shared<Transaction>(random);
                 sAccess->addReadRow("Sqtys-" + std::to_string(stockLevelTx->w_id) + "-" + std::to_string(orderLine.ol_i_id));
 
-                olAccess->addReadRow("OL-" + std::to_string(stockLevelTx->w_id) + "-" + std::to_string(stockLevelTx->d_id) + "-" 
-                                        + std::to_string(orderLine.o_id) + "-" + std::to_string(orderLine.ol_number));
                 // orderLine子事务添加依赖
                 olAccess->addChild(sAccess, Loom::DependencyType::WEAK);
             }
+            olAccess->addReadRow("OL-" + wd_key);
             olAccess->setExecutionTime(TPCC::ConsumptionType::HIGH);
 
             // district子事务添加依赖

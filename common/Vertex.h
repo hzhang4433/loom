@@ -3,6 +3,7 @@
 #include <memory>
 #include <string>
 #include <map>
+#include <set>
 #include <unordered_set>
 #include <tbb/concurrent_unordered_map.h>
 #include <tbb/concurrent_unordered_set.h>
@@ -32,6 +33,9 @@ class Vertex : public std::enable_shared_from_this<Vertex>
 
         struct VertexCompare {
             bool operator()(const Vertex::Ptr& a, const Vertex::Ptr& b) const {
+                if (a->m_hyperVertex != b->m_hyperVertex) {
+                    return a->m_hyperVertex < b->m_hyperVertex;
+                }
                 return a->m_id < b->m_id;
             }
         };
@@ -107,9 +111,11 @@ class Vertex : public std::enable_shared_from_this<Vertex>
         int m_cycle_num;                                                         // 记录节点所在环路数
         unordered_set<Vertex::Ptr, VertexHash> m_in_edges;                       // 记录节点的入边, 格式：节点指针 => 可抵达最小id
         unordered_set<Vertex::Ptr, VertexHash> m_out_edges;                      // 记录节点的出边, 格式：节点指针 => 可到达最小id
-        unordered_set<Vertex::Ptr, VertexHash> cascadeVertices;                  // 记录级联回滚节点
+        set<Vertex::Ptr, VertexCompare> cascadeVertices;                         // 记录级联回滚节点
         unordered_set<string> readSet;                                           // 记录读集
         unordered_set<string> writeSet;                                          // 记录写集
+        unordered_set<string> allReadSet;                                        // 记录所有读集(包括子事务)
+        unordered_set<string> allWriteSet;                                       // 记录所有写集(包括子事务)
         bool isNested;                                                           // 标记节点是否是嵌套节点
         unordered_set<ChildVertex, ChildVertexHash, ChildVertexEqual> m_children;// 记录子节点
         int scheduledTime;                                                       // 记录事务执行时刻

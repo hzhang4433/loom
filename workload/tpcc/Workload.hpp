@@ -42,8 +42,12 @@ class Workload {
             return random.get_seed();
         }
 
-        Loom::Random get_random() {
+        Loom::Random get_tx_random() {
             return tx_random;
+        }
+
+        Loom::Random get_random() {
+            return random;
         }
 
         void set_seed(uint64_t seed) {

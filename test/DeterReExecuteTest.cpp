@@ -49,7 +49,8 @@ TEST(DeterReExecuteTest, TestTimeSpaceGraph) {
     TxGenerator txGenerator_normal(Loom::BLOCK_SIZE), txGenerator_nested(Loom::BLOCK_SIZE);
     unordered_map<Vertex::Ptr, unordered_set<Vertex::Ptr, Vertex::VertexHash>, Vertex::VertexHash> RWIndex_normal, RWIndex_nested;// rw冲突索引
     unordered_map<Vertex::Ptr, unordered_set<Vertex::Ptr, Vertex::VertexHash>, Vertex::VertexHash> conflictIndex_normal, conflictIndex_nested;// 冲突索引
-    txGenerator_normal.generateIndex(rbList_normal, minw_normal.m_invertedIndex, RWIndex_normal, conflictIndex_normal);
+    unordered_map<string, set<Vertex::Ptr, Vertex::VertexCompare>> RBIndex_normal, RBIndex_nested;// 回滚索引
+    txGenerator_normal.generateIndex(rbList_normal, minw_normal.m_invertedIndex, RWIndex_normal, conflictIndex_normal, RBIndex_normal);
 
     auto start = chrono::high_resolution_clock::now();
     DeterReExecute deterReExecute_normal(rbList_normal, serialOrders, conflictIndex_normal);
@@ -58,7 +59,7 @@ TEST(DeterReExecuteTest, TestTimeSpaceGraph) {
     cout << "Normal Initial Time: " << duration_init.count() / 1000.0 << "ms" << endl;
 
     // 构造只有嵌套交易的DeterReExecute对象
-    txGenerator_nested.generateIndex(rbList_nested, minw_nested.m_invertedIndex, RWIndex_nested, conflictIndex_nested);
+    txGenerator_nested.generateIndex(rbList_nested, minw_nested.m_invertedIndex, RWIndex_nested, conflictIndex_nested, RBIndex_nested);
 
     start = chrono::high_resolution_clock::now();
     DeterReExecute deterReExecute_nested(rbList_nested, serialOrders, conflictIndex_nested);

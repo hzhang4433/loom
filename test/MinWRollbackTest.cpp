@@ -480,8 +480,8 @@ TEST(MinWRollbackTest, TestConcurrentBuild) {
     // Loom::Random random(140708984311565);
     int nestCounter = 0;
         
-    uint64_t seed = workload.get_seed();
-    // uint64_t seed = uint64_t(140711110005613);
+    // uint64_t seed = workload.get_seed();
+    uint64_t seed = uint64_t(140705472709645);
     workload.set_seed(seed);
     cout << "seed = " << seed << endl;
 
@@ -502,42 +502,33 @@ TEST(MinWRollbackTest, TestConcurrentBuild) {
         //     minw2.execute(tx);
         // }
 
-        if (nestCounter < Loom::BLOCK_SIZE * 0.55) {
-            minw1.execute(tx, false);
-            minw2.execute(tx, false);
-            nestCounter++;
-        } else {
-            minw1.execute(tx);
-            minw2.execute(tx);
-        }
-
         // minw1.execute(tx, false);
         // minw2.execute(tx, false);
-        // minw1.execute(tx);
-        // minw2.execute(tx);
+        minw1.execute(tx);
+        minw2.execute(tx);
     }
     cout << "transaction generate done" << endl;
     
 
-    start = std::chrono::high_resolution_clock::now();
-    minw1.buildGraph();
-    end = std::chrono::high_resolution_clock::now();
-    auto build = chrono::duration_cast<chrono::microseconds>(end - start).count();
-    cout << "build time: " << (double)build / 1000 << "ms " << "edgecounter: " << minw1.edgeCounter << endl;
-
-
     // start = std::chrono::high_resolution_clock::now();
-    // minw2.buildGraph2();
+    // minw1.buildGraph();
     // end = std::chrono::high_resolution_clock::now();
-    // auto build2 = chrono::duration_cast<chrono::microseconds>(end - start).count();
-    // cout << "build2 time: " << (double)build2 / 1000 << "ms " << "edgecounter: " << minw2.edgeCounter << endl;
+    // auto build = chrono::duration_cast<chrono::microseconds>(end - start).count();
+    // cout << "build time: " << (double)build / 1000 << "ms " << "edgecounter: " << minw1.edgeCounter << endl;
+
+
+    minw1.onWarm2RWIndex();
+    start = std::chrono::high_resolution_clock::now();
+    minw1.buildGraphSerial();
+    end = std::chrono::high_resolution_clock::now();
+    auto serialBuild = chrono::duration_cast<chrono::microseconds>(end - start).count();
+    cout << "Serial build time: " << (double)serialBuild / 1000 << "ms " << "edgecounter: " << minw1.edgeCounter << endl;
 
 
     int threadNum = std::thread::hardware_concurrency() / 2; // 获取硬件支持的并发线程数
     // int threadNum = 16;
     // ThreadPool::Ptr pool = std::make_shared<ThreadPool>(threadNum);
     threadpool::Ptr pool = std::make_unique<threadpool>((unsigned short)threadNum);
-
     UThreadPoolPtr tp = UAllocator::safeMallocTemplateCObject<UThreadPool>();
 
     minw2.onWarm2RWIndex();
@@ -561,11 +552,11 @@ TEST(MinWRollbackTest, TestThreadPool) {
     Loom::Random random(time(0));
     // Loom::Random random(140708984311565);
     int nestCounter = 0;
-    std::vector<std::future<void>> futures;
+    std::vector<std::future<void>> futures1, futures2, futures3;
         
     uint64_t seed = workload.get_seed();
     // uint64_t seed = uint64_t(140707768066669);
-    workload.set_seed(seed);
+    // workload.set_seed(seed);
     cout << "seed = " << seed << endl;
 
     for (int i = 0; i < Loom::BLOCK_SIZE; i++) {
@@ -601,7 +592,7 @@ TEST(MinWRollbackTest, TestThreadPool) {
     ThreadPool::Ptr tp1 = std::make_shared<ThreadPool>(threadNum);
     minw1.onWarm2RWIndex();
     start = std::chrono::high_resolution_clock::now();
-    minw1.buildGraphNoEdgeC(tp1, futures);
+    minw1.buildGraphNoEdgeC(tp1, futures1);
     // minw1.buildGraphConcurrent(tp1);
     end = std::chrono::high_resolution_clock::now();
     auto build = chrono::duration_cast<chrono::microseconds>(end - start).count();
@@ -611,7 +602,7 @@ TEST(MinWRollbackTest, TestThreadPool) {
     UThreadPoolPtr tp = UAllocator::safeMallocTemplateCObject<UThreadPool>();
     minw2.onWarm2RWIndex();
     start = std::chrono::high_resolution_clock::now();
-    minw2.buildGraphNoEdgeC(tp, futures);
+    minw2.buildGraphNoEdgeC(tp, futures2);
     // minw2.buildGraphConcurrent(tp);
     end = std::chrono::high_resolution_clock::now();
     auto build2 = chrono::duration_cast<chrono::microseconds>(end - start).count();
@@ -621,13 +612,13 @@ TEST(MinWRollbackTest, TestThreadPool) {
     threadpool::Ptr pool = std::make_unique<threadpool>((unsigned short)threadNum);
     minw3.onWarm2RWIndex();
     start = std::chrono::high_resolution_clock::now();
-    minw3.buildGraphNoEdgeC(pool, futures);
+    minw3.buildGraphNoEdgeC(pool, futures3);
     // minw3.buildGraphConcurrent(pool);
     end = std::chrono::high_resolution_clock::now();
     auto build3 = chrono::duration_cast<chrono::microseconds>(end - start).count();
     cout << "github threadpool time: " << (double)build3 / 1000 << "ms " << endl;
 
-    cout << "nestCounter: " << nestCounter << endl;
+    // cout << "nestCounter: " << nestCounter << endl;
 }
 
 TEST(MinWRollbackTest, TestOptCompare) {

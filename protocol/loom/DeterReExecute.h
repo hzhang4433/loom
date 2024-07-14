@@ -29,8 +29,10 @@ class DeterReExecute {
 
         // 时间计算模块
         int calculateTotalExecutionTime();      // 计算事务总执行时间
+        int calculateTotalNormalExecutionTime();      // 计算事务总执行时间
         bool isIdle(const Vertex::Ptr& tx, int startTime); // 判断事务是否能够在startTime时刻执行
         int calculateExecutionTime(Vertex::Ptr& Tx); // 计算事务执行时间
+        int calculateNormalExecutionTime(Vertex::Ptr& Tx);
         int calculateSerialTime(); // 计算事务串行执行时间
 
         // 功能函数模块

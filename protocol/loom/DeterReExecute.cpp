@@ -33,74 +33,25 @@ void DeterReExecute::buildGraphOrigin() {
         auto Tj = m_rbList[j];
         auto& unflictTxs = m_unConflictTxMap[m_rbList[j]->m_id];
         auto& conflictTxs = m_conflictIndex[Tj];
-        set<int> conflictHyperIds;
 
         // 判断本事务与前序事务间冲突
         for (int i = 0; i < m_rbList.size(); i++) {
             auto Ti = m_rbList[i];
-            // 若已经记录过冲突的超节点，则跳过
-            if (conflictHyperIds.find(Ti->m_hyperId) != conflictHyperIds.end()) {
-                continue;
-            }
 
-            // 若同属于一个超节点
-            if (Ti->m_hyperId == Tj->m_hyperId) {
-                // 若Tj层级大于Ti，则记录冲突关系
-                if (Ti->m_layer < Tj->m_layer) {
-                    Tj->dependencies_in.insert(Ti);
-                    Ti->dependencies_out.insert(Tj);
-                    int newScheduledTime = Ti->scheduledTime + Ti->m_self_cost;
-                    Tj->scheduledTime = std::max(Tj->scheduledTime, newScheduledTime);
-                }
-                continue;
-            }
-
-            // protocol::hasConflict(Tj->writeSet, Ti->readSet) || protocol::hasConflict(Tj->writeSet, Ti->writeSet) || protocol::hasConflict(Tj->readSet, Ti->writeSet)
-            if (conflictTxs.find(Ti) != conflictTxs.end()){
+            // conflictTxs.find(Ti) != conflictTxs.end()
+            if (protocol::hasConflict(Tj->allWriteSet, Ti->allReadSet) || 
+                protocol::hasConflict(Tj->allWriteSet, Ti->allWriteSet) || 
+                protocol::hasConflict(Tj->allReadSet, Ti->allWriteSet)) {
                 // 若Ti和Tj冲突
                 if (i < j) {
-                    // 对于和Ti相同m_hyperId的事务，都记录冲突关系：从下标i开始分别向前遍历和向后遍历，直到遇到不同m_hyperId的事务
-                    
-                    // updateDependenciesAndScheduleTime(Tj, Ti, unflictTxs, false); // 向前遍历
-                    // updateDependenciesAndScheduleTime(Tj, Ti, unflictTxs, true);  // 向后遍历
-                    
-                    for (int k = i - 1; k >= 0; k--) {
-                        auto Tk = m_rbList[k];
-                        if (Tk->m_hyperId == Ti->m_hyperId) {
-                            // 本事务记录前序事务
-                            Tj->dependencies_in.insert(Tk);
-                            
-                            // 所有前序事务记录本事务
-                            Tk->dependencies_out.insert(Tj);
-                            
-                            // 本事务调度时间为前序事务结束时间
-                            int newScheduledTime = Tk->scheduledTime + Tk->m_self_cost;
-                            Tj->scheduledTime = std::max(Tj->scheduledTime, newScheduledTime);
-                            unflictTxs.erase(Tk);
-                        } else {
-                            break;
-                        }
-                    }
-                    for (int k = i; k < m_rbList.size(); k++) {
-                        auto Tk = m_rbList[k];
-                        if (Tk->m_hyperId == Ti->m_hyperId) {
-                            // 本事务记录前序事务
-                            Tj->dependencies_in.insert(Tk);
-                            
-                            // 所有前序事务记录本事务
-                            Tk->dependencies_out.insert(Tj);
-                            
-                            // 本事务调度时间为前序事务结束时间
-                            int newScheduledTime = Tk->scheduledTime + Tk->m_self_cost;
-                            Tj->scheduledTime = std::max(Tj->scheduledTime, newScheduledTime);
-                            unflictTxs.erase(Tk);
-                        } else {
-                            break;
-                        }
-                    }
-
-                    // 记录冲突的前序超节点id
-                    conflictHyperIds.insert(Ti->m_hyperId);
+                    cout << "hasconflict on: " << i << ": " << Ti->m_id << " and " << j << ": " << Tj->m_id << endl;
+                    // 更新依赖关系和调度时间
+                    Tj->dependencies_in.insert(Ti);
+                    Ti->dependencies_out.insert(Tj);
+                    int newScheduledTime = Ti->scheduledTime + Ti->m_cost;
+                    cout << "Ti id: " << Ti->m_id << " cost: " << Ti->m_cost << " scheduledTime: " << newScheduledTime << endl;
+                    Tj->scheduledTime = std::max(Tj->scheduledTime, newScheduledTime);
+                    cout << "Tj id: " << Tj->m_id << " scheduledTime: " << Tj->scheduledTime << endl;
                 }
             } else {
                 // 添加到本事务的无冲突事务集合
@@ -476,6 +427,29 @@ int DeterReExecute::calculateExecutionTime(Vertex::Ptr& Tx) {
     int executionTime = 0;
     for (auto& conflictTx : Tx->dependencies_in) {
         executionTime = std::max(executionTime, conflictTx->scheduledTime + conflictTx->m_self_cost);
+    }
+    Tx->scheduledTime = executionTime;
+    return executionTime;
+}
+
+int DeterReExecute::calculateTotalNormalExecutionTime() {
+    // cout << "====calculateTotalExecutionTime====" << endl;
+    // 按scheduledTime，从小到大排序
+    std::sort(m_rbList.begin(), m_rbList.end(), Loom::lessScheduledTime());
+    // 计算每笔事务的执行时间
+    int endTime = 0;
+    for (auto& txn : m_rbList) {
+        int txnEndTime = calculateNormalExecutionTime(txn) + txn->m_cost;
+        endTime = std::max(endTime, txnEndTime);
+    }
+    m_totalExecTime = endTime;
+    return m_totalExecTime;
+}
+
+int DeterReExecute::calculateNormalExecutionTime(Vertex::Ptr& Tx) {
+    int executionTime = 0;
+    for (auto& conflictTx : Tx->dependencies_in) {
+        executionTime = std::max(executionTime, conflictTx->scheduledTime + conflictTx->m_cost);
     }
     Tx->scheduledTime = executionTime;
     return executionTime;

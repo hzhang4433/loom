@@ -30,7 +30,7 @@ class MinWRollback
 
         void onWarm2SCC();
 
-        void build(unordered_set<Vertex::Ptr, Vertex::VertexHash>& vertices);
+        void build(set<Vertex::Ptr, Vertex::VertexCompare>& vertices);
 
         void onRW(const Vertex::Ptr &rTx, const Vertex::Ptr &wTx);
 
@@ -122,6 +122,10 @@ class MinWRollback
         void updateSCCandDependencyFastMode(unordered_set<HyperVertex::Ptr, HyperVertex::HyperVertexHash>& scc, const HyperVertex::Ptr& rb, set<HyperVertex::Ptr, Loom::cmp>& pq);
         void updateSCCandDependencyFastMode(unordered_set<HyperVertex::Ptr, HyperVertex::HyperVertexHash>& scc, const HyperVertex::Ptr& rb, set<HyperVertex::Ptr, Loom::cmp>& pq, vector<int>& queueOrder, stack<int>& stackOrder);
 
+
+        //opt3:FastRollback
+        std::vector<Vertex::Ptr> fastRollback(unordered_map<string, set<Vertex::Ptr, Vertex::VertexCompare>>& RBIndex);
+        std::vector<Vertex::Ptr> fastNormalRollback(unordered_map<string, set<Vertex::Ptr, Vertex::VertexCompare>>& RBIndex);
 
         // 打印超图
         void printHyperGraph();

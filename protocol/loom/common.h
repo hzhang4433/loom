@@ -60,7 +60,11 @@ namespace Loom {
         int totalRollbackCost = 0;
         for (auto& tx : rollbackTxs) {
             totalRollbackCost += tx->m_self_cost;
-            cout << "id: " << tx->m_id << " cost: " << tx->m_self_cost << endl;
+            cout << "id: " << tx->m_id << " cost: " << tx->m_self_cost << " tx write set: ";
+            for (auto& writeKey : tx->writeSet) {
+                cout << writeKey << " ";
+            }
+            cout << endl;
         }
         cout << "rollback cost: " << totalRollbackCost << endl;
         cout << "=============================================================" << endl;
@@ -83,7 +87,31 @@ namespace Loom {
 
     // 输出回滚子事务
     template <typename T>
-    int printRollbackTxs(vector<T>& rollbackTxs) {
+    int printNormalRollbackTxs(vector<T>& rollbackTxs) {
+        cout << "====================Rollback Transactions====================" << endl;
+        cout << "total size: " << rollbackTxs.size() << endl;
+        int totalRollbackCost = 0;
+        for (auto& tx : rollbackTxs) {
+            cout << "======== Tx =========" << endl;
+            totalRollbackCost += tx->m_cost;
+            cout << "id: " << tx->m_id << " cost: " << tx->m_cost << " scheduledTime: " << tx->scheduledTime << endl;
+            cout << "tx read set: ";
+            for (auto& readKey : tx->allReadSet) {
+                cout << readKey << " ";
+            }
+            cout << endl << "tx write set: ";
+            for (auto& writeKey : tx->allWriteSet) {
+                cout << writeKey << " ";
+            }
+            cout << endl;
+        }
+        cout << "rollback cost: " << totalRollbackCost << endl;
+        cout << "=============================================================" << endl;
+        return totalRollbackCost;
+    }
+
+    template <typename T>
+    int printNestedRollbackTxs(vector<T>& rollbackTxs) {
         cout << "====================Rollback Transactions====================" << endl;
         cout << "total size: " << rollbackTxs.size() << endl;
         int totalRollbackCost = 0;
@@ -91,15 +119,15 @@ namespace Loom {
             cout << "======== Tx =========" << endl;
             totalRollbackCost += tx->m_self_cost;
             cout << "id: " << tx->m_id << " cost: " << tx->m_self_cost << " scheduledTime: " << tx->scheduledTime << endl;
-            // cout << "tx read set: ";
-            // for (auto& readKey : tx->readSet) {
-            //     cout << readKey << " ";
-            // }
-            // cout << endl << "tx write set: ";
-            // for (auto& writeKey : tx->writeSet) {
-            //     cout << writeKey << " ";
-            // }
-            // cout << endl;
+            cout << "tx read set: ";
+            for (auto& readKey : tx->readSet) {
+                cout << readKey << " ";
+            }
+            cout << endl << "tx write set: ";
+            for (auto& writeKey : tx->writeSet) {
+                cout << writeKey << " ";
+            }
+            cout << endl;
         }
         cout << "rollback cost: " << totalRollbackCost << endl;
         cout << "=============================================================" << endl;

@@ -69,6 +69,9 @@ int HyperVertex::buildVertexs(const Transaction::Ptr& tx, HyperVertex::Ptr& hype
             vertex->cascadeVertices.insert(childVertex->cascadeVertices.begin(), childVertex->cascadeVertices.end());
             // 添加子节点
             vertex->addChild(childVertex, children[i - 1].dependency);
+            // 添加子节点读写集
+            vertex->allReadSet.insert(childVertex->allReadSet.begin(), childVertex->allReadSet.end());
+            vertex->allWriteSet.insert(childVertex->allWriteSet.begin(), childVertex->allWriteSet.end());
         }
     }
     // 添加自己
@@ -77,6 +80,8 @@ int HyperVertex::buildVertexs(const Transaction::Ptr& tx, HyperVertex::Ptr& hype
     // 添加读写集
     vertex->readSet = tx->getReadRows();
     vertex->writeSet = tx->getUpdateRows();
+    vertex->allReadSet.insert(tx->getReadRows().begin(), tx->getReadRows().end());
+    vertex->allWriteSet.insert(tx->getUpdateRows().begin(), tx->getUpdateRows().end());
     auto hv = vertex->m_hyperVertex;
     // 构建倒排索引
     for (auto& readKey : vertex->readSet) {

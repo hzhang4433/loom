@@ -14,12 +14,12 @@ int main(int argc, char** argv) {
     /* 启用gtest测试 */
     testing::InitGoogleTest(&argc, argv);
     // ::testing::GTEST_FLAG(filter) = "TpccTest.MultiWarehouseTEST";
-    // ::testing::GTEST_FLAG(filter) = "MinWRollbackTest.TestLoopPerformance";
+    // ::testing::GTEST_FLAG(filter) = "MinWRollbackTest.TestConcurrentBuild";
     // ::testing::GTEST_FLAG(filter) = "MinWRollbackTest.TestSerialOrder";
     // ::testing::GTEST_FLAG(filter) = "FabricPPTest.TestRollback";
     // ::testing::GTEST_FLAG(filter) = "CompareTest.TestRollback";
     // ::testing::GTEST_FLAG(filter) = "DeterReExecuteTest.TestTimeSpaceGraph";
-    ::testing::GTEST_FLAG(filter) = "LoomTest.TestTxGenerator2ReExecute";
+    ::testing::GTEST_FLAG(filter) = "LoomTest.TestConcurrentRollback";
     
     int result = RUN_ALL_TESTS();
 

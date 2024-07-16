@@ -2,7 +2,7 @@
 
 #include <string>
 
-namespace Loom {
+namespace loom {
     
 enum class DependencyType {
     STRONG,
@@ -16,13 +16,13 @@ enum class EdgeType {
     BOTH
 };
 
-static std::string edgeTypeToString(Loom::EdgeType type) {
+static std::string edgeTypeToString(loom::EdgeType type) {
     switch (type) {
-        case Loom::EdgeType::IN:
+        case loom::EdgeType::IN:
             return "IN";
-        case Loom::EdgeType::OUT:
+        case loom::EdgeType::OUT:
             return "OUT";
-        case Loom::EdgeType::BOTH:
+        case loom::EdgeType::BOTH:
             return "BOTH";
         default:
             return "UNKNOWN";

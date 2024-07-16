@@ -11,7 +11,7 @@ class ConditionalOutputStream {
 public:
     template <typename T>
     ConditionalOutputStream& operator<<(const T& value) {
-        if (Loom::isOutputEnabled) {
+        if (loom::isOutputEnabled) {
             std::cout << value;
         }
         return *this;
@@ -19,7 +19,7 @@ public:
 
     // 处理流操纵器（例如 std::endl）
     ConditionalOutputStream& operator<<(std::ostream& (*pf)(std::ostream&)) {
-        if (Loom::isOutputEnabled) {
+        if (loom::isOutputEnabled) {
             std::cout << pf;
         }
         return *this;

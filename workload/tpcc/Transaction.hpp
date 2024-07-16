@@ -16,7 +16,7 @@
 
 #include <iostream>
 using namespace std;
-using namespace Loom;
+using namespace loom;
 
 class Transaction : public std::enable_shared_from_this<Transaction>
 {
@@ -28,7 +28,7 @@ class Transaction : public std::enable_shared_from_this<Transaction>
 
         struct ChildTransaction {
             Transaction::Ptr transaction;
-            Loom::DependencyType dependency;
+            loom::DependencyType dependency;
         };
 
         struct OrderInfo {
@@ -66,7 +66,7 @@ class Transaction : public std::enable_shared_from_this<Transaction>
         void setExecutionTime(int time) {executionTime = time;}
 
         // add child transaction
-        void addChild(Transaction::Ptr child, Loom::DependencyType dependency) {children.push_back({child, dependency});}
+        void addChild(Transaction::Ptr child, loom::DependencyType dependency) {children.push_back({child, dependency});}
 
         // get children
         const std::vector<ChildTransaction>& getChildren() const {return children;}
@@ -251,7 +251,9 @@ class NewOrderTransaction : public Transaction
             
             // items子事务
             Transaction::Ptr itemsAccess = std::make_shared<Transaction>(random);
-            itemsAccess->setExecutionTime(TPCC::ConsumptionType::LOW);
+            itemsAccess->setExecutionTime(TPCC::ConsumptionType::HIGH);
+            
+            /*
             for (auto i = 0; i < newOrderTx->o_ol_cnt; i++) {
 
                 ol_i_id_num[newOrderTx->orderLines[i].ol_i_id]++;
@@ -275,9 +277,49 @@ class NewOrderTransaction : public Transaction
         
 
                 // item子事务添加依赖
-                iAccess->addChild(sAccess, Loom::DependencyType::WEAK);
-                iAccess->addChild(olAccess, Loom::DependencyType::WEAK);
+                iAccess->addChild(sAccess, loom::DependencyType::WEAK);
+                iAccess->addChild(olAccess, loom::DependencyType::WEAK);
                 
+                
+                /* 更新d_latestOrderLines，d_latestOrderLines中只存储最近的20条orderLine记录
+                   判断是否超过20条：
+                    若没超过20条，则直接添加
+                    若超过20条，则删除最旧的一条 => 覆盖最旧的一条 
+                
+                auto wd_key = std::to_string(newOrderTx->w_id) + "-" + std::to_string(newOrderTx->d_id);
+                if (wd_orderLineCounters[newOrderTx->w_id - 1][newOrderTx->d_id - 1] < 20) {
+                    wd_latestOrderLines[wd_key].push_back({next_o_id, newOrderTx->orderLines[i].ol_i_id, i});
+                } else {
+                    wd_latestOrderLines[wd_key][wd_orderLineCounters[newOrderTx->w_id - 1][newOrderTx->d_id - 1] % 20] = {next_o_id, newOrderTx->orderLines[i].ol_i_id, i};
+                }
+                // coutConditional << "In neworderTx, wd_orderLineCounters[" << newOrderTx->d_id << "] = " << wd_orderLineCounters[newOrderTx->w_id - 1][newOrderTx->d_id - 1] << endl;
+
+                wd_orderLineCounters[newOrderTx->w_id - 1][newOrderTx->d_id - 1]++;
+
+                // items子事务添加依赖
+                itemsAccess->addChild(iAccess, loom::DependencyType::STRONG);
+            }
+            */
+
+            // orderLine子事务
+            Transaction::Ptr olAccess = std::make_shared<Transaction>(random);
+            olAccess->setExecutionTime(TPCC::ConsumptionType::HIGH);
+            // stock子事务
+            Transaction::Ptr sAccess = std::make_shared<Transaction>(random);
+            sAccess->setExecutionTime(TPCC::ConsumptionType::HIGH);
+
+            for (auto i = 0; i < newOrderTx->o_ol_cnt; i++) {
+
+                // ol_i_id_num[newOrderTx->orderLines[i].ol_i_id]++;
+
+                // item子事务读写集
+                itemsAccess->addReadRow("I-" + std::to_string(newOrderTx->orderLines[i].ol_i_id));
+                
+                olAccess->addReadRow("OL-" + std::to_string(newOrderTx->w_id) + "-" + std::to_string(newOrderTx->d_id) + "-" + std::to_string(next_o_id) + "-" + std::to_string(i));
+                olAccess->addUpdateRow("OL-" + std::to_string(newOrderTx->w_id) + "-" + std::to_string(newOrderTx->d_id) + "-" + std::to_string(next_o_id) + "-" + std::to_string(i));
+
+                sAccess->addReadRow("S-" + std::to_string(newOrderTx->orderLines[i].ol_supply_w_id) + "-" + std::to_string(newOrderTx->orderLines[i].ol_i_id));
+                sAccess->addUpdateRow("S-" + std::to_string(newOrderTx->orderLines[i].ol_supply_w_id) + "-" + std::to_string(newOrderTx->orderLines[i].ol_i_id));
                 
                 /* 更新d_latestOrderLines，d_latestOrderLines中只存储最近的20条orderLine记录
                    判断是否超过20条：
@@ -293,24 +335,25 @@ class NewOrderTransaction : public Transaction
                 // coutConditional << "In neworderTx, wd_orderLineCounters[" << newOrderTx->d_id << "] = " << wd_orderLineCounters[newOrderTx->w_id - 1][newOrderTx->d_id - 1] << endl;
 
                 wd_orderLineCounters[newOrderTx->w_id - 1][newOrderTx->d_id - 1]++;
-
-                // items子事务添加依赖
-                itemsAccess->addChild(iAccess, Loom::DependencyType::STRONG);
             }
+            // item事务添加依赖
+            itemsAccess->addChild(sAccess, loom::DependencyType::WEAK);
+            itemsAccess->addChild(olAccess, loom::DependencyType::WEAK);
+
             
             // district子事务添加依赖
-            dAccess->addChild(noAccess, Loom::DependencyType::WEAK);
-            dAccess->addChild(oAccess, Loom::DependencyType::WEAK);
-            dAccess->addChild(itemsAccess, Loom::DependencyType::STRONG);
+            dAccess->addChild(noAccess, loom::DependencyType::WEAK);
+            dAccess->addChild(oAccess, loom::DependencyType::WEAK);
+            dAccess->addChild(itemsAccess, loom::DependencyType::STRONG);
 
             // customer子事务
             Transaction::Ptr cAccess = std::make_shared<Transaction>(random);
             cAccess->addReadRow("Cdiscount-" + std::to_string(newOrderTx->w_id) + "-" + std::to_string(newOrderTx->d_id) + "-" + std::to_string(newOrderTx->c_id));
             
             // 根节点添加依赖
-            root->addChild(wAccess, Loom::DependencyType::STRONG);
-            root->addChild(dAccess, Loom::DependencyType::STRONG);
-            root->addChild(cAccess, Loom::DependencyType::STRONG);
+            root->addChild(wAccess, loom::DependencyType::STRONG);
+            root->addChild(dAccess, loom::DependencyType::STRONG);
+            root->addChild(cAccess, loom::DependencyType::STRONG);
 
             // 更新wdc_latestOrder
             string wdc_key = std::to_string(newOrderTx->w_id) + "-" + std::to_string(newOrderTx->d_id) + "-" + std::to_string(newOrderTx->c_id);
@@ -429,12 +472,12 @@ class PaymentTransaction : public Transaction
 
                 cAccess->setExecutionTime(TPCC::ConsumptionType::HIGH);
                 // 该情况下history子事务依赖customer子事务
-                cAccess->addChild(hAccess, Loom::DependencyType::WEAK);
+                cAccess->addChild(hAccess, loom::DependencyType::WEAK);
             } else {
                 // coutConditional << "already have paymentTx->c_id: " << paymentTx->c_id << endl;
                 cAccess->addReadRow("Cbalance-" + std::to_string(paymentTx->w_id) + "-" + std::to_string(paymentTx->d_id) + "-" + std::to_string(paymentTx->c_id));
                 // 否则history子事务独立
-                root->addChild(hAccess, Loom::DependencyType::WEAK);
+                root->addChild(hAccess, loom::DependencyType::WEAK);
             }
             // coutConditional << endl;
 
@@ -443,9 +486,9 @@ class PaymentTransaction : public Transaction
             hAccess->addUpdateRow("H-" + std::to_string(paymentTx->w_id) + "-" + std::to_string(paymentTx->d_id) + "-" + std::to_string(paymentTx->c_id));
 
             // 根节点添加依赖
-            root->addChild(wAccess, Loom::DependencyType::WEAK);
-            root->addChild(dAccess, Loom::DependencyType::WEAK);
-            root->addChild(cAccess, Loom::DependencyType::WEAK);
+            root->addChild(wAccess, loom::DependencyType::WEAK);
+            root->addChild(dAccess, loom::DependencyType::WEAK);
+            root->addChild(cAccess, loom::DependencyType::WEAK);
 
             return root;
         }
@@ -537,7 +580,7 @@ class OrderStatusTransaction : public Transaction
                 // 设置customer子事务执行时间
                 cAccess->setExecutionTime(TPCC::ConsumptionType::HIGH);
                 // customer子事务添加依赖
-                cAccess->addChild(oAccess, Loom::DependencyType::WEAK);
+                cAccess->addChild(oAccess, loom::DependencyType::WEAK);
                 // 根节点为customer子事务
                 root = cAccess;
             } else {
@@ -547,8 +590,8 @@ class OrderStatusTransaction : public Transaction
                 // 新建根子事务
                 root = std::make_shared<Transaction>(random);
                 root->setExecutionTime(TPCC::ConsumptionType::LOW);
-                root->addChild(cAccess, Loom::DependencyType::WEAK);
-                root->addChild(oAccess, Loom::DependencyType::WEAK);
+                root->addChild(cAccess, loom::DependencyType::WEAK);
+                root->addChild(oAccess, loom::DependencyType::WEAK);
             }
             
             string wdc_key = std::to_string(orderStatusTx->w_id) + "-" + std::to_string(orderStatusTx->d_id) + "-" + std::to_string(orderStatusTx->c_id);
@@ -572,7 +615,7 @@ class OrderStatusTransaction : public Transaction
                 olAccess->addReadRow("OL-" + std::to_string(orderStatusTx->w_id) + "-" + std::to_string(orderStatusTx->d_id) + "-" + std::to_string(latestOrder.o_id));
                 
                 // order子事务添加依赖
-                oAccess->addChild(olAccess, Loom::DependencyType::WEAK);
+                oAccess->addChild(olAccess, loom::DependencyType::WEAK);
             }
 
             root->setType(TPCC::TransactionType::ORDER_STATUS);
@@ -670,16 +713,16 @@ class DeliveryTransaction : public Transaction
                 for (int j = 0; j < oldestNewOrder.o_ol_cnt; j++) {
                     // orderLine子事务
                     Transaction::Ptr olAccess = std::make_shared<Transaction>(random);
-                    // olAccess->addReadRow("OL-" + wd_key + "-" + std::to_string(oldestNewOrder.o_id) + "-" + std::to_string(j));
                     olAccess->addReadRow("OL-" + wd_key + "-" + std::to_string(oldestNewOrder.o_id));
-                    olAccess->addUpdateRow("OLdelivery-" + wd_key + "-" + std::to_string(oldestNewOrder.o_id) + "-" + std::to_string(j));
+                    // olAccess->addUpdateRow("OLdelivery-" + wd_key + "-" + std::to_string(oldestNewOrder.o_id) + "-" + std::to_string(j));
                     // orderlines子事务添加依赖
-                    olsAccess->addChild(olAccess, Loom::DependencyType::STRONG);
+                    olsAccess->addChild(olAccess, loom::DependencyType::STRONG);
                 }
+                olsAccess->addUpdateRow("OLdelivery-" + wd_key);
                 
                 // no_cAccess添加依赖   
-                no_cAccess->addChild(oAccess, Loom::DependencyType::STRONG);
-                no_cAccess->addChild(olsAccess, Loom::DependencyType::STRONG);
+                no_cAccess->addChild(oAccess, loom::DependencyType::STRONG);
+                no_cAccess->addChild(olsAccess, loom::DependencyType::STRONG);
 
                 // 添加customer子事务读写集
                 no_cAccess->addReadRow("C-" + wd_key + "-" + std::to_string(oldestNewOrder.o_c_id));
@@ -688,7 +731,7 @@ class DeliveryTransaction : public Transaction
                 no_cAccess->addUpdateRow("Cdelivery-" + wd_key + "-" + std::to_string(oldestNewOrder.o_c_id));
 
                 // root添加依赖
-                root->addChild(no_cAccess, Loom::DependencyType::WEAK);
+                root->addChild(no_cAccess, loom::DependencyType::WEAK);
             }
 
             return root;
@@ -765,13 +808,13 @@ class StockLevelTransaction : public Transaction
                 sAccess->addReadRow("Sqtys-" + std::to_string(stockLevelTx->w_id) + "-" + std::to_string(orderLine.ol_i_id));
 
                 // orderLine子事务添加依赖
-                olAccess->addChild(sAccess, Loom::DependencyType::WEAK);
+                olAccess->addChild(sAccess, loom::DependencyType::WEAK);
             }
             olAccess->addReadRow("OL-" + wd_key);
             olAccess->setExecutionTime(TPCC::ConsumptionType::HIGH);
 
             // district子事务添加依赖
-            dAccess->addChild(olAccess, Loom::DependencyType::WEAK);
+            dAccess->addChild(olAccess, loom::DependencyType::WEAK);
             
             return dAccess;
         }

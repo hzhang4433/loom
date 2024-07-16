@@ -17,9 +17,9 @@ class HyperVertex : public std::enable_shared_from_this<HyperVertex>
 
         ~HyperVertex();
 
-        int buildVertexs(const Transaction::Ptr& tx, HyperVertex::Ptr& hyperVertex, Vertex::Ptr& vertex, string& txid, std::unordered_map<string, protocol::RWSets<Vertex::Ptr>>& invertedIndex);
+        int buildVertexs(const Transaction::Ptr& tx, HyperVertex::Ptr& hyperVertex, Vertex::Ptr& vertex, string& txid, std::unordered_map<string, loom::RWSets<Vertex::Ptr>>& invertedIndex);
 
-        void buildVertexs(const Transaction::Ptr& tx, Vertex::Ptr& vertex, std::unordered_map<string, protocol::RWSets<Vertex::Ptr>>& invertedIndex);
+        void buildVertexs(const Transaction::Ptr& tx, Vertex::Ptr& vertex, std::unordered_map<string, loom::RWSets<Vertex::Ptr>>& invertedIndex);
 
         void recognizeCascades(Vertex::Ptr vertex);
 
@@ -96,7 +96,7 @@ class HyperVertex : public std::enable_shared_from_this<HyperVertex>
 
         tbb::concurrent_vector<double> m_out_weights; //记录出边边权
         tbb::concurrent_vector<double> m_in_weights;  //记录入边边权
-        Loom::EdgeType m_rollback_type; // 边类型
+        loom::EdgeType m_rollback_type; // 边类型
         unordered_set<Vertex::Ptr, Vertex::VertexHash> m_vertices;  // 记录所有节点
         Vertex::Ptr m_rootVertex;                               // 根节点
         

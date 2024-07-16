@@ -4,7 +4,13 @@
 #include <atomic>
 #include <unordered_set>
 
-namespace protocol {
+namespace loom {
+    class Protocol {
+        public:
+        virtual void Start() = 0;
+        virtual void Stop() = 0;
+        virtual ~Protocol() = default;
+    };
 
     // 判断两个set是否有交集
     template <typename T, typename Hash>

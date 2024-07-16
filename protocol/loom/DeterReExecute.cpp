@@ -13,10 +13,10 @@ DeterReExecute::DeterReExecute(std::vector<Vertex::Ptr>& rbList, const vector<ve
     }
     // 记录事务顺序
     int counter = 0;
-    // std::unordered_set<std::shared_ptr<Vertex>, Vertex::VertexHash> rbSet(rbList.begin(), rbList.end());
+    std::unordered_set<Vertex::Ptr, Vertex::VertexHash> rbSet(m_rbList.begin(), m_rbList.end());
     for (auto& tx : m_rbList) {
         m_txOrder[tx] = counter++;
-        // m_unConflictTxMap[tx->m_id] = rbSet;
+        m_unConflictTxMap[tx->m_id] = rbSet;
     }
     // 重排序轮次定义为事务数的20%
     this->N = rbList.size() * 0.2;
@@ -28,30 +28,38 @@ DeterReExecute::DeterReExecute(std::vector<Vertex::Ptr>& rbList, const vector<ve
     即不考虑嵌套事务结构的时空图 => 为了做对比
 */
 void DeterReExecute::buildGraphOrigin() {
+    auto counter = 0;
     // 按队列顺序，依次遍历事务
     for (int j = 0; j < m_rbList.size(); j++) {
         auto Tj = m_rbList[j];
         auto& unflictTxs = m_unConflictTxMap[m_rbList[j]->m_id];
-        auto& conflictTxs = m_conflictIndex[Tj];
 
         // 判断本事务与前序事务间冲突
         for (int i = 0; i < m_rbList.size(); i++) {
             auto Ti = m_rbList[i];
+            // 不对，应该是同一个超节点的事务作为一个整体，而不是部分了，这里的逻辑不行
+            if (Ti->m_hyperId == Tj->m_hyperId && Ti->m_layer > Tj->m_layer) { // Tj是NO事务
+                // 若Ti和Tj属于同一个超节点，记录冲突
+                Tj->dependencies_in.insert(Ti);
+                Ti->dependencies_out.insert(Tj);
+                int newScheduledTime = Ti->scheduledTime + Ti->m_cost;
+                Tj->scheduledTime = std::max(Tj->scheduledTime, newScheduledTime);
+                continue;
+            }
 
             // conflictTxs.find(Ti) != conflictTxs.end()
-            if (protocol::hasConflict(Tj->allWriteSet, Ti->allReadSet) || 
-                protocol::hasConflict(Tj->allWriteSet, Ti->allWriteSet) || 
-                protocol::hasConflict(Tj->allReadSet, Ti->allWriteSet)) {
+            if (loom::hasConflict(Tj->allWriteSet, Ti->allReadSet) || 
+                loom::hasConflict(Tj->allWriteSet, Ti->allWriteSet) || 
+                loom::hasConflict(Tj->allReadSet, Ti->allWriteSet)) {
                 // 若Ti和Tj冲突
                 if (i < j) {
-                    cout << "hasconflict on: " << i << ": " << Ti->m_id << " and " << j << ": " << Tj->m_id << endl;
+                    counter++;
+                    // cout << "hasconflict on: " << i << ": " << Ti->m_id << " and " << j << ": " << Tj->m_id << endl;
                     // 更新依赖关系和调度时间
                     Tj->dependencies_in.insert(Ti);
                     Ti->dependencies_out.insert(Tj);
                     int newScheduledTime = Ti->scheduledTime + Ti->m_cost;
-                    cout << "Ti id: " << Ti->m_id << " cost: " << Ti->m_cost << " scheduledTime: " << newScheduledTime << endl;
                     Tj->scheduledTime = std::max(Tj->scheduledTime, newScheduledTime);
-                    cout << "Tj id: " << Tj->m_id << " scheduledTime: " << Tj->scheduledTime << endl;
                 }
             } else {
                 // 添加到本事务的无冲突事务集合
@@ -59,31 +67,60 @@ void DeterReExecute::buildGraphOrigin() {
             }
         }
     }
+
+    cout << "counter in buildGraphOrigin: " << counter << endl;
 }
 
 
 void DeterReExecute::buildGraphOriginByIndex() {
+    auto counter = 0;
     // 按队列顺序，依次遍历事务
     for (int j = 0; j < m_rbList.size(); j++) {
         auto Tj = m_rbList[j];
         auto& unflictTxs = m_unConflictTxMap[m_rbList[j]->m_id];
-        for (auto& Ti : m_conflictIndex[Tj]) {
-            unflictTxs.erase(Ti);
-            if (m_txOrder[Ti] < j) {
-                // 本事务记录前序事务
-                Tj->dependencies_in.insert(Ti);
-                
-                // 所有前序事务记录本事务
-                Ti->dependencies_out.insert(Tj);
-                
-                // 本事务调度时间为前序事务结束时间
-                int newScheduledTime = Ti->scheduledTime + Ti->m_self_cost;
-                Tj->scheduledTime = std::max(Tj->scheduledTime, newScheduledTime);
+        auto& conflictTxs = m_conflictIndex[Tj];
+        
+        if (Tj->m_cost > 500) {
+            for (int i = 0; i < m_rbList.size(); i++) {
+                auto Ti = m_rbList[i];
+                if (loom::hasConflict(Tj->allWriteSet, Ti->allReadSet) || 
+                    loom::hasConflict(Tj->allWriteSet, Ti->allWriteSet) || 
+                    loom::hasConflict(Tj->allReadSet, Ti->allWriteSet)) {
+                    // 若Ti和Tj冲突
+                    unflictTxs.erase(Ti);
+                    if (i < j) {
+                        counter++;
+                        // cout << "hasconflict on: " << i << ": " << Ti->m_id << " and " << j << ": " << Tj->m_id << endl;
+                        // 更新依赖关系和调度时间
+                        Tj->dependencies_in.insert(Ti);
+                        Ti->dependencies_out.insert(Tj);
+                        int newScheduledTime = Ti->scheduledTime + Ti->m_cost;
+                        Tj->scheduledTime = std::max(Tj->scheduledTime, newScheduledTime);
+                    }
+                }
+            }
+        } else {
+            for (auto& Ti : conflictTxs) {
+                unflictTxs.erase(Ti);
+                if (m_txOrder.find(Ti) != m_txOrder.end() && m_txOrder[Ti] < j) {
+                    counter++;
+                    // 本事务记录前序事务
+                    Tj->dependencies_in.insert(Ti);
+                    
+                    // 所有前序事务记录本事务
+                    Ti->dependencies_out.insert(Tj);
+                    
+                    // 本事务调度时间为前序事务结束时间
+                    int newScheduledTime = Ti->scheduledTime + Ti->m_self_cost;
+                    Tj->scheduledTime = std::max(Tj->scheduledTime, newScheduledTime);
+                }
             }
         }
         // 移除自己
         unflictTxs.erase(Tj);
     }
+
+    cout << "counter in buildGraphOriginByIndex: " << counter << endl;
 }
 
 /* 构建时空图
@@ -148,7 +185,7 @@ void DeterReExecute::buildGraph() {
 }
 
 void DeterReExecute::buildGraphByIndex() {
-    // int counter = 0;
+    int counter = 0;
     // 按队列顺序，依次遍历事务
     for (int j = 0; j < m_rbList.size(); j++) {
         auto Tj = m_rbList[j];
@@ -159,7 +196,7 @@ void DeterReExecute::buildGraphByIndex() {
         for (auto& Ti : conflictTxs) {
             unflictTxs.erase(Ti);
             if (m_txOrder.find(Ti) != m_txOrder.end() && m_txOrder[Ti] < j) {
-                // counter++;
+                counter++;
                 // 本事务记录前序事务
                 Tj->dependencies_in.insert(Ti);
                 
@@ -193,7 +230,7 @@ void DeterReExecute::buildGraphByIndex() {
         unflictTxs.erase(Tj);
     }
 
-    // cout << "index counter: " << counter << endl;
+    cout << "counter in buildGraphByIndex: " << counter << endl;
 }
 
 /* 并发构建时空图 
@@ -212,24 +249,20 @@ void DeterReExecute::rescheduleTransactions() {
         // 1.1 若下一笔事务的执行时间和上一笔相同，则直接跳过该笔
         if ((lastTime != -1 && lastTime == tx->scheduledTime)) {
             if (N + 1 < m_rbList.size()) {
-                N++;
-                continue;
-            } else {
-                break;
+                N++;   
             }
+            continue;
         }
 
         // 2.获取事务队列中读写集与其不冲突,且执行时刻在其之后的所有事务集Ts
-        std::set<Vertex::Ptr, Loom::lessScheduledTime> Ts;
+        std::set<Vertex::Ptr, loom::lessScheduledTime> Ts;
         getCandidateTxSet(tx, Ts);
         // 若不存在满足条件的事务，则跳过
         if (Ts.empty()) {
             if (N + 1 < m_rbList.size()) {
                 N++;
-                continue;
-            } else {
-                break;
             }
+            continue;
         }
 
         // 存不存在可直接退出的情况？
@@ -265,7 +298,7 @@ void DeterReExecute::rescheduleTransactions() {
 }
 
 /* 获取候选重调度事务集 */
-void DeterReExecute::getCandidateTxSet(const Vertex::Ptr& Tx, std::set<Vertex::Ptr, Loom::lessScheduledTime>& Ts) {
+void DeterReExecute::getCandidateTxSet(const Vertex::Ptr& Tx, std::set<Vertex::Ptr, loom::lessScheduledTime>& Ts) {
     for (auto candidateTx : m_unConflictTxMap[Tx->m_id]) {
         // 事务执行时刻在tx之后
         if (candidateTx->scheduledTime > Tx->scheduledTime) {
@@ -411,7 +444,7 @@ bool DeterReExecute::isIdle(const Vertex::Ptr& tx, int startTime) {
 int DeterReExecute::calculateTotalExecutionTime() {
     // cout << "====calculateTotalExecutionTime====" << endl;
     // 按scheduledTime，从小到大排序
-    std::sort(m_rbList.begin(), m_rbList.end(), Loom::lessScheduledTime());
+    std::sort(m_rbList.begin(), m_rbList.end(), loom::lessScheduledTime());
     // 计算每笔事务的执行时间
     int endTime = 0;
     for (auto& txn : m_rbList) {
@@ -435,7 +468,7 @@ int DeterReExecute::calculateExecutionTime(Vertex::Ptr& Tx) {
 int DeterReExecute::calculateTotalNormalExecutionTime() {
     // cout << "====calculateTotalExecutionTime====" << endl;
     // 按scheduledTime，从小到大排序
-    std::sort(m_rbList.begin(), m_rbList.end(), Loom::lessScheduledTime());
+    std::sort(m_rbList.begin(), m_rbList.end(), loom::lessScheduledTime());
     // 计算每笔事务的执行时间
     int endTime = 0;
     for (auto& txn : m_rbList) {

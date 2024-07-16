@@ -59,7 +59,7 @@ class Vertex : public std::enable_shared_from_this<Vertex>
 
         struct ChildVertex {
             Vertex::Ptr vertex;
-            Loom::DependencyType dependency;
+            loom::DependencyType dependency;
         };
 
         struct ChildVertexHash {
@@ -89,14 +89,14 @@ class Vertex : public std::enable_shared_from_this<Vertex>
 
         const unordered_set<ChildVertex, ChildVertexHash, ChildVertexEqual>& getChildren() const;
         // const set<ChildVertex, ChildVertexCmp>& getChildren() const;
-        void addChild(Vertex::Ptr child, Loom::DependencyType dependency);
+        void addChild(Vertex::Ptr child, loom::DependencyType dependency);
 
-        Loom::DependencyType getDependencyType() const;
-        void setDependencyType(Loom::DependencyType type);
+        loom::DependencyType getDependencyType() const;
+        void setDependencyType(loom::DependencyType type);
 
         void printVertex();
 
-        string DependencyTypeToString(Loom::DependencyType type);
+        string DependencyTypeToString(loom::DependencyType type);
 
         int mapToHyperId() const;
 

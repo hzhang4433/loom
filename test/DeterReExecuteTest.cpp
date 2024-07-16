@@ -23,14 +23,14 @@ TEST(DeterReExecuteTest, TestTimeSpaceGraph) {
 
     // 模拟生成事务执行顺序
     vector<int> serialOrder;
-    for (int j = 1; j <= Loom::BLOCK_SIZE; j++) {
+    for (int j = 1; j <= loom::BLOCK_SIZE; j++) {
         serialOrder.push_back(j);
     }
     serialOrders.push_back(serialOrder);
 
     // 模拟生成事务列表
-    set<Vertex::Ptr, Loom::customCompare> rollbackTxs(Loom::customCompare{serialOrder});
-    for (int i = 0; i < Loom::BLOCK_SIZE; i++) {
+    set<Vertex::Ptr, loom::customCompare> rollbackTxs(loom::customCompare{serialOrder});
+    for (int i = 0; i < loom::BLOCK_SIZE; i++) {
         // 产生交易
         auto tx = workload.NextTransaction();
         // 记录嵌套事务
@@ -46,7 +46,7 @@ TEST(DeterReExecuteTest, TestTimeSpaceGraph) {
     }
     
     // 构造只有普通交易的DeterReExecute对象
-    TxGenerator txGenerator_normal(Loom::BLOCK_SIZE), txGenerator_nested(Loom::BLOCK_SIZE);
+    TxGenerator txGenerator_normal(loom::BLOCK_SIZE), txGenerator_nested(loom::BLOCK_SIZE);
     unordered_map<Vertex::Ptr, unordered_set<Vertex::Ptr, Vertex::VertexHash>, Vertex::VertexHash> RWIndex_normal, RWIndex_nested;// rw冲突索引
     unordered_map<Vertex::Ptr, unordered_set<Vertex::Ptr, Vertex::VertexHash>, Vertex::VertexHash> conflictIndex_normal, conflictIndex_nested;// 冲突索引
     unordered_map<string, set<Vertex::Ptr, Vertex::VertexCompare>> RBIndex_normal, RBIndex_nested;// 回滚索引

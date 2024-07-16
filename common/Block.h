@@ -11,7 +11,7 @@ class Block {
         typedef std::shared_ptr<Block> Ptr;
         
         // 构造函数
-        Block(std::unordered_set<HyperVertex::Ptr, HyperVertex::HyperVertexHash> txs, unordered_map<string, protocol::RWSets<Vertex::Ptr>> invertedIndex, 
+        Block(std::unordered_set<HyperVertex::Ptr, HyperVertex::HyperVertexHash> txs, unordered_map<string, loom::RWSets<Vertex::Ptr>> invertedIndex, 
         unordered_map<Vertex::Ptr, unordered_set<Vertex::Ptr, Vertex::VertexHash>, Vertex::VertexHash> RWIndex, 
         unordered_map<Vertex::Ptr, unordered_set<Vertex::Ptr, Vertex::VertexHash>, Vertex::VertexHash> conflictIndex,
         unordered_map<string, set<Vertex::Ptr, Vertex::VertexCompare>> RBIndex)
@@ -27,10 +27,10 @@ class Block {
         std::unordered_set<HyperVertex::Ptr, HyperVertex::HyperVertexHash> getTxs() {return m_txs;}
 
         // 设置倒排索引
-        void setInvertedIndex(const std::unordered_map<string, protocol::RWSets<Vertex::Ptr>>& invertedIndex) {m_invertedIndex = invertedIndex;} 
+        void setInvertedIndex(const std::unordered_map<string, loom::RWSets<Vertex::Ptr>>& invertedIndex) {m_invertedIndex = invertedIndex;} 
 
         // 获取倒排索引
-        std::unordered_map<string, protocol::RWSets<Vertex::Ptr>> getInvertedIndex() {return m_invertedIndex;}
+        std::unordered_map<string, loom::RWSets<Vertex::Ptr>> getInvertedIndex() {return m_invertedIndex;}
         
         // 设置rw冲突索引
         void setRWIndex(const std::unordered_map<Vertex::Ptr, std::unordered_set<Vertex::Ptr, Vertex::VertexHash>, Vertex::VertexHash>& RWIndex) {m_RWIndex = RWIndex;}
@@ -48,13 +48,13 @@ class Block {
         void setRBIndex(const std::unordered_map<string, std::set<Vertex::Ptr, Vertex::VertexCompare>>& RBIndex) {m_RBIndex = RBIndex;}
 
         // 获取回滚索引
-        std::unordered_map<string, std::set<Vertex::Ptr, Vertex::VertexCompare>> getRBIndex() {return m_RBIndex;}
+        const std::unordered_map<string, std::set<Vertex::Ptr, Vertex::VertexCompare>> getRBIndex() const {return m_RBIndex;}
 
     private:
         // 区块内事务
         std::unordered_set<HyperVertex::Ptr, HyperVertex::HyperVertexHash> m_txs;
         // 倒排索引
-        unordered_map<string, protocol::RWSets<Vertex::Ptr>> m_invertedIndex;
+        unordered_map<string, loom::RWSets<Vertex::Ptr>> m_invertedIndex;
         // rw冲突索引
         unordered_map<Vertex::Ptr, unordered_set<Vertex::Ptr, Vertex::VertexHash>, Vertex::VertexHash> m_RWIndex;
         // 冲突索引

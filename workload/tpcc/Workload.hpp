@@ -42,11 +42,11 @@ class Workload {
             return random.get_seed();
         }
 
-        Loom::Random get_tx_random() {
+        loom::Random get_tx_random() {
             return tx_random;
         }
 
-        Loom::Random get_random() {
+        loom::Random get_random() {
             return random;
         }
 
@@ -60,7 +60,7 @@ class Workload {
         }
 
     private:
-        Loom::Random random;
-        Loom::Random tx_random;
+        loom::Random random;
+        loom::Random tx_random;
         Transaction::Ptr txGenerator;
 };

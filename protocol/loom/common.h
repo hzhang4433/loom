@@ -3,7 +3,7 @@
 #include <set>
 #include "common/HyperVertex.h"
 
-namespace Loom {
+namespace loom {
     // 优先队列比较函数: 按照回滚代价从小到大排序
     struct cmp {
         bool operator()(const HyperVertex::Ptr& a, const HyperVertex::Ptr& b) const {
@@ -88,7 +88,7 @@ namespace Loom {
     // 输出回滚子事务
     template <typename T>
     int printNormalRollbackTxs(vector<T>& rollbackTxs) {
-        cout << "====================Rollback Transactions====================" << endl;
+        cout << "====================Normal Rollback Transactions====================" << endl;
         cout << "total size: " << rollbackTxs.size() << endl;
         int totalRollbackCost = 0;
         for (auto& tx : rollbackTxs) {
@@ -112,7 +112,7 @@ namespace Loom {
 
     template <typename T>
     int printNestedRollbackTxs(vector<T>& rollbackTxs) {
-        cout << "====================Rollback Transactions====================" << endl;
+        cout << "====================Nested Rollback Transactions====================" << endl;
         cout << "total size: " << rollbackTxs.size() << endl;
         int totalRollbackCost = 0;
         for (auto& tx : rollbackTxs) {

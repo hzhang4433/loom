@@ -4,7 +4,7 @@
 #include <vector>
 #include "utils/Random.hpp"
 
-namespace Loom {
+namespace loom {
 class Random : public Util::Random {
     public:
         using Util::Random::Random;

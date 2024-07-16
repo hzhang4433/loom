@@ -23,7 +23,7 @@ const unordered_set<Vertex::ChildVertex, Vertex::ChildVertexHash, Vertex::ChildV
 //     return m_children; 
 // }
 
-void Vertex::addChild(Vertex::Ptr child, Loom::DependencyType dependency) { 
+void Vertex::addChild(Vertex::Ptr child, loom::DependencyType dependency) { 
     m_children.insert({child, dependency}); 
 }
 
@@ -57,11 +57,11 @@ void Vertex::printVertex() {
     }
 }
 
-string Vertex::DependencyTypeToString(Loom::DependencyType type) {
+string Vertex::DependencyTypeToString(loom::DependencyType type) {
     switch (type) {
-    case Loom::DependencyType::STRONG:
+    case loom::DependencyType::STRONG:
         return "STRONG";
-    case Loom::DependencyType::WEAK:
+    case loom::DependencyType::WEAK:
         return "WEAK";
     default:
         return "UNKNOWN";

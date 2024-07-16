@@ -34,7 +34,7 @@ void FabricPP::buildGraph() {
             // auto& newHyperVertex = newV->m_hyperVertex;
             // auto& oldHyperVertex = oldV->m_hyperVertex;
             // 1. 判断rw冲突
-            if (protocol::hasConflict(newV->readSet, oldV->writeSet)) {
+            if (loom::hasConflict(newV->readSet, oldV->writeSet)) {
                 // 添加出边
                 newV->m_out_edges.insert(oldV);
                 // 更新度数
@@ -45,7 +45,7 @@ void FabricPP::buildGraph() {
                 oldV->m_degree++;
             }
             // 2. 判断wr冲突
-            if (protocol::hasConflict(newV->writeSet, oldV->readSet)) {
+            if (loom::hasConflict(newV->writeSet, oldV->readSet)) {
                 // 添加入边
                 newV->m_in_edges.insert(oldV);
                 // 更新度数

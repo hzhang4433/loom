@@ -19,19 +19,17 @@ class TxGenerator {
 
         ~TxGenerator(){}; // 析构函数
 
-        // 生成负载
-        std::vector<Block::Ptr> generateWorkload(); 
-        // 生成区块
-        Block::Ptr generateBlock(); 
-        // 生成事务
-        HyperVertex::Ptr generateTransaction(const Transaction::Ptr& tx, bool isNest, unordered_map<string, protocol::RWSets<Vertex::Ptr>>& invertedIndex); 
-        // 生成索引
-        void generateIndex(vector<Vertex::Ptr> txLists, unordered_map<string, protocol::RWSets<Vertex::Ptr>>& invertedIndex, unordered_map<Vertex::Ptr, unordered_set<Vertex::Ptr, Vertex::VertexHash>, Vertex::VertexHash>& RWIndex, 
-                           unordered_map<Vertex::Ptr, unordered_set<Vertex::Ptr, Vertex::VertexHash>, Vertex::VertexHash>& conflictIndex, unordered_map<string, set<Vertex::Ptr, Vertex::VertexCompare>>& RBIndex); 
-        // 获取区块
-        std::vector<Block::Ptr> getBlocks(); 
-        // 获取事务ID
-        int getId(); 
+        std::vector<Block::Ptr> generateWorkload(); // 生成负载
+        
+        Block::Ptr generateBlock(); // 生成区块
+        
+        HyperVertex::Ptr generateTransaction(const Transaction::Ptr& tx, bool isNest, unordered_map<string, loom::RWSets<Vertex::Ptr>>& invertedIndex); // 生成事务
+        
+        void generateIndex(vector<Vertex::Ptr> txLists, unordered_map<string, loom::RWSets<Vertex::Ptr>>& invertedIndex, unordered_map<Vertex::Ptr, unordered_set<Vertex::Ptr, Vertex::VertexHash>, Vertex::VertexHash>& RWIndex, unordered_map<Vertex::Ptr, unordered_set<Vertex::Ptr, Vertex::VertexHash>, Vertex::VertexHash>& conflictIndex, unordered_map<string, set<Vertex::Ptr, Vertex::VertexCompare>>& RBIndex); // 生成索引
+        
+        std::vector<Block::Ptr> getBlocks(); // 获取区块
+        
+        int getId(); // 获取事务ID
 
     private:
         int m_txNum;                        // 生成事务数量

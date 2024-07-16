@@ -7,7 +7,7 @@ using namespace std;
 
 // 测试NewOrderTransaction事务结构
 TEST(TpccTest, NewOrderTransaction) {
-    Loom::Random random;
+    loom::Random random;
     // Transaction::Ptr txGenerator = std::make_shared<NewOrderTransaction>(random);
     NewOrderTransaction::Ptr txGenerator = std::make_shared<NewOrderTransaction>(random);
     for (int i = 0; i < 200; i++) {
@@ -27,7 +27,7 @@ TEST(TpccTest, NewOrderTransaction) {
 TEST(TpccTest, PaymentTransaction) {
     Transaction::Ptr txGenerator;
     MinWRollback minw;
-    Loom::Random random;
+    loom::Random random;
     txGenerator = std::make_shared<PaymentTransaction>(random);
     chrono::high_resolution_clock::time_point start, end;
 
@@ -46,7 +46,7 @@ TEST(TpccTest, OrderStatusTransaction) {
     Transaction::Ptr txGenerator;
     MinWRollback minw;
     chrono::high_resolution_clock::time_point start, end;
-    Loom::Random random;
+    loom::Random random;
 
     // 先生成一批newOrder事务
     txGenerator = std::make_shared<NewOrderTransaction>(random);
@@ -69,7 +69,7 @@ TEST(TpccTest, OrderStatusTransaction) {
 TEST(TpccTest, DeliveryTransaction) {
     Transaction::Ptr txGenerator;
     MinWRollback minw;
-    Loom::Random random;
+    loom::Random random;
     chrono::high_resolution_clock::time_point start, end;
 
     // 先生成一批newOrder事务
@@ -93,7 +93,7 @@ TEST(TpccTest, DeliveryTransaction) {
 TEST(TpccTest, StockLevelTransaction) {
     Transaction::Ptr txGenerator;
     MinWRollback minw;
-    Loom::Random random;
+    loom::Random random;
     chrono::high_resolution_clock::time_point start, end;
 
     // 先生成一批newOrder事务
@@ -149,7 +149,7 @@ TEST(TpccTest, WorkloadTEST) {
 TEST(TpccTest, RandomTEST) {
     Workload workload;
     workload.set_seed(123456);
-    Loom::Random random(workload.get_seed());
+    loom::Random random(workload.get_seed());
     
     for (int i = 0; i < 20; i++) {
         cout << random.uniform_dist(1, 255) << " ";

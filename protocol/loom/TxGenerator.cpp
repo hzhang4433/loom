@@ -3,7 +3,7 @@
 
 
 // 构造函数
-TxGenerator::TxGenerator(int txNum) : id_counter(0), m_txNum(txNum), m_blockSize(Loom::BLOCK_SIZE) {}  
+TxGenerator::TxGenerator(int txNum) : id_counter(0), m_txNum(txNum), m_blockSize(loom::BLOCK_SIZE) {}  
 
 // 生成事务
 std::vector<Block::Ptr> TxGenerator::generateWorkload() {
@@ -20,7 +20,7 @@ Block::Ptr TxGenerator::generateBlock() {
     Workload workload;
     vector<Vertex::Ptr> txLists;
     std::unordered_set<HyperVertex::Ptr, HyperVertex::HyperVertexHash> txs;   
-    unordered_map<string, protocol::RWSets<Vertex::Ptr>> invertedIndex;// 倒排索引
+    unordered_map<string, loom::RWSets<Vertex::Ptr>> invertedIndex;// 倒排索引
     unordered_map<Vertex::Ptr, unordered_set<Vertex::Ptr, Vertex::VertexHash>, Vertex::VertexHash> RWIndex;// rw冲突索引
     unordered_map<Vertex::Ptr, unordered_set<Vertex::Ptr, Vertex::VertexHash>, Vertex::VertexHash> conflictIndex;// 冲突索引
     unordered_map<string, set<Vertex::Ptr, Vertex::VertexCompare>> RBIndex;// 回滚索引
@@ -30,8 +30,8 @@ Block::Ptr TxGenerator::generateBlock() {
     cout << "seed: " << seed << endl;
 
     // 生成事务
-    // Loom::Random random = workload.get_random();
-    // Loom::Random tx_random = workload.get_tx_random();
+    // loom::Random random = workload.get_random();
+    // loom::Random tx_random = workload.get_tx_random();
     // auto NO_txGenerator = std::make_shared<NewOrderTransaction>(tx_random);
     // auto P_txGenerator = std::make_shared<PaymentTransaction>(tx_random);
     // auto D_txGenerator = std::make_shared<DeliveryTransaction>(tx_random);
@@ -66,8 +66,8 @@ Block::Ptr TxGenerator::generateBlock() {
         //     tx = D_txGenerator->makeTransaction();
         // }
         // cout << "tx " << i + 1 << " type: " << TPCC::transactionTypeToString(tx->getType()) << endl;
-
         HyperVertex::Ptr txVertex = generateTransaction(tx, true, invertedIndex);
+        
         // 记录所有子事务
         txLists.insert(txLists.end(), txVertex->m_vertices.begin(), txVertex->m_vertices.end());
         // 记录所有事务
@@ -82,7 +82,7 @@ Block::Ptr TxGenerator::generateBlock() {
 }
 
 // 生成事务
-HyperVertex::Ptr TxGenerator::generateTransaction(const Transaction::Ptr& tx, bool isNest, unordered_map<string, protocol::RWSets<Vertex::Ptr>>& invertedIndex) {
+HyperVertex::Ptr TxGenerator::generateTransaction(const Transaction::Ptr& tx, bool isNest, unordered_map<string, loom::RWSets<Vertex::Ptr>>& invertedIndex) {
     int txid = getId();
     HyperVertex::Ptr hyperVertex = make_shared<HyperVertex>(txid, isNest);
     Vertex::Ptr rootVertex = make_shared<Vertex>(hyperVertex, txid, to_string(txid), 0, isNest);
@@ -110,7 +110,7 @@ HyperVertex::Ptr TxGenerator::generateTransaction(const Transaction::Ptr& tx, bo
 }
 
 // 生成事务索引
-void TxGenerator::generateIndex(vector<Vertex::Ptr> txLists, unordered_map<string, protocol::RWSets<Vertex::Ptr>>& invertedIndex, 
+void TxGenerator::generateIndex(vector<Vertex::Ptr> txLists, unordered_map<string, loom::RWSets<Vertex::Ptr>>& invertedIndex, 
                                 unordered_map<Vertex::Ptr, unordered_set<Vertex::Ptr, Vertex::VertexHash>, Vertex::VertexHash>& RWIndex, 
                                 unordered_map<Vertex::Ptr, unordered_set<Vertex::Ptr, Vertex::VertexHash>, Vertex::VertexHash>& conflictIndex,
                                 unordered_map<string, set<Vertex::Ptr, Vertex::VertexCompare>>& RBIndex) {

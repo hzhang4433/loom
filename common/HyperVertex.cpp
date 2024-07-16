@@ -10,17 +10,17 @@ HyperVertex::HyperVertex(int id, bool isNested): m_hyperId(id), m_isNested(isNes
     m_in_cost = 0;
     m_out_cost = 0;
 
-    m_out_edges.resize(Loom::BLOCK_SIZE + 1);
-    m_in_edges.resize(Loom::BLOCK_SIZE + 1);
-    m_out_rollback.resize(Loom::BLOCK_SIZE + 1);
-    m_in_rollback.resize(Loom::BLOCK_SIZE + 1);
-    m_out_weights.resize(Loom::BLOCK_SIZE + 1);
-    m_in_weights.resize(Loom::BLOCK_SIZE + 1);
+    m_out_edges.resize(loom::BLOCK_SIZE + 1);
+    m_in_edges.resize(loom::BLOCK_SIZE + 1);
+    m_out_rollback.resize(loom::BLOCK_SIZE + 1);
+    m_in_rollback.resize(loom::BLOCK_SIZE + 1);
+    m_out_weights.resize(loom::BLOCK_SIZE + 1);
+    m_in_weights.resize(loom::BLOCK_SIZE + 1);
 
-    m_out_mapS.resize(Loom::BLOCK_SIZE + 1);
-    m_in_mapS.resize(Loom::BLOCK_SIZE + 1);
-    m_out_rollbackMS.resize(Loom::BLOCK_SIZE + 1);
-    m_in_rollbackMS.resize(Loom::BLOCK_SIZE + 1);
+    m_out_mapS.resize(loom::BLOCK_SIZE + 1);
+    m_in_mapS.resize(loom::BLOCK_SIZE + 1);
+    m_out_rollbackMS.resize(loom::BLOCK_SIZE + 1);
+    m_in_rollbackMS.resize(loom::BLOCK_SIZE + 1);
 }
 
 HyperVertex::~HyperVertex() {}
@@ -30,7 +30,7 @@ void HyperVertex::recognizeCascades(Vertex::Ptr vertex) {
     // 递归识别并更新级联子事务
     for (auto& child : vertex->getChildren()) {
         // 更新回滚代价
-        if (child.dependency == Loom::DependencyType::STRONG) {
+        if (child.dependency == loom::DependencyType::STRONG) {
             child.vertex->m_cost = vertex->m_cost;
             child.vertex->cascadeVertices = vertex->cascadeVertices;
         }
@@ -40,7 +40,7 @@ void HyperVertex::recognizeCascades(Vertex::Ptr vertex) {
 }
 
 // 构建嵌套事务超节点
-int HyperVertex::buildVertexs(const Transaction::Ptr& tx, HyperVertex::Ptr& hyperVertex, Vertex::Ptr& vertex, string& txid, std::unordered_map<string, protocol::RWSets<Vertex::Ptr>>& invertedIndex) {
+int HyperVertex::buildVertexs(const Transaction::Ptr& tx, HyperVertex::Ptr& hyperVertex, Vertex::Ptr& vertex, string& txid, std::unordered_map<string, loom::RWSets<Vertex::Ptr>>& invertedIndex) {
     // 获取执行时间
     int execTime = tx->getExecutionTime();
     vertex->m_self_cost = execTime;
@@ -60,7 +60,7 @@ int HyperVertex::buildVertexs(const Transaction::Ptr& tx, HyperVertex::Ptr& hype
             // 递归添加级联回滚代价
             execTime += buildVertexs(child.transaction, hyperVertex, childVertex, subTxid, invertedIndex);
             // 若为强依赖，则记录强依赖子节点
-            if (child.dependency == Loom::DependencyType::STRONG) {
+            if (child.dependency == loom::DependencyType::STRONG) {
                 vertex->hasStrong = true;
                 vertex->m_strongChildren.insert(childVertex);
                 childVertex->m_strongParent = vertex;
@@ -97,7 +97,7 @@ int HyperVertex::buildVertexs(const Transaction::Ptr& tx, HyperVertex::Ptr& hype
 }
 
 // 构建普通事务节点
-void HyperVertex::buildVertexs(const Transaction::Ptr& tx, Vertex::Ptr& vertex, std::unordered_map<string, protocol::RWSets<Vertex::Ptr>>& invertedIndex) {
+void HyperVertex::buildVertexs(const Transaction::Ptr& tx, Vertex::Ptr& vertex, std::unordered_map<string, loom::RWSets<Vertex::Ptr>>& invertedIndex) {
     // 获取执行时间
     int execTime = tx->getExecutionTime();
     vertex->m_self_cost += execTime;

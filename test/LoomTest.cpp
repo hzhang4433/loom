@@ -9,7 +9,7 @@ using namespace std;
 
 TEST(LoomTest, TestTxGenerator) {
     // 定义变量
-    TxGenerator txGenerator(Loom::BLOCK_SIZE * 10);
+    TxGenerator txGenerator(loom::BLOCK_SIZE * 10);
     auto start = chrono::high_resolution_clock::now();
     auto blocks = txGenerator.generateWorkload();
     auto end = chrono::high_resolution_clock::now();
@@ -19,7 +19,7 @@ TEST(LoomTest, TestTxGenerator) {
 
 TEST(LoomTest, TestTxGenerator2MinW) {
     // 定义变量
-    TxGenerator txGenerator(Loom::BLOCK_SIZE);
+    TxGenerator txGenerator(loom::BLOCK_SIZE);
     auto blocks = txGenerator.generateWorkload();
     UThreadPoolPtr threadPool = UAllocator::safeMallocTemplateCObject<UThreadPool>();
     std::vector<std::future<void>> futures;
@@ -49,13 +49,13 @@ TEST(LoomTest, TestTxGenerator2MinW) {
             auto reExecuteInfo = minw.rollbackNoEdge(scc, true);
             // 获得回滚事务顺序
             serialOrders.push_back(reExecuteInfo.m_serialOrder);
-            // Loom::printTxsOrder(reExecuteInfo.m_serialOrder);
+            // loom::printTxsOrder(reExecuteInfo.m_serialOrder);
             // 获得回滚事务并根据事务顺序排序
-            set<Vertex::Ptr, Loom::customCompare> rollbackTxs(Loom::customCompare(reExecuteInfo.m_serialOrder));
+            set<Vertex::Ptr, loom::customCompare> rollbackTxs(loom::customCompare(reExecuteInfo.m_serialOrder));
             rollbackTxs.insert(reExecuteInfo.m_rollbackTxs.begin(), reExecuteInfo.m_rollbackTxs.end());
             // 更新m_orderedRollbackTxs
             reExecuteInfo.m_orderedRollbackTxs = std::move(rollbackTxs);
-            // Loom::printRollbackTxs(reExecuteInfo.m_orderedRollbackTxs);
+            // loom::printRollbackTxs(reExecuteInfo.m_orderedRollbackTxs);
 
             // 将排序后的交易插入rbList
             rbList.insert(rbList.end(), reExecuteInfo.m_orderedRollbackTxs.begin(), reExecuteInfo.m_orderedRollbackTxs.end());
@@ -69,7 +69,7 @@ TEST(LoomTest, TestTxGenerator2MinW) {
 
 TEST(LoomTest, TestTxGenerator2ReExecute) {
     // 定义变量
-    TxGenerator txGenerator(Loom::BLOCK_SIZE);
+    TxGenerator txGenerator(loom::BLOCK_SIZE);
     auto blocks = txGenerator.generateWorkload();
     UThreadPoolPtr threadPool = UAllocator::safeMallocTemplateCObject<UThreadPool>();
     // threadpool::Ptr threadPool = std::make_unique<threadpool>((unsigned short)48);
@@ -105,13 +105,13 @@ TEST(LoomTest, TestTxGenerator2ReExecute) {
             // auto reExecuteInfo = minw.rollbackOpt1(scc);
             // 获得回滚事务顺序
             serialOrders.push_back(reExecuteInfo.m_serialOrder);
-            Loom::printTxsOrder(reExecuteInfo.m_serialOrder);
+            loom::printTxsOrder(reExecuteInfo.m_serialOrder);
             // 获得回滚事务并根据事务顺序排序
-            set<Vertex::Ptr, Loom::customCompare> rollbackTxs(Loom::customCompare(reExecuteInfo.m_serialOrder));            
+            set<Vertex::Ptr, loom::customCompare> rollbackTxs(loom::customCompare(reExecuteInfo.m_serialOrder));            
             rollbackTxs.insert(reExecuteInfo.m_rollbackTxs.begin(), reExecuteInfo.m_rollbackTxs.end());
             // 更新m_orderedRollbackTxs
             reExecuteInfo.m_orderedRollbackTxs = std::move(rollbackTxs);
-            Loom::printRollbackTxs(reExecuteInfo.m_orderedRollbackTxs);
+            loom::printRollbackTxs(reExecuteInfo.m_orderedRollbackTxs);
 
             // 将排序后的交易插入rbList
             rbList.insert(rbList.end(), reExecuteInfo.m_orderedRollbackTxs.begin(), reExecuteInfo.m_orderedRollbackTxs.end());
@@ -131,10 +131,10 @@ TEST(LoomTest, TestTxGenerator2ReExecute) {
         duration = chrono::duration_cast<chrono::microseconds>(end - start);
         cout << "txList size: " << rbList.size() << ", Normal Build Time: " << duration.count() / 1000.0 << "ms" << endl;
         int normalBuildTime = normalReExecute.calculateTotalExecutionTime();
-        // Loom::printRollbackTxs(rbList);
+        // loom::printRollbackTxs(rbList);
         normalReExecute.clearGraph();
         
-        // Loom::printRollbackTxs(nestedReExecute.getRbList());
+        // loom::printRollbackTxs(nestedReExecute.getRbList());
         start = chrono::high_resolution_clock::now();
         // nestedReExecute.buildGraph();
         nestedReExecute.buildGraphByIndex();
@@ -160,12 +160,12 @@ TEST(LoomTest, TestTxGenerator2ReExecute) {
 
 TEST(LoomTest, TestConcurrentRollback) {
     // 定义变量
-    TxGenerator txGenerator(Loom::BLOCK_SIZE);
+    TxGenerator txGenerator(loom::BLOCK_SIZE);
     auto blocks = txGenerator.generateWorkload();
     UThreadPoolPtr threadPool = UAllocator::safeMallocTemplateCObject<UThreadPool>();
     // threadpool::Ptr threadPool = std::make_unique<threadpool>((unsigned short)48);
     std::vector<std::future<void>> futures;
-    std::vector<std::future<Loom::ReExecuteInfo>> reExecuteFutures;
+    std::vector<std::future<loom::ReExecuteInfo>> reExecuteFutures;
 
     // std::this_thread::sleep_for(std::chrono::seconds(5));
 
@@ -186,46 +186,46 @@ TEST(LoomTest, TestConcurrentRollback) {
         // 识别scc
         minw.onWarm2SCC();
         vector<vector<int>> serialOrders;
-        std::vector<Vertex::Ptr> rbList;
+        std::vector<Vertex::Ptr> normalList, nestedList, rbList;
         serialOrders.reserve(minw.m_sccs.size());
         // 回滚事务
         start = chrono::high_resolution_clock::now();
-        // // 并发回滚
-        // for (auto& scc : minw.m_sccs) {
-        //     reExecuteFutures.emplace_back(threadPool->commit([this, &scc, &minw] {
-        //         // 回滚事务
-        //         auto reExecuteInfo = minw.rollbackNoEdge(scc, true);
-        //         // 获得回滚事务并根据事务顺序排序
-        //         set<Vertex::Ptr, Loom::customCompare> rollbackTxs(Loom::customCompare(reExecuteInfo.m_serialOrder));            
-        //         rollbackTxs.insert(reExecuteInfo.m_rollbackTxs.begin(), reExecuteInfo.m_rollbackTxs.end());
-        //         // 更新m_orderedRollbackTxs
-        //         reExecuteInfo.m_orderedRollbackTxs = std::move(rollbackTxs);
-        //         return reExecuteInfo;
-        //     }));
-        // }
-        // // 收集回滚结果
-        // for (auto& future : reExecuteFutures) {
-        //     auto res = future.get();
-        //     // 获得回滚事务顺序
-        //     // Loom::printTxsOrder(res.m_serialOrder);
-        //     serialOrders.push_back(res.m_serialOrder);
-        //     // Loom::printRollbackTxs(res.m_orderedRollbackTxs);
-        //     // 将排序后的交易插入rbList
-        //     rbList.insert(rbList.end(), res.m_orderedRollbackTxs.begin(), res.m_orderedRollbackTxs.end());
-        // }
+        // 并发回滚
+        for (auto& scc : minw.m_sccs) {
+            reExecuteFutures.emplace_back(threadPool->commit([this, &scc, &minw] {
+                // 回滚事务
+                auto reExecuteInfo = minw.rollbackNoEdge(scc, true);
+                // 获得回滚事务并根据事务顺序排序
+                set<Vertex::Ptr, loom::customCompare> rollbackTxs(loom::customCompare(reExecuteInfo.m_serialOrder));            
+                rollbackTxs.insert(reExecuteInfo.m_rollbackTxs.begin(), reExecuteInfo.m_rollbackTxs.end());
+                // 更新m_orderedRollbackTxs
+                reExecuteInfo.m_orderedRollbackTxs = std::move(rollbackTxs);
+                return reExecuteInfo;
+            }));
+        }
+        // 收集回滚结果
+        for (auto& future : reExecuteFutures) {
+            auto res = future.get();
+            // 获得回滚事务顺序
+            // loom::printTxsOrder(res.m_serialOrder);
+            serialOrders.push_back(res.m_serialOrder);
+            // loom::printRollbackTxs(res.m_orderedRollbackTxs);
+            // 将排序后的交易插入rbList
+            rbList.insert(rbList.end(), res.m_orderedRollbackTxs.begin(), res.m_orderedRollbackTxs.end());
+        }
 
         // 局部快速回滚
-        auto rbIndex = block->getRBIndex();
-        auto normalList = minw.fastNormalRollback(rbIndex);
-        cout << "Fast Rollback Size: " << rbList.size() << endl;
+        normalList = rbList;
+        minw.fastNormalRollback(block->getRBIndex(), normalList);
+        // cout << "Normal Rollback Size: " << normalList.size() << endl;
 
         end = chrono::high_resolution_clock::now();
         duration = chrono::duration_cast<chrono::microseconds>(end - start);
         cout << "Rollback Time: " << duration.count() / 1000.0 << "ms" << endl;
-        // Loom::printRollbackTxs(rbList);
 
-
-        auto nestedList = minw.fastRollback(rbIndex);
+        nestedList = rbList;
+        minw.fastRollback(block->getRBIndex(), nestedList);
+        // cout << "Nested Rollback Size: " << nestedList.size() << endl;
 
 
         // 重调度
@@ -234,11 +234,12 @@ TEST(LoomTest, TestConcurrentRollback) {
         // 遍历构图
         start = chrono::high_resolution_clock::now();
         normalReExecute.buildGraphOrigin();
+        // normalReExecute.buildGraphOriginByIndex();
         end = chrono::high_resolution_clock::now();
         duration = chrono::duration_cast<chrono::microseconds>(end - start);
         cout << "txList size: " << normalList.size() << ", Normal Build Time: " << duration.count() / 1000.0 << "ms" << endl;
         int normalBuildTime = normalReExecute.calculateTotalNormalExecutionTime();
-        Loom::printNormalRollbackTxs(normalList);
+        // loom::printNormalRollbackTxs(normalList);
         normalReExecute.clearGraph();
         
 
@@ -248,16 +249,20 @@ TEST(LoomTest, TestConcurrentRollback) {
         end = chrono::high_resolution_clock::now();
         duration = chrono::duration_cast<chrono::microseconds>(end - start);
         cout << "txList size: " << nestedList.size() << ", Nested Build Time: " << duration.count() / 1000.0 << "ms" << endl;
+        // loom::printNestedRollbackTxs(nestedList);
         int nestedBuildTime = nestedReExecute.calculateTotalExecutionTime();
-        // Loom::printNestedRollbackTxs(nestedList);
+        nestedReExecute.rescheduleTransactions();
+        int nestedRescheduleTime = nestedReExecute.calculateTotalExecutionTime();
+
 
         // 重执行
 
 
-        int serialTime = nestedReExecute.calculateSerialTime();
+        int serialTime = normalReExecute.calculateSerialTime();
         cout << "Serial Execute Time: " << serialTime << endl;
         cout << "Normal Execute Time: " << normalBuildTime << endl;
-        cout << "Nested Execute Time: " << nestedBuildTime << endl;
+        cout << "Nested build Time: " << nestedBuildTime << endl;
+        cout << "Nested Execute Time: " << nestedRescheduleTime << endl;
 
 
         // 计算优化效率

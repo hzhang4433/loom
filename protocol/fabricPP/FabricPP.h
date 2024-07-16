@@ -5,6 +5,7 @@
 #include <atomic>
 #include "common/HyperVertex.h"
 
+
 class FabricPP {
     public:
         FabricPP() : id_counter(0) {};
@@ -50,5 +51,5 @@ class FabricPP {
         vector<set<Vertex::Ptr, Vertex::VertexCompare>> m_cycles;   
         int testCounter = 0; 
         // 建立倒排索引
-        std::unordered_map<string, protocol::RWSets<Vertex::Ptr>> m_invertedIndex;
+        std::unordered_map<string, loom::RWSets<Vertex::Ptr>> m_invertedIndex;
 };

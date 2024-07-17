@@ -12,7 +12,7 @@ class FabricPP {
 
         ~FabricPP() = default;
 
-        void execute(const Transaction::Ptr& tx);
+        void execute(const TPCCTransaction::Ptr& tx);
 
         void buildGraph();
 

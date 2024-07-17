@@ -9,7 +9,7 @@ using namespace std;
 TEST(FabricPPTest, TestRollback) {
     Workload workload;
     FabricPP fabricPP;
-    Transaction::Ptr tx;
+    TPCCTransaction::Ptr tx;
     chrono::high_resolution_clock::time_point start, end;
     
     workload.set_seed(uint64_t(0));

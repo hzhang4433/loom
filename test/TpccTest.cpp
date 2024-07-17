@@ -8,10 +8,10 @@ using namespace std;
 // 测试NewOrderTransaction事务结构
 TEST(TpccTest, NewOrderTransaction) {
     loom::Random random;
-    // Transaction::Ptr txGenerator = std::make_shared<NewOrderTransaction>(random);
+    // TPCCTransaction::Ptr txGenerator = std::make_shared<NewOrderTransaction>(random);
     NewOrderTransaction::Ptr txGenerator = std::make_shared<NewOrderTransaction>(random);
     for (int i = 0; i < 200; i++) {
-        Transaction::Ptr tx = txGenerator->makeTransaction();
+        TPCCTransaction::Ptr tx = txGenerator->makeTransaction();
         
         // 创建MinWRollback实例，测试execute函数vertexs构建部分
         // MinWRollback minw;
@@ -25,14 +25,14 @@ TEST(TpccTest, NewOrderTransaction) {
 }
 
 TEST(TpccTest, PaymentTransaction) {
-    Transaction::Ptr txGenerator;
+    TPCCTransaction::Ptr txGenerator;
     MinWRollback minw;
     loom::Random random;
     txGenerator = std::make_shared<PaymentTransaction>(random);
     chrono::high_resolution_clock::time_point start, end;
 
     for (int i = 0; i < 10; i++) {
-        Transaction::Ptr tx = txGenerator->makeTransaction();
+        TPCCTransaction::Ptr tx = txGenerator->makeTransaction();
         
         // 创建MinWRollback实例，测试execute函数vertexs构建部分
         start = chrono::high_resolution_clock::now();
@@ -43,7 +43,7 @@ TEST(TpccTest, PaymentTransaction) {
 }
 
 TEST(TpccTest, OrderStatusTransaction) {
-    Transaction::Ptr txGenerator;
+    TPCCTransaction::Ptr txGenerator;
     MinWRollback minw;
     chrono::high_resolution_clock::time_point start, end;
     loom::Random random;
@@ -51,12 +51,12 @@ TEST(TpccTest, OrderStatusTransaction) {
     // 先生成一批newOrder事务
     txGenerator = std::make_shared<NewOrderTransaction>(random);
     for (int i = 0; i < 43; i++) {
-        Transaction::Ptr tx = txGenerator->makeTransaction();
+        TPCCTransaction::Ptr tx = txGenerator->makeTransaction();
     }
 
     txGenerator = std::make_shared<OrderStatusTransaction>(random);
     for (int i = 0; i < 3; i++) {
-        Transaction::Ptr tx = txGenerator->makeTransaction();
+        TPCCTransaction::Ptr tx = txGenerator->makeTransaction();
         
         // 创建MinWRollback实例，测试execute函数vertexs构建部分
         start = chrono::high_resolution_clock::now();
@@ -67,7 +67,7 @@ TEST(TpccTest, OrderStatusTransaction) {
 }
 
 TEST(TpccTest, DeliveryTransaction) {
-    Transaction::Ptr txGenerator;
+    TPCCTransaction::Ptr txGenerator;
     MinWRollback minw;
     loom::Random random;
     chrono::high_resolution_clock::time_point start, end;
@@ -75,12 +75,12 @@ TEST(TpccTest, DeliveryTransaction) {
     // 先生成一批newOrder事务
     txGenerator = std::make_shared<NewOrderTransaction>(random);
     for (int i = 0; i < 43; i++) {
-        Transaction::Ptr tx = txGenerator->makeTransaction();
+        TPCCTransaction::Ptr tx = txGenerator->makeTransaction();
     }
 
     txGenerator = std::make_shared<DeliveryTransaction>(random);
     for (int i = 0; i < 3; i++) {
-        Transaction::Ptr tx = txGenerator->makeTransaction();
+        TPCCTransaction::Ptr tx = txGenerator->makeTransaction();
         
         // 创建MinWRollback实例，测试execute函数vertexs构建部分
         start = chrono::high_resolution_clock::now();
@@ -91,7 +91,7 @@ TEST(TpccTest, DeliveryTransaction) {
 }
 
 TEST(TpccTest, StockLevelTransaction) {
-    Transaction::Ptr txGenerator;
+    TPCCTransaction::Ptr txGenerator;
     MinWRollback minw;
     loom::Random random;
     chrono::high_resolution_clock::time_point start, end;
@@ -99,12 +99,12 @@ TEST(TpccTest, StockLevelTransaction) {
     // 先生成一批newOrder事务
     txGenerator = std::make_shared<NewOrderTransaction>(random);
     for (int i = 0; i < 43; i++) {
-        Transaction::Ptr tx = txGenerator->makeTransaction();
+        TPCCTransaction::Ptr tx = txGenerator->makeTransaction();
     }
 
     txGenerator = std::make_shared<StockLevelTransaction>(random);
     for (int i = 0; i < 3; i++) {
-        Transaction::Ptr tx = txGenerator->makeTransaction();
+        TPCCTransaction::Ptr tx = txGenerator->makeTransaction();
         if (tx == nullptr) {
             cout << "tx is nullptr" << endl;
             continue;
@@ -123,7 +123,7 @@ TEST(TpccTest, StockLevelTransaction) {
 TEST(TpccTest, WorkloadTEST) {
     Workload workload;
     MinWRollback minw;
-    Transaction::Ptr tx;
+    TPCCTransaction::Ptr tx;
     chrono::high_resolution_clock::time_point start, end;
 
     cout << "Seed: " << workload.get_seed() << endl;
@@ -173,7 +173,7 @@ TEST(TpccTest, RandomTEST) {
 TEST(TpccTest, MultiWarehouseTEST) {
     Workload workload;
     MinWRollback minw;
-    Transaction::Ptr tx;
+    TPCCTransaction::Ptr tx;
     chrono::high_resolution_clock::time_point start, end;
 
     cout << "Seed: " << workload.get_seed() << endl;

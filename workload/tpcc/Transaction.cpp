@@ -1,7 +1,7 @@
 #include "Transaction.hpp"
 
 // // 定义并初始化c_lasts数组
-// const std::array<std::string, 3000> Transaction::c_lasts = [] {
+// const std::array<std::string, 3000> TPCCTransaction::c_lasts = [] {
 //     Random random;
 //     std::array<std::string, 3000> temp{};
 //     for (int i = 0; i < 3000; i++) {
@@ -15,7 +15,7 @@
 // }();
 
 // // 定义并初始化c_last_to_c_id
-// const std::unordered_map<std::string, std::vector<int32_t>> Transaction::c_last_to_c_id = [] {
+// const std::unordered_map<std::string, std::vector<int32_t>> TPCCTransaction::c_last_to_c_id = [] {
 //     std::unordered_map<std::string, std::vector<int32_t>> temp;
 //     for (int32_t c_id = 0; c_id < 3000; c_id++) {
 //         temp[c_lasts[c_id]].push_back(c_id + 1);
@@ -40,24 +40,24 @@ static auto init_data = [] {
     return std::make_pair(c_lasts, c_last_to_c_id);
 }();
 
-const std::array<std::string, 3000> Transaction::c_lasts = init_data.first;
-const std::unordered_map<std::string, std::vector<int32_t>> Transaction::c_last_to_c_id = init_data.second;
+const std::array<std::string, 3000> TPCCTransaction::c_lasts = init_data.first;
+const std::unordered_map<std::string, std::vector<int32_t>> TPCCTransaction::c_last_to_c_id = init_data.second;
 
 
 // 定义静态变量
-std::unordered_map<std::string, Transaction::OrderInfo> Transaction::wdc_latestOrder;
-std::unordered_map<std::string, std::queue<Transaction::OrderInfo>> Transaction::wd_oldestNewOrder;
-std::unordered_map<std::string, std::vector<Transaction::OrderLineInfo>> Transaction::wd_latestOrderLines;
+std::unordered_map<std::string, TPCCTransaction::OrderInfo> TPCCTransaction::wdc_latestOrder;
+std::unordered_map<std::string, std::queue<TPCCTransaction::OrderInfo>> TPCCTransaction::wd_oldestNewOrder;
+std::unordered_map<std::string, std::vector<TPCCTransaction::OrderLineInfo>> TPCCTransaction::wd_latestOrderLines;
 
 // 定义并初始化order_counters的每个元素
-std::array<std::atomic<uint64_t>, 10> Transaction::order_counters;
+std::array<std::atomic<uint64_t>, 10> TPCCTransaction::order_counters;
 static auto _ = [] {
-    for(auto& counter : Transaction::order_counters) {
+    for(auto& counter : TPCCTransaction::order_counters) {
         counter.store(1);
     }
     return 0;
 }();
 
-uint64_t Transaction::wd_orderLineCounters[TPCC::N_WAREHOUSES][TPCC::N_DISTRICTS];
+uint64_t TPCCTransaction::wd_orderLineCounters[TPCC::N_WAREHOUSES][TPCC::N_DISTRICTS];
 
-std::map<size_t, int> Transaction::ol_i_id_num;
+std::map<size_t, int> TPCCTransaction::ol_i_id_num;

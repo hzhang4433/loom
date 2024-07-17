@@ -17,6 +17,8 @@ class MinWRollback
         MinWRollback() : id_counter(0) {}
         
         MinWRollback(std::unordered_set<HyperVertex::Ptr, HyperVertex::HyperVertexHash> hyperVertices, unordered_map<Vertex::Ptr, unordered_set<Vertex::Ptr, Vertex::VertexHash>, Vertex::VertexHash> RWIndex) : id_counter(0), m_hyperVertices(hyperVertices), m_RWIndex(RWIndex) {}
+        
+        MinWRollback(unordered_map<Vertex::Ptr, unordered_set<Vertex::Ptr, Vertex::VertexHash>, Vertex::VertexHash> RWIndex) : id_counter(0), m_RWIndex(RWIndex) {}
 
         ~MinWRollback() = default;
 
@@ -24,7 +26,7 @@ class MinWRollback
             return id_counter.fetch_add(1, std::memory_order_relaxed) + 1;
         }
 
-        HyperVertex::Ptr execute(const Transaction::Ptr& tx, bool isNest = true);
+        HyperVertex::Ptr execute(const TPCCTransaction::Ptr& tx, bool isNest = true);
 
         void onWarm2RWIndex();
 

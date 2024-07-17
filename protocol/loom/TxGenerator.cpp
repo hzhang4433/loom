@@ -19,7 +19,7 @@ std::vector<Block::Ptr> TxGenerator::generateWorkload() {
 Block::Ptr TxGenerator::generateBlock() {
     Workload workload;
     vector<Vertex::Ptr> txLists;
-    std::unordered_set<HyperVertex::Ptr, HyperVertex::HyperVertexHash> txs;   
+    std::vector<Transaction::Ptr> txs;
     unordered_map<string, loom::RWSets<Vertex::Ptr>> invertedIndex;// 倒排索引
     unordered_map<Vertex::Ptr, unordered_set<Vertex::Ptr, Vertex::VertexHash>, Vertex::VertexHash> RWIndex;// rw冲突索引
     unordered_map<Vertex::Ptr, unordered_set<Vertex::Ptr, Vertex::VertexHash>, Vertex::VertexHash> conflictIndex;// 冲突索引
@@ -71,7 +71,7 @@ Block::Ptr TxGenerator::generateBlock() {
         // 记录所有子事务
         txLists.insert(txLists.end(), txVertex->m_vertices.begin(), txVertex->m_vertices.end());
         // 记录所有事务
-        txs.insert(txVertex);
+        txs.push_back(make_shared<Transaction>(txVertex, (size_t)txVertex->m_rootVertex->m_cost));
     }
 
     // 生成索引
@@ -82,7 +82,7 @@ Block::Ptr TxGenerator::generateBlock() {
 }
 
 // 生成事务
-HyperVertex::Ptr TxGenerator::generateTransaction(const Transaction::Ptr& tx, bool isNest, unordered_map<string, loom::RWSets<Vertex::Ptr>>& invertedIndex) {
+HyperVertex::Ptr TxGenerator::generateTransaction(const TPCCTransaction::Ptr& tx, bool isNest, unordered_map<string, loom::RWSets<Vertex::Ptr>>& invertedIndex) {
     int txid = getId();
     HyperVertex::Ptr hyperVertex = make_shared<HyperVertex>(txid, isNest);
     Vertex::Ptr rootVertex = make_shared<Vertex>(hyperVertex, txid, to_string(txid), 0, isNest);

@@ -17,9 +17,9 @@ class HyperVertex : public std::enable_shared_from_this<HyperVertex>
 
         ~HyperVertex();
 
-        int buildVertexs(const Transaction::Ptr& tx, HyperVertex::Ptr& hyperVertex, Vertex::Ptr& vertex, string& txid, std::unordered_map<string, loom::RWSets<Vertex::Ptr>>& invertedIndex);
+        int buildVertexs(const TPCCTransaction::Ptr& tx, HyperVertex::Ptr& hyperVertex, Vertex::Ptr& vertex, string& txid, std::unordered_map<string, loom::RWSets<Vertex::Ptr>>& invertedIndex);
 
-        void buildVertexs(const Transaction::Ptr& tx, Vertex::Ptr& vertex, std::unordered_map<string, loom::RWSets<Vertex::Ptr>>& invertedIndex);
+        void buildVertexs(const TPCCTransaction::Ptr& tx, Vertex::Ptr& vertex, std::unordered_map<string, loom::RWSets<Vertex::Ptr>>& invertedIndex);
 
         void recognizeCascades(Vertex::Ptr vertex);
 

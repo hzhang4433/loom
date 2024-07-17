@@ -4,14 +4,14 @@
 #include <unordered_map>
 #include <unordered_set>
 #include <set>
-#include "HyperVertex.h"
+#include "Transaction.h"
 
 class Block {
     public:
         typedef std::shared_ptr<Block> Ptr;
         
         // 构造函数
-        Block(std::unordered_set<HyperVertex::Ptr, HyperVertex::HyperVertexHash> txs, unordered_map<string, loom::RWSets<Vertex::Ptr>> invertedIndex, 
+        Block(std::vector<Transaction::Ptr> txs, unordered_map<string, loom::RWSets<Vertex::Ptr>> invertedIndex, 
         unordered_map<Vertex::Ptr, unordered_set<Vertex::Ptr, Vertex::VertexHash>, Vertex::VertexHash> RWIndex, 
         unordered_map<Vertex::Ptr, unordered_set<Vertex::Ptr, Vertex::VertexHash>, Vertex::VertexHash> conflictIndex,
         unordered_map<string, set<Vertex::Ptr, Vertex::VertexCompare>> RBIndex)
@@ -21,10 +21,10 @@ class Block {
         ~Block() = default; // 析构函数
 
         // 设置区块内事务
-        void setTxs(const std::unordered_set<HyperVertex::Ptr, HyperVertex::HyperVertexHash>& txs) {m_txs = txs;}
+        void setTxs(const std::vector<Transaction::Ptr>& txs) {m_txs = txs;}
 
         // 获取区块内事务
-        std::unordered_set<HyperVertex::Ptr, HyperVertex::HyperVertexHash> getTxs() {return m_txs;}
+        std::vector<Transaction::Ptr> getTxs() {return m_txs;}
 
         // 设置倒排索引
         void setInvertedIndex(const std::unordered_map<string, loom::RWSets<Vertex::Ptr>>& invertedIndex) {m_invertedIndex = invertedIndex;} 
@@ -50,9 +50,20 @@ class Block {
         // 获取回滚索引
         const std::unordered_map<string, std::set<Vertex::Ptr, Vertex::VertexCompare>> getRBIndex() const {return m_RBIndex;}
 
+        // 获得区块事务信息
+        const std::unordered_set<HyperVertex::Ptr, HyperVertex::HyperVertexHash> getTxList() const {
+            std::unordered_set<HyperVertex::Ptr, HyperVertex::HyperVertexHash> txInfo;
+            for (auto& tx : m_txs) {
+                txInfo.insert(tx->GetTx());
+            }
+            return txInfo;
+        }
+
     private:
+        // 区块ID
+        size_t m_blockId; 
         // 区块内事务
-        std::unordered_set<HyperVertex::Ptr, HyperVertex::HyperVertexHash> m_txs;
+        vector<Transaction::Ptr> m_txs;
         // 倒排索引
         unordered_map<string, loom::RWSets<Vertex::Ptr>> m_invertedIndex;
         // rw冲突索引

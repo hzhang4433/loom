@@ -1,11 +1,12 @@
 #include <iostream>
 #include <gtest/gtest.h>
-#include "test/TpccTest.cpp"
-#include "test/MinWRollbackTest.cpp"
-#include "test/FabricPPTest.cpp"
-#include "test/CompareTest.cpp"
-#include "test/DeterReExecuteTest.cpp"
-#include "test/LoomTest.cpp"
+#include <glog/logging.h>
+#include <Loom/test/TpccTest.cpp>
+#include <Loom/test/MinWRollbackTest.cpp>
+#include <Loom/test/FabricPPTest.cpp>
+#include <Loom/test/CompareTest.cpp>
+#include <Loom/test/DeterReExecuteTest.cpp>
+#include <Loom/test/LoomTest.cpp>
 
 
 using namespace std;

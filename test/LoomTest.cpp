@@ -30,7 +30,7 @@ TEST(LoomTest, TestTxGenerator2MinW) {
             // 并行执行所有交易
         }
         // 执行完成 => 构图 => 回滚
-        MinWRollback minw(block->getTxs(), block->getRWIndex());
+        MinWRollback minw(block->getRWIndex());
         auto start = chrono::high_resolution_clock::now();
         minw.buildGraphNoEdgeC(threadPool, futures);
         auto end = chrono::high_resolution_clock::now();
@@ -83,7 +83,7 @@ TEST(LoomTest, TestTxGenerator2ReExecute) {
             // 并行执行所有交易
         }
         // 执行完成 => 构图 => 回滚 => 重调度 => 重执行
-        MinWRollback minw(block->getTxs(), block->getRWIndex());
+        MinWRollback minw(block->getRWIndex());
         auto start = chrono::high_resolution_clock::now();
         minw.buildGraphNoEdgeC(threadPool, futures);
         // minw.buildGraphConcurrent(threadPool, futures);
@@ -175,7 +175,7 @@ TEST(LoomTest, TestConcurrentRollback) {
             // 并行执行所有交易
         }
         // 执行完成 => 构图 => 回滚 => 重调度 => 重执行
-        MinWRollback minw(block->getTxs(), block->getRWIndex());
+        MinWRollback minw(block->getTxList(), block->getRWIndex());
         auto start = chrono::high_resolution_clock::now();
         minw.buildGraphNoEdgeC(threadPool, futures);
         // minw.buildGraphConcurrent(threadPool, futures);
@@ -216,7 +216,7 @@ TEST(LoomTest, TestConcurrentRollback) {
 
         // 局部快速回滚
         normalList = rbList;
-        minw.fastNormalRollback(block->getRBIndex(), normalList);
+        // minw.fastNormalRollback(block->getRBIndex(), normalList);
         // cout << "Normal Rollback Size: " << normalList.size() << endl;
 
         end = chrono::high_resolution_clock::now();
@@ -224,7 +224,7 @@ TEST(LoomTest, TestConcurrentRollback) {
         cout << "Rollback Time: " << duration.count() / 1000.0 << "ms" << endl;
 
         nestedList = rbList;
-        minw.fastRollback(block->getRBIndex(), nestedList);
+        // minw.fastRollback(block->getRBIndex(), nestedList);
         // cout << "Nested Rollback Size: " << nestedList.size() << endl;
 
 

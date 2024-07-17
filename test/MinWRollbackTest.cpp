@@ -9,7 +9,7 @@
 using namespace std;
 using namespace Util;
 
-void simulateRow(Transaction::Ptr tx, string txid) {
+void simulateRow(TPCCTransaction::Ptr tx, string txid) {
     tx->addReadRow(txid + "4");
     tx->addReadRow(txid + "5");
     tx->addReadRow(txid + "6");
@@ -19,57 +19,57 @@ void simulateRow(Transaction::Ptr tx, string txid) {
 }
 
 // 自定义tx1
-Transaction::Ptr makeTx1() {
-    Transaction::Ptr tx1;
+TPCCTransaction::Ptr makeTx1() {
+    TPCCTransaction::Ptr tx1;
     simulateRow(tx1, "1");
 
-    Transaction::Ptr tx11;
+    TPCCTransaction::Ptr tx11;
     simulateRow(tx11, "11");
     tx1->addChild(tx11, loom::DependencyType::STRONG);
-    Transaction::Ptr tx111;
+    TPCCTransaction::Ptr tx111;
     simulateRow(tx111, "111");
     tx11->addChild(tx111, loom::DependencyType::WEAK);
-    Transaction::Ptr tx112;
+    TPCCTransaction::Ptr tx112;
     simulateRow(tx112, "112");
     tx11->addChild(tx112, loom::DependencyType::STRONG);
 
-    Transaction::Ptr tx12;
+    TPCCTransaction::Ptr tx12;
     simulateRow(tx12, "12");
     tx1->addChild(tx12, loom::DependencyType::WEAK);
-    Transaction::Ptr tx121;
+    TPCCTransaction::Ptr tx121;
     simulateRow(tx121, "121");
     tx12->addChild(tx121, loom::DependencyType::STRONG);
     
     // 需要修改读写集
-    Transaction::Ptr tx122;
+    TPCCTransaction::Ptr tx122;
     simulateRow(tx122, "122");
     tx122->addReadRow("4");
     tx12->addChild(tx122, loom::DependencyType::WEAK);
     
     // 需要修改读写集
-    Transaction::Ptr tx1221;
+    TPCCTransaction::Ptr tx1221;
     simulateRow(tx1221, "1221");
     tx1221->addReadRow("5");
     tx122->addChild(tx1221, loom::DependencyType::STRONG);
 
-    Transaction::Ptr tx12211;
+    TPCCTransaction::Ptr tx12211;
     simulateRow(tx12211, "12211");
     tx1221->addChild(tx12211, loom::DependencyType::WEAK);
 
     // 需要修改读写集
-    Transaction::Ptr tx12212;
+    TPCCTransaction::Ptr tx12212;
     simulateRow(tx12212, "12212");
     tx12212->addUpdateRow("6");
     tx1221->addChild(tx12212, loom::DependencyType::STRONG);
 
     // 需要修改读写集
-    Transaction::Ptr tx122121;
+    TPCCTransaction::Ptr tx122121;
     simulateRow(tx122121, "122121");
     tx122121->addUpdateRow("7");
     tx12212->addChild(tx122121, loom::DependencyType::WEAK);
     
     // 需要修改读写集
-    Transaction::Ptr tx1221211;
+    TPCCTransaction::Ptr tx1221211;
     simulateRow(tx1221211, "1221211");
     tx1221211->addReadRow("8");
     tx122121->addChild(tx1221211, loom::DependencyType::STRONG);
@@ -78,22 +78,22 @@ Transaction::Ptr makeTx1() {
 }
 
 // 自定义tx2
-Transaction::Ptr makeTx2() {
-    Transaction::Ptr tx2;
+TPCCTransaction::Ptr makeTx2() {
+    TPCCTransaction::Ptr tx2;
     simulateRow(tx2, "2");
 
-    Transaction::Ptr tx21;
+    TPCCTransaction::Ptr tx21;
     simulateRow(tx21, "21");
     tx21->addUpdateRow("4");
     tx2->addChild(tx21, loom::DependencyType::STRONG);
-    Transaction::Ptr tx211;
+    TPCCTransaction::Ptr tx211;
     simulateRow(tx211, "211");
     tx211->addUpdateRow("5");
     tx21->addChild(tx211, loom::DependencyType::WEAK);
-    Transaction::Ptr tx212;
+    TPCCTransaction::Ptr tx212;
     simulateRow(tx212, "212");
     tx21->addChild(tx212, loom::DependencyType::STRONG);
-    Transaction::Ptr tx2121;
+    TPCCTransaction::Ptr tx2121;
     simulateRow(tx2121, "2121");
     tx2121->addReadRow("6");
     tx212->addChild(tx2121, loom::DependencyType::WEAK);
@@ -101,27 +101,27 @@ Transaction::Ptr makeTx2() {
     
 
 
-    Transaction::Ptr tx22;
+    TPCCTransaction::Ptr tx22;
     simulateRow(tx22, "22");
     tx22->addReadRow("9");
     tx2->addChild(tx22, loom::DependencyType::WEAK);
     
-    Transaction::Ptr tx221;
+    TPCCTransaction::Ptr tx221;
     simulateRow(tx221, "221");
     tx221->addReadRow("44");
     tx22->addChild(tx221, loom::DependencyType::STRONG);
     
-    Transaction::Ptr tx2211;
+    TPCCTransaction::Ptr tx2211;
     simulateRow(tx2211, "2211");
     tx221->addChild(tx2211, loom::DependencyType::STRONG);
-    Transaction::Ptr tx22111;
+    TPCCTransaction::Ptr tx22111;
     simulateRow(tx22111, "22111");
     tx2211->addChild(tx22111, loom::DependencyType::WEAK);
-    Transaction::Ptr tx22112;
+    TPCCTransaction::Ptr tx22112;
     simulateRow(tx22112, "22112");
     tx2211->addChild(tx22112, loom::DependencyType::STRONG);
 
-    Transaction::Ptr tx222;
+    TPCCTransaction::Ptr tx222;
     simulateRow(tx222, "222");
     tx222->addReadRow("10");
     tx22->addChild(tx222, loom::DependencyType::WEAK);
@@ -130,47 +130,47 @@ Transaction::Ptr makeTx2() {
 }
 
 // 自定义tx3
-Transaction::Ptr makeTx3() {
-    Transaction::Ptr tx3;
+TPCCTransaction::Ptr makeTx3() {
+    TPCCTransaction::Ptr tx3;
     simulateRow(tx3, "3");
 
-    Transaction::Ptr tx31;
+    TPCCTransaction::Ptr tx31;
     simulateRow(tx31, "31");
     tx31->addUpdateRow("9");
     tx3->addChild(tx31, loom::DependencyType::STRONG);
-    Transaction::Ptr tx311;
+    TPCCTransaction::Ptr tx311;
     simulateRow(tx311, "311");
     tx311->addUpdateRow("10");
     tx31->addChild(tx311, loom::DependencyType::STRONG);
     
-    Transaction::Ptr tx312;
+    TPCCTransaction::Ptr tx312;
     simulateRow(tx312, "312");
     tx312->addReadRow("45");
     tx31->addChild(tx312, loom::DependencyType::WEAK);
 
 
-    Transaction::Ptr tx32;
+    TPCCTransaction::Ptr tx32;
     simulateRow(tx32, "32");
     tx3->addChild(tx32, loom::DependencyType::WEAK);
     
-    Transaction::Ptr tx321;
+    TPCCTransaction::Ptr tx321;
     simulateRow(tx321, "321");
     tx32->addChild(tx321, loom::DependencyType::STRONG);
-    Transaction::Ptr tx3211;
+    TPCCTransaction::Ptr tx3211;
     simulateRow(tx3211, "3211");
     tx321->addChild(tx3211, loom::DependencyType::WEAK);
-    Transaction::Ptr tx32111;
+    TPCCTransaction::Ptr tx32111;
     simulateRow(tx32111, "32111");
     tx32111->addReadRow("7");
     tx3211->addChild(tx32111, loom::DependencyType::STRONG);
-    Transaction::Ptr tx32112;
+    TPCCTransaction::Ptr tx32112;
     simulateRow(tx32112, "32112");
     tx32112->addUpdateRow("8");
     tx32112->addReadRow("55");
     tx3211->addChild(tx32112, loom::DependencyType::STRONG);
 
 
-    Transaction::Ptr tx322;
+    TPCCTransaction::Ptr tx322;
     simulateRow(tx322, "322");
     tx322->addReadRow("54");
     tx32->addChild(tx322, loom::DependencyType::WEAK);
@@ -181,19 +181,19 @@ Transaction::Ptr makeTx3() {
 TEST(MinWRollbackTest, TestExecute) {
     // 自定义构建Transaction
     int txNum = 5;
-    vector<Transaction::Ptr> txs;
+    vector<TPCCTransaction::Ptr> txs;
     // tx1
-    Transaction::Ptr tx1 = makeTx1();
-    Transaction::Ptr tx2 = makeTx2();
-    Transaction::Ptr tx3 = makeTx3();
+    TPCCTransaction::Ptr tx1 = makeTx1();
+    TPCCTransaction::Ptr tx2 = makeTx2();
+    TPCCTransaction::Ptr tx3 = makeTx3();
 
     // tx4
-    Transaction::Ptr tx4;
+    TPCCTransaction::Ptr tx4;
     simulateRow(tx4, "4");
     tx4->addReadRow("22114");
 
     // tx5
-    Transaction::Ptr tx5;
+    TPCCTransaction::Ptr tx5;
     simulateRow(tx5, "5");
     tx5->addReadRow("3214");
     tx5->addReadRow("32114");
@@ -232,7 +232,7 @@ TEST(MinWRollbackTest, TestPerformance) {
     Workload workload;
     MinWRollback minw;
     loom::Random random(time(0));
-    Transaction::Ptr tx;
+    TPCCTransaction::Ptr tx;
     chrono::high_resolution_clock::time_point start, end;
 
     for (int i = 0; i < 10; i++) {
@@ -278,7 +278,7 @@ TEST(MinWRollbackTest, TestSCC) {
     Workload workload;
     MinWRollback minw;
     loom::Random random;
-    Transaction::Ptr tx = std::make_shared<NewOrderTransaction>(random);
+    TPCCTransaction::Ptr tx = std::make_shared<NewOrderTransaction>(random);
     chrono::high_resolution_clock::time_point start, end;
 
     // 先生成一笔newOrder事务
@@ -344,7 +344,7 @@ TEST(MinWRollbackTest, TestSCC) {
 TEST(MinWRollbackTest, TestLoopPerformance) {
     Workload workload;
     chrono::high_resolution_clock::time_point start, end;
-    Transaction::Ptr tx;
+    TPCCTransaction::Ptr tx;
 
     uint64_t seed = workload.get_seed();
     cout << "seed = " << seed << endl;
@@ -390,7 +390,7 @@ TEST(MinWRollbackTest, TestLoopPerformance) {
 TEST(MinWRollbackTest, TestBuildGraph) {
     Workload workload;
     chrono::high_resolution_clock::time_point start, end;
-    Transaction::Ptr tx;
+    TPCCTransaction::Ptr tx;
     int counter = 0;
 
     for (int j = 0; j < 10; j++) {
@@ -435,7 +435,7 @@ TEST(MinWRollbackTest, TestBuildGraph) {
 TEST(MinWRollbackTest, TestBuildTime) {
     Workload workload;
     chrono::high_resolution_clock::time_point start, end;
-    Transaction::Ptr tx;
+    TPCCTransaction::Ptr tx;
     MinWRollback minw;
         
     // uint64_t seed = workload.get_seed();
@@ -474,7 +474,7 @@ TEST(MinWRollbackTest, TestBuildTime) {
 TEST(MinWRollbackTest, TestConcurrentBuild) {
     Workload workload;
     chrono::high_resolution_clock::time_point start, end;
-    Transaction::Ptr tx;
+    TPCCTransaction::Ptr tx;
     MinWRollback minw1, minw2;
     loom::Random random(time(0));
     // loom::Random random(140708984311565);
@@ -547,7 +547,7 @@ TEST(MinWRollbackTest, TestConcurrentBuild) {
 TEST(MinWRollbackTest, TestThreadPool) {
     Workload workload;
     chrono::high_resolution_clock::time_point start, end;
-    Transaction::Ptr tx;
+    TPCCTransaction::Ptr tx;
     MinWRollback minw1, minw2, minw3;
     loom::Random random(time(0));
     // loom::Random random(140708984311565);
@@ -624,7 +624,7 @@ TEST(MinWRollbackTest, TestThreadPool) {
 TEST(MinWRollbackTest, TestOptCompare) {
     Workload workload;
     chrono::high_resolution_clock::time_point start, end;
-    Transaction::Ptr tx;
+    TPCCTransaction::Ptr tx;
     MinWRollback minw0, minw1, minw2;
     loom::Random random(time(0));
     int nestCounter = 0;
@@ -744,7 +744,7 @@ TEST(MinWRollbackTest, TestOptCompare) {
 TEST(MinWRollbackTest, TestFastMode) {
     Workload workload;
     chrono::high_resolution_clock::time_point start, end;
-    Transaction::Ptr tx;
+    TPCCTransaction::Ptr tx;
     MinWRollback minw1, minw2;
     loom::Random random(time(0));
     int nestCounter = 0;
@@ -824,7 +824,7 @@ TEST(MinWRollbackTest, TestFastMode) {
 TEST(MinWRollbackTest, TestConcurrentRollback) {
     Workload workload;
     chrono::high_resolution_clock::time_point start, end;
-    Transaction::Ptr tx;
+    TPCCTransaction::Ptr tx;
     MinWRollback minw1, minw2;
     loom::Random random(time(0));
     int nestCounter = 0;
@@ -915,7 +915,7 @@ TEST(MinWRollbackTest, TestConcurrentRollback) {
 TEST(MinWRollbackTest, TestSerialOrder) {
     Workload workload;
     chrono::high_resolution_clock::time_point start, end;
-    Transaction::Ptr tx;
+    TPCCTransaction::Ptr tx;
     MinWRollback minw1, minw2;
     loom::Random random(time(0));
     int nestCounter = 0;

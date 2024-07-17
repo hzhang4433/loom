@@ -18,16 +18,16 @@
 using namespace std;
 using namespace loom;
 
-class Transaction : public std::enable_shared_from_this<Transaction>
+class TPCCTransaction : public std::enable_shared_from_this<TPCCTransaction>
 {
     public:
-        typedef std::shared_ptr<Transaction> Ptr;
+        typedef std::shared_ptr<TPCCTransaction> Ptr;
         
         // 使用自定义输出流代替std::cout
         Util::ConditionalOutputStream coutConditional;
 
         struct ChildTransaction {
-            Transaction::Ptr transaction;
+            TPCCTransaction::Ptr transaction;
             loom::DependencyType dependency;
         };
 
@@ -44,13 +44,13 @@ class Transaction : public std::enable_shared_from_this<Transaction>
         };
 
         // 随机
-        // Transaction(): random(reinterpret_cast<uint64_t>(this)) {}
-        Transaction(Random& random): random(random) {}
+        // TPCCTransaction(): random(reinterpret_cast<uint64_t>(this)) {}
+        TPCCTransaction(Random& random): random(random) {}
 
-        ~Transaction() = default;
+        ~TPCCTransaction() = default;
 
         // 定义虚函数，生成事务
-        virtual Transaction::Ptr makeTransaction() {}
+        virtual TPCCTransaction::Ptr makeTransaction() {}
 
         // 原子地增加计数器，并返回增加后的值 
         // 带测试？ 这个值不会每次初始化都是1吧？
@@ -66,7 +66,7 @@ class Transaction : public std::enable_shared_from_this<Transaction>
         void setExecutionTime(int time) {executionTime = time;}
 
         // add child transaction
-        void addChild(Transaction::Ptr child, loom::DependencyType dependency) {children.push_back({child, dependency});}
+        void addChild(TPCCTransaction::Ptr child, loom::DependencyType dependency) {children.push_back({child, dependency});}
 
         // get children
         const std::vector<ChildTransaction>& getChildren() const {return children;}
@@ -84,10 +84,10 @@ class Transaction : public std::enable_shared_from_this<Transaction>
         const unordered_set<std::string>& getUpdateRows() const {return updateRows;}
 
         // add sibling transaction
-        void addSibling(Transaction::Ptr sibling) {siblings.push_back(sibling);}
+        void addSibling(TPCCTransaction::Ptr sibling) {siblings.push_back(sibling);}
 
         // get siblings
-        const std::vector<Transaction::Ptr>& getSiblings() const {return siblings;}
+        const std::vector<TPCCTransaction::Ptr>& getSiblings() const {return siblings;}
 
         // set transaction type
         void setType(TPCC::TransactionType type) {m_type = type;}
@@ -102,7 +102,7 @@ class Transaction : public std::enable_shared_from_this<Transaction>
             wdc_latestOrder.clear();
             wd_oldestNewOrder.clear();
             wd_latestOrderLines.clear();
-            for(auto& counter : Transaction::order_counters) {
+            for(auto& counter : TPCCTransaction::order_counters) {
                 counter.store(1);
             }
             // wd_orderLineCounters
@@ -116,7 +116,7 @@ class Transaction : public std::enable_shared_from_this<Transaction>
         void printCustomerInfo() {
             coutConditional << "c_lasts: ";
             for (int i = 0; i < 3000; i++) {
-                coutConditional << Transaction::c_lasts[i] << " ";
+                coutConditional << TPCCTransaction::c_lasts[i] << " ";
             }
             coutConditional << endl;
         }
@@ -148,17 +148,17 @@ class Transaction : public std::enable_shared_from_this<Transaction>
         unordered_set<std::string> updateRows;                  // update rows
         // tx structure
         std::vector<ChildTransaction> children;                 // child transactions
-        std::vector<Transaction::Ptr> siblings;                 // sibling transactions
+        std::vector<TPCCTransaction::Ptr> siblings;                 // sibling transactions
         int executionTime = TPCC::ConsumptionType::MEDIUM;      // execution time
         TPCC::TransactionType m_type;                             // transaction type
 };
 
-class NewOrderTransaction : public Transaction
+class NewOrderTransaction : public TPCCTransaction
 {
     public:
         typedef std::shared_ptr<NewOrderTransaction> Ptr;
         // NewOrderTransaction() = default;
-        NewOrderTransaction(Random& random) : Transaction(random) {};
+        NewOrderTransaction(Random& random) : TPCCTransaction(random) {};
         ~NewOrderTransaction() = default;
 
         // 构造NewOrder事务生成所需参数
@@ -194,7 +194,7 @@ class NewOrderTransaction : public Transaction
         }
 
         // 生成嵌套事务
-        Transaction::Ptr makeTransaction() override {
+        TPCCTransaction::Ptr makeTransaction() override {
             // coutConditional << "======= making new order transaction =======" << endl;
 
             auto newOrderTx = makeNewOrder();
@@ -212,17 +212,16 @@ class NewOrderTransaction : public Transaction
                 7. 计算总金额：total_amount = sum(ol_amount)*（1-c_discount）*(1+w_tax+d_tax)
             */
             // 根事务
-            Transaction::Ptr root = std::make_shared<Transaction>(random);
+            TPCCTransaction::Ptr root = std::make_shared<TPCCTransaction>(random);
             root->setType(TPCC::TransactionType::NEW_ORDER);
             root->setExecutionTime(TPCC::ConsumptionType::LOW);
             
             // warehouse子事务
-            Transaction::Ptr wAccess = std::make_shared<Transaction>(random);
+            TPCCTransaction::Ptr wAccess = std::make_shared<TPCCTransaction>(random);
             wAccess->addReadRow("Wtax-" + std::to_string(newOrderTx->w_id));
             
             // district子事务
-            Transaction::Ptr dAccess = std::make_shared<Transaction>(random);
-            // ??
+            TPCCTransaction::Ptr dAccess = std::make_shared<TPCCTransaction>(random);
             dAccess->addReadRow("Dtax-" + std::to_string(newOrderTx->w_id) + "-" + std::to_string(newOrderTx->d_id));
             dAccess->addUpdateRow("DnextOId-" + std::to_string(newOrderTx->w_id) + "-" + std::to_string(newOrderTx->d_id));
             
@@ -241,51 +240,45 @@ class NewOrderTransaction : public Transaction
             // coutConditional << endl;
             
             // newOrder子事务
-            Transaction::Ptr noAccess = std::make_shared<Transaction>(random);
-            noAccess->addReadRow("NO-" + std::to_string(newOrderTx->w_id) + "-" + std::to_string(newOrderTx->d_id) + "-" + std::to_string(next_o_id));
+            TPCCTransaction::Ptr noAccess = std::make_shared<TPCCTransaction>(random);
+            // noAccess->addReadRow("NO-" + std::to_string(newOrderTx->w_id) + "-" + std::to_string(newOrderTx->d_id) + "-" + std::to_string(next_o_id));
             noAccess->addUpdateRow("NO-" + std::to_string(newOrderTx->w_id) + "-" + std::to_string(newOrderTx->d_id) + "-" + std::to_string(next_o_id));
             
             // order子事务
-            Transaction::Ptr oAccess = std::make_shared<Transaction>(random);
+            TPCCTransaction::Ptr oAccess = std::make_shared<TPCCTransaction>(random);
             oAccess->addUpdateRow("O-" + std::to_string(newOrderTx->w_id) + "-" + std::to_string(newOrderTx->d_id) + "-" + std::to_string(next_o_id) + "-" + std::to_string(newOrderTx->c_id));
             
             // items子事务
-            Transaction::Ptr itemsAccess = std::make_shared<Transaction>(random);
+            TPCCTransaction::Ptr itemsAccess = std::make_shared<TPCCTransaction>(random);
             itemsAccess->setExecutionTime(TPCC::ConsumptionType::HIGH);
             
-            /*
+            // /*
             for (auto i = 0; i < newOrderTx->o_ol_cnt; i++) {
 
                 ol_i_id_num[newOrderTx->orderLines[i].ol_i_id]++;
 
                 // item子事务
-                Transaction::Ptr iAccess = std::make_shared<Transaction>(random);
+                TPCCTransaction::Ptr iAccess = std::make_shared<TPCCTransaction>(random);
                 iAccess->addReadRow("I-" + std::to_string(newOrderTx->orderLines[i].ol_i_id));
                 
                 // orderLine子事务
-                Transaction::Ptr olAccess = std::make_shared<Transaction>(random);
+                TPCCTransaction::Ptr olAccess = std::make_shared<TPCCTransaction>(random);
                 olAccess->addReadRow("OL-" + std::to_string(newOrderTx->w_id) + "-" + std::to_string(newOrderTx->d_id) + "-" + std::to_string(next_o_id) + "-" + std::to_string(i));
                 olAccess->addUpdateRow("OL-" + std::to_string(newOrderTx->w_id) + "-" + std::to_string(newOrderTx->d_id) + "-" + std::to_string(next_o_id) + "-" + std::to_string(i));
                 
                 // stock子事务
-                Transaction::Ptr sAccess = std::make_shared<Transaction>(random);
-                // sAccess->addReadRow("S-" + std::to_string(newOrderTx->orderLines[i].ol_supply_w_id) + std::to_string(newOrderTx->d_id) + "-" + std::to_string(newOrderTx->orderLines[i].ol_i_id));
-                // sAccess->addUpdateRow("S-" + std::to_string(newOrderTx->orderLines[i].ol_supply_w_id) + std::to_string(newOrderTx->d_id) + "-" + std::to_string(newOrderTx->orderLines[i].ol_i_id));
-
+                TPCCTransaction::Ptr sAccess = std::make_shared<TPCCTransaction>(random);
                 sAccess->addReadRow("S-" + std::to_string(newOrderTx->orderLines[i].ol_supply_w_id) + "-" + std::to_string(newOrderTx->orderLines[i].ol_i_id));
                 sAccess->addUpdateRow("S-" + std::to_string(newOrderTx->orderLines[i].ol_supply_w_id) + "-" + std::to_string(newOrderTx->orderLines[i].ol_i_id));
         
-
                 // item子事务添加依赖
                 iAccess->addChild(sAccess, loom::DependencyType::WEAK);
                 iAccess->addChild(olAccess, loom::DependencyType::WEAK);
                 
-                
-                /* 更新d_latestOrderLines，d_latestOrderLines中只存储最近的20条orderLine记录
-                   判断是否超过20条：
-                    若没超过20条，则直接添加
-                    若超过20条，则删除最旧的一条 => 覆盖最旧的一条 
-                
+                //  更新d_latestOrderLines，d_latestOrderLines中只存储最近的20条orderLine记录
+                //    判断是否超过20条：
+                //     若没超过20条，则直接添加
+                //     若超过20条，则删除最旧的一条 => 覆盖最旧的一条 
                 auto wd_key = std::to_string(newOrderTx->w_id) + "-" + std::to_string(newOrderTx->d_id);
                 if (wd_orderLineCounters[newOrderTx->w_id - 1][newOrderTx->d_id - 1] < 20) {
                     wd_latestOrderLines[wd_key].push_back({next_o_id, newOrderTx->orderLines[i].ol_i_id, i});
@@ -299,13 +292,14 @@ class NewOrderTransaction : public Transaction
                 // items子事务添加依赖
                 itemsAccess->addChild(iAccess, loom::DependencyType::STRONG);
             }
-            */
+            // */
 
+/*
             // orderLine子事务
-            Transaction::Ptr olAccess = std::make_shared<Transaction>(random);
+            TPCCTransaction::Ptr olAccess = std::make_shared<TPCCTransaction>(random);
             olAccess->setExecutionTime(TPCC::ConsumptionType::HIGH);
             // stock子事务
-            Transaction::Ptr sAccess = std::make_shared<Transaction>(random);
+            TPCCTransaction::Ptr sAccess = std::make_shared<TPCCTransaction>(random);
             sAccess->setExecutionTime(TPCC::ConsumptionType::HIGH);
 
             for (auto i = 0; i < newOrderTx->o_ol_cnt; i++) {
@@ -321,11 +315,6 @@ class NewOrderTransaction : public Transaction
                 sAccess->addReadRow("S-" + std::to_string(newOrderTx->orderLines[i].ol_supply_w_id) + "-" + std::to_string(newOrderTx->orderLines[i].ol_i_id));
                 sAccess->addUpdateRow("S-" + std::to_string(newOrderTx->orderLines[i].ol_supply_w_id) + "-" + std::to_string(newOrderTx->orderLines[i].ol_i_id));
                 
-                /* 更新d_latestOrderLines，d_latestOrderLines中只存储最近的20条orderLine记录
-                   判断是否超过20条：
-                    若没超过20条，则直接添加
-                    若超过20条，则删除最旧的一条 => 覆盖最旧的一条 
-                */
                 auto wd_key = std::to_string(newOrderTx->w_id) + "-" + std::to_string(newOrderTx->d_id);
                 if (wd_orderLineCounters[newOrderTx->w_id - 1][newOrderTx->d_id - 1] < 20) {
                     wd_latestOrderLines[wd_key].push_back({next_o_id, newOrderTx->orderLines[i].ol_i_id, i});
@@ -339,7 +328,7 @@ class NewOrderTransaction : public Transaction
             // item事务添加依赖
             itemsAccess->addChild(sAccess, loom::DependencyType::WEAK);
             itemsAccess->addChild(olAccess, loom::DependencyType::WEAK);
-
+*/
             
             // district子事务添加依赖
             dAccess->addChild(noAccess, loom::DependencyType::WEAK);
@@ -347,7 +336,7 @@ class NewOrderTransaction : public Transaction
             dAccess->addChild(itemsAccess, loom::DependencyType::STRONG);
 
             // customer子事务
-            Transaction::Ptr cAccess = std::make_shared<Transaction>(random);
+            TPCCTransaction::Ptr cAccess = std::make_shared<TPCCTransaction>(random);
             cAccess->addReadRow("Cdiscount-" + std::to_string(newOrderTx->w_id) + "-" + std::to_string(newOrderTx->d_id) + "-" + std::to_string(newOrderTx->c_id));
             
             // 根节点添加依赖
@@ -388,12 +377,12 @@ class NewOrderTransaction : public Transaction
         OrderLineInfo orderLines[15];
 };
 
-class PaymentTransaction : public Transaction
+class PaymentTransaction : public TPCCTransaction
 {
     public:
         typedef std::shared_ptr<PaymentTransaction> Ptr;
         // PaymentTransaction() = default;
-        PaymentTransaction(Random& random) : Transaction(random) {};
+        PaymentTransaction(Random& random) : TPCCTransaction(random) {};
         ~PaymentTransaction() = default;
         
         // 构造Payment事务
@@ -420,7 +409,7 @@ class PaymentTransaction : public Transaction
         }
 
         // 生成嵌套事务
-        Transaction::Ptr makeTransaction() override {
+        TPCCTransaction::Ptr makeTransaction() override {
             // coutConditional << "======= making payment transaction =======" << endl;
 
             auto paymentTx = makePayment();
@@ -441,25 +430,25 @@ class PaymentTransaction : public Transaction
             */
 
             // 根事务
-            Transaction::Ptr root = std::make_shared<Transaction>(random);
+            TPCCTransaction::Ptr root = std::make_shared<TPCCTransaction>(random);
             root->setType(TPCC::TransactionType::PAYMENT);
             root->setExecutionTime(TPCC::ConsumptionType::LOW);
             
             // warehouse子事务
-            Transaction::Ptr wAccess = std::make_shared<Transaction>(random);
+            TPCCTransaction::Ptr wAccess = std::make_shared<TPCCTransaction>(random);
             // wAccess->addReadRow("Wytd-" + std::to_string(paymentTx->w_id));
             // wAccess->addUpdateRow("Wytd-" + std::to_string(paymentTx->w_id));
 
             // district子事务
-            Transaction::Ptr dAccess = std::make_shared<Transaction>(random);
+            TPCCTransaction::Ptr dAccess = std::make_shared<TPCCTransaction>(random);
             dAccess->addReadRow("Dytd-" + std::to_string(paymentTx->w_id) + "-" + std::to_string(paymentTx->d_id));
             dAccess->addUpdateRow("Dytd-" + std::to_string(paymentTx->w_id) + "-" + std::to_string(paymentTx->d_id));
 
             // history子事务
-            Transaction::Ptr hAccess = std::make_shared<Transaction>(random);
+            TPCCTransaction::Ptr hAccess = std::make_shared<TPCCTransaction>(random);
 
             // customer子事务
-            Transaction::Ptr cAccess = std::make_shared<Transaction>(random);
+            TPCCTransaction::Ptr cAccess = std::make_shared<TPCCTransaction>(random);
             if (paymentTx->c_id == -1) {
                 auto& c_ids = c_last_to_c_id.at(paymentTx->c_last);
                 
@@ -501,12 +490,12 @@ class PaymentTransaction : public Transaction
         uint64_t h_amount;
 };
 
-class OrderStatusTransaction : public Transaction
+class OrderStatusTransaction : public TPCCTransaction
 {
     public:
         typedef std::shared_ptr<OrderStatusTransaction> Ptr;
         // OrderStatusTransaction() = default;
-        OrderStatusTransaction(Random& random) : Transaction(random) {};
+        OrderStatusTransaction(Random& random) : TPCCTransaction(random) {};
         ~OrderStatusTransaction() = default;
         
         // 构造OrderStatus事务
@@ -542,7 +531,7 @@ class OrderStatusTransaction : public Transaction
         }
 
         // 生成嵌套事务
-        Transaction::Ptr makeTransaction() override {
+        TPCCTransaction::Ptr makeTransaction() override {
             coutConditional << "======= making order status transaction =======" << endl;
 
             auto orderStatusTx = makeOrderStatus();
@@ -561,11 +550,11 @@ class OrderStatusTransaction : public Transaction
             */
             
             // 根子事务：可能为customer子事务
-            Transaction::Ptr root;
+            TPCCTransaction::Ptr root;
             // customer子事务
-            Transaction::Ptr cAccess = std::make_shared<Transaction>(random);
+            TPCCTransaction::Ptr cAccess = std::make_shared<TPCCTransaction>(random);
             // order子事务
-            Transaction::Ptr oAccess = std::make_shared<Transaction>(random);
+            TPCCTransaction::Ptr oAccess = std::make_shared<TPCCTransaction>(random);
             oAccess->setExecutionTime(TPCC::ConsumptionType::HIGH);
 
             if (orderStatusTx->c_id == -1) {
@@ -588,7 +577,7 @@ class OrderStatusTransaction : public Transaction
                 cAccess->addReadRow("C-" + std::to_string(orderStatusTx->w_id) + "-" + std::to_string(orderStatusTx->d_id) + "-" + std::to_string(orderStatusTx->c_id));
 
                 // 新建根子事务
-                root = std::make_shared<Transaction>(random);
+                root = std::make_shared<TPCCTransaction>(random);
                 root->setExecutionTime(TPCC::ConsumptionType::LOW);
                 root->addChild(cAccess, loom::DependencyType::WEAK);
                 root->addChild(oAccess, loom::DependencyType::WEAK);
@@ -611,7 +600,7 @@ class OrderStatusTransaction : public Transaction
 
             for (int i = 0; i < latestOrder.o_ol_cnt; i++) {
                 // orderLine子事务
-                Transaction::Ptr olAccess = std::make_shared<Transaction>(random);
+                TPCCTransaction::Ptr olAccess = std::make_shared<TPCCTransaction>(random);
                 olAccess->addReadRow("OL-" + std::to_string(orderStatusTx->w_id) + "-" + std::to_string(orderStatusTx->d_id) + "-" + std::to_string(latestOrder.o_id));
                 
                 // order子事务添加依赖
@@ -630,12 +619,12 @@ class OrderStatusTransaction : public Transaction
         std::string c_last;
 };
 
-class DeliveryTransaction : public Transaction
+class DeliveryTransaction : public TPCCTransaction
 {
     public:
         typedef std::shared_ptr<DeliveryTransaction> Ptr;
         // DeliveryTransaction() = default;
-        DeliveryTransaction(Random& random) : Transaction(random) {};
+        DeliveryTransaction(Random& random) : TPCCTransaction(random) {};
         ~DeliveryTransaction() = default;
         
         // 构造Delivery事务
@@ -648,7 +637,7 @@ class DeliveryTransaction : public Transaction
         }
 
         // 生成嵌套事务
-        Transaction::Ptr makeTransaction() override {
+        TPCCTransaction::Ptr makeTransaction() override {
             coutConditional << "======= making delivery transaction =======" << endl;
 
             auto deliveryTx = makeDelivery();
@@ -664,13 +653,13 @@ class DeliveryTransaction : public Transaction
                 需要额外维护的数据：(w_id-d_id, {o_id, o_c_id, o_ol_cnt})
             */
             // 根事务
-            Transaction::Ptr root = std::make_shared<Transaction>(random);
+            TPCCTransaction::Ptr root = std::make_shared<TPCCTransaction>(random);
             root->setType(TPCC::TransactionType::DELIVERY);
             root->setExecutionTime(TPCC::ConsumptionType::HIGH);
 
             for (int i = 1; i <= TPCC::N_DISTRICTS; i++) {
                 // newOrder子事务 + customer子事务
-                Transaction::Ptr no_cAccess = std::make_shared<Transaction>(random);
+                TPCCTransaction::Ptr no_cAccess = std::make_shared<TPCCTransaction>(random);
                 
                 // 获得oldestNewOrder并更新wd_oldestNewOrder
                 auto wd_key = std::to_string(deliveryTx->w_id) + "-" + std::to_string(i);
@@ -704,15 +693,15 @@ class DeliveryTransaction : public Transaction
                 no_cAccess->setExecutionTime(TPCC::ConsumptionType::HIGH);
 
                 // order子事务
-                Transaction::Ptr oAccess = std::make_shared<Transaction>(random);
+                TPCCTransaction::Ptr oAccess = std::make_shared<TPCCTransaction>(random);
                 oAccess->addReadRow("O-" + wd_key + "-" + std::to_string(oldestNewOrder.o_id) + "-" + std::to_string(oldestNewOrder.o_c_id));
                 oAccess->addUpdateRow("O-" + wd_key + "-" + std::to_string(oldestNewOrder.o_id) + "-" + std::to_string(oldestNewOrder.o_c_id));
                 
                 // orderlines子事务
-                Transaction::Ptr olsAccess = std::make_shared<Transaction>(random);
+                TPCCTransaction::Ptr olsAccess = std::make_shared<TPCCTransaction>(random);
                 for (int j = 0; j < oldestNewOrder.o_ol_cnt; j++) {
                     // orderLine子事务
-                    Transaction::Ptr olAccess = std::make_shared<Transaction>(random);
+                    TPCCTransaction::Ptr olAccess = std::make_shared<TPCCTransaction>(random);
                     olAccess->addReadRow("OL-" + wd_key + "-" + std::to_string(oldestNewOrder.o_id));
                     // olAccess->addUpdateRow("OLdelivery-" + wd_key + "-" + std::to_string(oldestNewOrder.o_id) + "-" + std::to_string(j));
                     // orderlines子事务添加依赖
@@ -744,12 +733,12 @@ class DeliveryTransaction : public Transaction
         uint64_t ol_delivery_d;
 };
 
-class StockLevelTransaction : public Transaction
+class StockLevelTransaction : public TPCCTransaction
 {
     public:
         typedef std::shared_ptr<StockLevelTransaction> Ptr;
         // StockLevelTransaction() = default;
-        StockLevelTransaction(Random& random) : Transaction(random) {};
+        StockLevelTransaction(Random& random) : TPCCTransaction(random) {};
         ~StockLevelTransaction() = default;
         
         // 构造StockLevel事务
@@ -766,7 +755,7 @@ class StockLevelTransaction : public Transaction
         }
 
         // 生成嵌套事务
-        Transaction::Ptr makeTransaction() override {
+        TPCCTransaction::Ptr makeTransaction() override {
             coutConditional << "======= making stock level transaction =======" << endl;
 
             auto stockLevelTx = makeStockLevel();
@@ -783,7 +772,7 @@ class StockLevelTransaction : public Transaction
 
             /* 嵌套事务实现 */
             // district子事务
-            Transaction::Ptr dAccess = std::make_shared<Transaction>(random);
+            TPCCTransaction::Ptr dAccess = std::make_shared<TPCCTransaction>(random);
             dAccess->setType(TPCC::TransactionType::STOCK_LEVEL);
             dAccess->addReadRow("D-" + std::to_string(stockLevelTx->w_id) + "-" + std::to_string(stockLevelTx->d_id));
             // 获取d_next_o_id
@@ -791,7 +780,7 @@ class StockLevelTransaction : public Transaction
             // coutConditional << "In StockLevelTransaction, now next_o_id: " << d_next_o_id << endl;
 
             // orderLine子事务
-            Transaction::Ptr olAccess = std::make_shared<Transaction>(random);
+            TPCCTransaction::Ptr olAccess = std::make_shared<TPCCTransaction>(random);
             auto wd_key = std::to_string(stockLevelTx->w_id) + "-" + std::to_string(stockLevelTx->d_id);
             // 获取最近的20条orderLine记录
             if (wd_latestOrderLines.count(wd_key) == 0) {
@@ -804,7 +793,7 @@ class StockLevelTransaction : public Transaction
                 // coutConditional << "orderLine: o_id = " << orderLine.o_id << ", ol_i_id = " << orderLine.ol_i_id << endl;
 
                 // stock子事务
-                Transaction::Ptr sAccess = std::make_shared<Transaction>(random);
+                TPCCTransaction::Ptr sAccess = std::make_shared<TPCCTransaction>(random);
                 sAccess->addReadRow("Sqtys-" + std::to_string(stockLevelTx->w_id) + "-" + std::to_string(orderLine.ol_i_id));
 
                 // orderLine子事务添加依赖

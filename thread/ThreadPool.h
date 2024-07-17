@@ -31,6 +31,7 @@ class ThreadPool : public std::enable_shared_from_this<ThreadPool>
     private:
         void PinRoundRobin(std::thread& thread, unsigned rotate_id);
         void PinRoundRobin(pthread_t& thread, unsigned rotate_id);
+        void PinRoundRobin(std::jthread& thread, unsigned rotate_id);
 
         
         std::vector<std::thread> workers;

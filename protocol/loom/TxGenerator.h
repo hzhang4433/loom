@@ -23,7 +23,7 @@ class TxGenerator {
         
         Block::Ptr generateBlock(); // 生成区块
         
-        HyperVertex::Ptr generateTransaction(const Transaction::Ptr& tx, bool isNest, unordered_map<string, loom::RWSets<Vertex::Ptr>>& invertedIndex); // 生成事务
+        HyperVertex::Ptr generateTransaction(const TPCCTransaction::Ptr& tx, bool isNest, unordered_map<string, loom::RWSets<Vertex::Ptr>>& invertedIndex); // 生成事务
         
         void generateIndex(vector<Vertex::Ptr> txLists, unordered_map<string, loom::RWSets<Vertex::Ptr>>& invertedIndex, unordered_map<Vertex::Ptr, unordered_set<Vertex::Ptr, Vertex::VertexHash>, Vertex::VertexHash>& RWIndex, unordered_map<Vertex::Ptr, unordered_set<Vertex::Ptr, Vertex::VertexHash>, Vertex::VertexHash>& conflictIndex, unordered_map<string, set<Vertex::Ptr, Vertex::VertexCompare>>& RBIndex); // 生成索引
         

@@ -15,7 +15,7 @@ using namespace std;
         2. 判断执行完成的事务与其它执行完成事务间的rw依赖，构建rw依赖图
     状态: 测试完成，待优化...
 */
-HyperVertex::Ptr MinWRollback::execute(const Transaction::Ptr& tx, bool isNest) {
+HyperVertex::Ptr MinWRollback::execute(const TPCCTransaction::Ptr& tx, bool isNest) {
     int txid = getId();
     HyperVertex::Ptr hyperVertex = make_shared<HyperVertex>(txid, isNest);
     Vertex::Ptr rootVertex = make_shared<Vertex>(hyperVertex, txid, to_string(txid), 0, isNest);
@@ -198,8 +198,8 @@ void MinWRollback::buildGraphNoEdgeC(UThreadPoolPtr& Pool, std::vector<std::futu
     }
 
     size_t totalPairs = rwPairs.size();
-    size_t chunkSize = (totalPairs + UTIL_DEFAULT_THREAD_SIZE - 1) / (UTIL_DEFAULT_THREAD_SIZE * 2);
-    // chunkSize = 20;
+    size_t chunkSize = (totalPairs + UTIL_DEFAULT_THREAD_SIZE - 1) / (UTIL_DEFAULT_THREAD_SIZE * 0.8);
+    // chunkSize = 15;
     if (chunkSize == 0) {
         chunkSize = totalPairs;
     }

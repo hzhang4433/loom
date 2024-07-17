@@ -22,7 +22,7 @@ class Workload {
         ~Workload() = default;
         
         // 随机生成封装好的五类事务
-        Transaction::Ptr NextTransaction() {
+        TPCCTransaction::Ptr NextTransaction() {
             uint64_t option = random.uniform_dist(1, 100);
             if (option <= 45) {         // 生成由newOrder构成的负载
                 txGenerator = std::make_shared<NewOrderTransaction>(tx_random);
@@ -62,5 +62,5 @@ class Workload {
     private:
         loom::Random random;
         loom::Random tx_random;
-        Transaction::Ptr txGenerator;
+        TPCCTransaction::Ptr txGenerator;
 };

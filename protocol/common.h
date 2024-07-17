@@ -12,6 +12,16 @@ namespace loom {
         virtual ~Protocol() = default;
     };
 
+    struct KeyHasher {
+        size_t operator()(const std::string& key) const {
+            size_t h = 0;
+            for (char c : key) {
+                h ^= std::hash<char>{}(c) + 0x9e3779b9 + (h << 6) + (h >> 2);
+            }
+            return h;
+        }
+    };
+
     // 判断两个set是否有交集
     template <typename T, typename Hash>
     bool hasIntersection(const tbb::concurrent_unordered_set<T, Hash>& set1, const tbb::concurrent_unordered_set<T, Hash>& set2) {

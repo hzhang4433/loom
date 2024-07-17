@@ -3,7 +3,7 @@
 
 using namespace std;
 
-void FabricPP::execute(const Transaction::Ptr& tx) {
+void FabricPP::execute(const TPCCTransaction::Ptr& tx) {
     // 构建超节点
     int txid = getId();
     HyperVertex::Ptr hyperVertex = make_shared<HyperVertex>(txid, false);

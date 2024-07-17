@@ -1,7 +1,7 @@
 #include <Loom/protocol/aria/Aria.h>
 #include <fmt/core.h>
 #include <glog/logging.h>
-#include <Loom/thread/thread-util.hpp>
+#include <Loom/thread/ThreadPool.h>
 
 
 
@@ -34,7 +34,7 @@ void Aria::Start() {
         workers.push_back(std::thread([this, i]() {
             AriaExecutor(*this, i).Run();
         }));
-        PinRoundRobin(workers[i], i);
+        ThreadPool::PinRoundRobin(workers[i], i);
     }
 }
 

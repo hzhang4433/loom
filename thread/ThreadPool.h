@@ -28,11 +28,11 @@ class ThreadPool : public std::enable_shared_from_this<ThreadPool>
 
         std::vector<std::future<void>> BG_futures; // 并发构建时空图的future
 
-    private:
-        void PinRoundRobin(std::thread& thread, unsigned rotate_id);
-        void PinRoundRobin(pthread_t& thread, unsigned rotate_id);
-        void PinRoundRobin(std::jthread& thread, unsigned rotate_id);
+        static void PinRoundRobin(std::thread& thread, unsigned rotate_id);
+        static void PinRoundRobin(pthread_t& thread, unsigned rotate_id);
+        static void PinRoundRobin(std::jthread& thread, unsigned rotate_id);
 
+    private:
         
         std::vector<std::thread> workers;
         std::queue<std::function<void()>> tasks;

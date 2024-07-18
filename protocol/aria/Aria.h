@@ -24,7 +24,8 @@ struct AriaTransaction: public Transaction {
     std::unordered_set<string> readSet;
     std::unordered_set<string> writeSet;
     AriaTransaction(Transaction&& inner, size_t batch_id);
-    AriaTransaction(AriaTransaction&& tx);
+    AriaTransaction(AriaTransaction&& tx) noexcept; // move constructor
+    AriaTransaction(const AriaTransaction& other); // copy constructor
 };
 
 /// @brief aria table entry for first round execution
@@ -58,7 +59,7 @@ struct AriaLockTable: public Table<K, AriaLockEntry, KeyHasher> {
 class Aria: public Protocol {
 
 public:
-    Aria(vector<Block::Ptr> blocks, size_t num_threads, size_t table_partitions, size_t repeat, bool enable_reordering);
+    Aria(vector<Block::Ptr> blocks, size_t num_threads, bool enable_reordering, size_t table_partitions = 1);
     void Start() override;
     void Stop() override;
 
@@ -81,7 +82,7 @@ private:
 class AriaExecutor {
 
 public:
-    AriaExecutor(Aria& aria, size_t worker_id);
+    AriaExecutor(Aria& aria, size_t worker_id, vector<vector<T>> batchTxs);
     void Run();
     void Execute(T* tx);
     void Reserve(T* tx);
@@ -92,7 +93,7 @@ public:
     void CleanLockTable(T* tx);
 
 private:
-    vector<AriaTransaction>                 txs;
+    vector<vector<T>>                       batchTxs;
     AriaTable&                              table;
     AriaLockTable&                          lock_table;
     bool                                    enable_reordering;

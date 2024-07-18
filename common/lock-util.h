@@ -125,7 +125,7 @@ void Table<K, V, Hasher>::Get(const K& k, std::function<void(const V& v)>&& vmap
     DLOG(INFO) << "at partition " << partition_id;
     auto guard = Guard{locks[partition_id]};
     auto& partition = this->partitions[partition_id];
-    if (partition.contains(k)) vmap(partition[k]);
+    vmap(partition[k]);
 }
 
 template<typename K, typename V, typename Hasher>

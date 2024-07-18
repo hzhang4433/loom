@@ -24,7 +24,7 @@ class Block {
         void setTxs(const std::vector<Transaction::Ptr>& txs) {m_txs = txs;}
 
         // 获取区块内事务
-        std::vector<Transaction::Ptr> getTxs() {return m_txs;}
+        const std::vector<Transaction::Ptr> getTxs() const {return m_txs;}
 
         // 设置倒排索引
         void setInvertedIndex(const std::unordered_map<string, loom::RWSets<Vertex::Ptr>>& invertedIndex) {m_invertedIndex = invertedIndex;} 

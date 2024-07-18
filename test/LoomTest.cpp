@@ -270,3 +270,12 @@ TEST(LoomTest, TestConcurrentRollback) {
     }
     
 }
+
+TEST(LoomTest, TestLooptime) {
+    size_t loopTime = 3500;
+    auto start = chrono::high_resolution_clock::now();
+    for (int i = 0; i < loopTime; i++) {}
+    auto end = chrono::high_resolution_clock::now();
+    auto duration = chrono::duration_cast<chrono::microseconds>(end - start);
+    cout << "Loop Time: " << duration.count() << "us" << endl;
+}

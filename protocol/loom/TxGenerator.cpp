@@ -54,7 +54,7 @@ Block::Ptr TxGenerator::generateBlock() {
         // auto tx = NO_txGenerator->makeTransaction();
 
         // // 48%的NewOrder事务,48%的Payment事务,4%的Delivery事务
-        // Transaction::Ptr tx;
+        // TPCCTransaction::Ptr tx;
         // uint64_t option = random.uniform_dist(1, 100);
         // if (option <= 49) {
         //     tx = NO_txGenerator->makeTransaction();
@@ -71,7 +71,7 @@ Block::Ptr TxGenerator::generateBlock() {
         // 记录所有子事务
         txLists.insert(txLists.end(), txVertex->m_vertices.begin(), txVertex->m_vertices.end());
         // 记录所有事务
-        txs.push_back(make_shared<Transaction>(txVertex, (size_t)txVertex->m_rootVertex->m_cost));
+        txs.push_back(make_shared<Transaction>(txVertex));
     }
 
     // 生成索引

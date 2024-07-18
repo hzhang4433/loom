@@ -17,19 +17,21 @@ namespace loom {
 
 /// @brief aria tranaction with local read and write set.
 struct AriaTransaction: public Transaction {
+    size_t      id;
     size_t      batch_id;
     bool        flag_conflict{false};
     std::atomic<bool>   committed{false};
     std::chrono::time_point<std::chrono::steady_clock> start_time;
-    std::unordered_set<string> readSet;
-    std::unordered_set<string> writeSet;
-    AriaTransaction(Transaction&& inner, size_t batch_id);
+    std::unordered_map<string, string> local_get;
+    std::unordered_map<string, string> local_put;
+    AriaTransaction(Transaction&& inner, size_t id, size_t batch_id);
     AriaTransaction(AriaTransaction&& tx) noexcept; // move constructor
     AriaTransaction(const AriaTransaction& other); // copy constructor
 };
 
 /// @brief aria table entry for first round execution
 struct AriaEntry {
+    string  value           = "";
     size_t  batch_id_get    = 0;
     size_t  batch_id_put    = 0;
     T*      reserved_get_tx = nullptr;

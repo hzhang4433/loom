@@ -199,4 +199,10 @@ namespace loom {
         std::unordered_set<T> readSet;
         std::unordered_set<T> writeSet;
     };
+
+    static void Exec(size_t tx) {
+        size_t TENMILL = 3500;
+        size_t loopTime = TENMILL * tx / 10;
+        for (int i = 0; i < loopTime; i++) {}
+    }
 }

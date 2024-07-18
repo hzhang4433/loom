@@ -2,17 +2,26 @@
 
 #include "HyperVertex.h"
 
+namespace loom {
+
+using SetStorage = std::function<void(const std::unordered_set<string>& writeSet, const std::string& value)>;
+using GetStorage = std::function<void(const std::unordered_set<string>& readSet)>;
+
 class Transaction : public std::enable_shared_from_this<Transaction>
 {
     public:
         typedef std::shared_ptr<Transaction> Ptr;
-        Transaction(HyperVertex::Ptr tx, size_t txTime) : m_tx(tx), m_txTime(txTime) {}
-        Transaction(const Transaction& other) : m_tx(other.m_tx), m_txTime(other.m_txTime) {} // copy constructor
+        Transaction(HyperVertex::Ptr tx);
+        Transaction(const Transaction& other); // copy constructor
+        void InstallSetStorageHandler(SetStorage &&handler);
+        void InstallGetStorageHandler(GetStorage &&handler);
         void Execute();
-        void SetStorageHandler();
-        void GetStorageHandler();
         const HyperVertex::Ptr GetTx() const {return m_tx;}
     private:
         HyperVertex::Ptr m_tx;
-        size_t m_txTime;
+
+        // Handler functions for get and set operations
+        SetStorage setHandler;
+        GetStorage getHandler;
 };
+}

@@ -2,7 +2,7 @@
 
 #include <string>
 #include <vector>
-#include "utils/Random.hpp"
+#include "utils/URandom.hpp"
 
 namespace loom {
 class Random : public Util::Random {

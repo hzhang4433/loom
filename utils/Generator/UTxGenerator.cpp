@@ -1,4 +1,4 @@
-#include "TxGenerator.h"
+#include "UTxGenerator.h"
 #include "workload/tpcc/Workload.hpp"
 
 

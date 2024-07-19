@@ -3,7 +3,7 @@
 #include "workload/tpcc/Workload.hpp"
 #include "protocol/loom/MinWRollback.h"
 #include "protocol/loom/common.h"
-#include "protocol/loom/TxGenerator.h"
+#include "utils/Generator/UTxGenerator.h"
 #include "protocol/loom/DeterReExecute.h"
 
 using namespace std;

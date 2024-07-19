@@ -7,11 +7,17 @@
 #include <Loom/test/CompareTest.cpp>
 #include <Loom/test/DeterReExecuteTest.cpp>
 #include <Loom/test/LoomTest.cpp>
+#include <Loom/test/AriaTest.cpp>
 
 
 using namespace std;
 
 int main(int argc, char** argv) {
+    // 设置日志输出路径
+    FLAGS_log_dir = "/home/z/zh/Loom/log";
+    // 初始化glog
+    google::InitGoogleLogging(argv[0]);
+
     /* 启用gtest测试 */
     testing::InitGoogleTest(&argc, argv);
     // ::testing::GTEST_FLAG(filter) = "TpccTest.MultiWarehouseTEST";
@@ -21,7 +27,8 @@ int main(int argc, char** argv) {
     // ::testing::GTEST_FLAG(filter) = "CompareTest.TestRollback";
     // ::testing::GTEST_FLAG(filter) = "DeterReExecuteTest.TestTimeSpaceGraph";
     // ::testing::GTEST_FLAG(filter) = "LoomTest.TestConcurrentRollback";
-    ::testing::GTEST_FLAG(filter) = "LoomTest.TestLooptime";
+    // ::testing::GTEST_FLAG(filter) = "LoomTest.TestLooptime";
+    ::testing::GTEST_FLAG(filter) = "AriaTest.TestAria";
     
     int result = RUN_ALL_TESTS();
 
@@ -30,6 +37,9 @@ int main(int argc, char** argv) {
     } else {
         cout << "Some tests failed." << endl;
     }
+
+    // 关闭glog
+    google::ShutdownGoogleLogging();
 
     return 0;
 }

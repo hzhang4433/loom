@@ -13,6 +13,8 @@
 #include <vector>
 #include "common/Block.h"
 
+namespace loom {
+
 class TxGenerator {
     public:
         TxGenerator(int txNum); // 构造函数
@@ -37,3 +39,5 @@ class TxGenerator {
         std::vector<Block::Ptr> m_blocks;   // 产生的所有区块
         std::atomic<int> id_counter;        // 分配事务ID
 };
+
+}

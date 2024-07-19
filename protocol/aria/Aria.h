@@ -2,6 +2,7 @@
 
 #include <chrono>
 #include <barrier>
+#include <thread>
 #include <glog/logging.h>
 #include <Loom/common/lock-util.h>
 #include <Loom/protocol/common.h>

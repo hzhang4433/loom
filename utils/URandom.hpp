@@ -4,6 +4,7 @@
 #include <random>
 
 namespace Util {
+
 class Random {
     public:
         Random(uint64_t seed = 0) : distribution(0, 1000000), rng(seed) { init_seed(seed); }

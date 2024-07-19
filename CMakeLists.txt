@@ -24,8 +24,20 @@ find_package(Boost REQUIRED)
 include_directories(${Boost_INCLUDE_DIRS})
 
 # 找glog
-set(GLOG_DIR /usr/include/glog)
+# find_package(PkgConfig REQUIRED)
+# pkg_check_modules(GLOG REQUIRED glog)
+# include_directories(${GLOG_INCLUDE_DIRS})
+# link_directories(${GLOG_LIBRARY_DIRS})
+# add_definitions(-DGLOG_EXPORT -DGLOG_NO_EXPORT)
+
+set(GLOG_INCLUDE_DIRS /usr/include/glog)
 set(GLOG_LIBRARIES /usr/lib/x86_64-linux-gnu/libglog.so)
+include_directories(${GLOG_INCLUDE_DIRS})
+
+# 找gflags
+find_package(GFlags REQUIRED)
+include_directories(${GFLAGS_INCLUDE_DIRS})
+
 
 # 找fmt
 set(FMT_DIR /usr/include/fmt)
@@ -44,7 +56,9 @@ file(GLOB_RECURSE HEADERS "*.h" "*.hpp")
 add_definitions(-DTBB_SUPPRESS_DEPRECATED_MESSAGES=1)
 
 add_executable(loom ${SRC_LIST} ${HEADERS})
-target_link_libraries(loom ${GTEST_LIBRARIES} ${TBB_LIBRARIES} ${Boost_LIBRARIES} ${GLOG_LIBRARIES} ${FMT_LIBRARIES} pthread)
+target_link_libraries(
+    loom 
+    PUBLIC ${GTEST_LIBRARIES} ${TBB_LIBRARIES} ${Boost_LIBRARIES} ${GLOG_LIBRARIES} ${FMT_LIBRARIES} pthread)
 target_compile_options(loom PRIVATE -Wno-deprecated -Wpedantic -Wno-unused-variable -Wno-unused-parameter -Wno-comment -Wno-sign-compare -Wno-pedantic -Wno-return-type -Wno-uninitialized)
 # add project to include path
 # message(STATUS "Project source directory: ${PROJECT_SOURCE_DIR}")

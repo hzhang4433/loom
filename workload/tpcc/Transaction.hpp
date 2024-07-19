@@ -11,7 +11,7 @@
 #include "Random.hpp"
 #include "Define.h"
 #include "common/common.h"
-#include "utils/ConditionalOutputStream.h"
+#include "utils/UConditionalOutputStream.h"
 
 
 #include <iostream>

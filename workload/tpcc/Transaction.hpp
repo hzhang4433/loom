@@ -471,7 +471,7 @@ class PaymentTransaction : public TPCCTransaction
             // coutConditional << endl;
 
             // cAccess->addUpdateRow("Cbalance-" + std::to_string(paymentTx->w_id) + "-" + std::to_string(paymentTx->d_id) + "-" + std::to_string(paymentTx->c_id));
-            cAccess->addUpdateRow("C-" + std::to_string(paymentTx->w_id) + "-" + std::to_string(paymentTx->d_id) + "-" + std::to_string(paymentTx->c_id));
+            // cAccess->addUpdateRow("C-" + std::to_string(paymentTx->w_id) + "-" + std::to_string(paymentTx->d_id) + "-" + std::to_string(paymentTx->c_id));
             hAccess->addUpdateRow("H-" + std::to_string(paymentTx->w_id) + "-" + std::to_string(paymentTx->d_id) + "-" + std::to_string(paymentTx->c_id));
 
             // 根节点添加依赖
@@ -714,8 +714,8 @@ class DeliveryTransaction : public TPCCTransaction
                 no_cAccess->addChild(olsAccess, loom::DependencyType::STRONG);
 
                 // 添加customer子事务读写集
-                no_cAccess->addReadRow("C-" + wd_key + "-" + std::to_string(oldestNewOrder.o_c_id));
-                no_cAccess->addUpdateRow("Cbalance-" + wd_key + "-" + std::to_string(oldestNewOrder.o_c_id));
+                // no_cAccess->addReadRow("C-" + wd_key + "-" + std::to_string(oldestNewOrder.o_c_id));
+                // no_cAccess->addUpdateRow("Cbalance-" + wd_key + "-" + std::to_string(oldestNewOrder.o_c_id));
                 no_cAccess->addReadRow("Cdelivery-" + wd_key + "-" + std::to_string(oldestNewOrder.o_c_id));
                 no_cAccess->addUpdateRow("Cdelivery-" + wd_key + "-" + std::to_string(oldestNewOrder.o_c_id));
 

@@ -171,9 +171,14 @@ TEST(LoomTest, TestConcurrentRollback) {
 
     // 执行每个区块
     for (auto& block : blocks) {
+        size_t allTime = 0;
         for (auto tx : block->getTxs()) {
             // 并行执行所有交易
+            // 计算交易执行时间
+            allTime += tx->GetTx()->m_rootVertex->m_cost;
         }
+        cout << "All Time: " << allTime << endl;
+        
         // 执行完成 => 构图 => 回滚 => 重调度 => 重执行
         MinWRollback minw(block->getTxList(), block->getRWIndex());
         auto start = chrono::high_resolution_clock::now();
@@ -256,8 +261,6 @@ TEST(LoomTest, TestConcurrentRollback) {
 
 
         // 重执行
-
-
         int serialTime = normalReExecute.calculateSerialTime();
         cout << "Serial Execute Time: " << serialTime << endl;
         cout << "Normal Execute Time: " << normalBuildTime << endl;

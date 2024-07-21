@@ -6,17 +6,17 @@
 TxGenerator::TxGenerator(int txNum) : id_counter(0), m_txNum(txNum), m_blockSize(loom::BLOCK_SIZE) {}  
 
 // 生成事务
-std::vector<Block::Ptr> TxGenerator::generateWorkload() {
+std::vector<Block::Ptr> TxGenerator::generateWorkload(bool isNest) {
     auto blockNum = m_txNum / m_blockSize;
     for (int i = 0; i < blockNum; i++) {
-        auto block = generateBlock();
+        auto block = generateBlock(isNest);
         m_blocks.push_back(block);
     }
     return m_blocks;
 }
 
 // 生成区块
-Block::Ptr TxGenerator::generateBlock() {
+Block::Ptr TxGenerator::generateBlock(bool isNest) {
     Workload workload;
     vector<Vertex::Ptr> txLists;
     std::vector<Transaction::Ptr> txs;
@@ -66,7 +66,7 @@ Block::Ptr TxGenerator::generateBlock() {
         //     tx = D_txGenerator->makeTransaction();
         // }
         // cout << "tx " << i + 1 << " type: " << TPCC::transactionTypeToString(tx->getType()) << endl;
-        HyperVertex::Ptr txVertex = generateTransaction(tx, true, invertedIndex);
+        HyperVertex::Ptr txVertex = generateTransaction(tx, isNest, invertedIndex);
         
         // 记录所有子事务
         txLists.insert(txLists.end(), txVertex->m_vertices.begin(), txVertex->m_vertices.end());

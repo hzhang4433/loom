@@ -124,11 +124,11 @@ AriaTransaction::AriaTransaction(const AriaTransaction& other) :
 /// @param k the reserved key
 void AriaTable::ReserveGet(T* tx, const K& k) {
     Table::Put(k, [&](AriaEntry& entry) {
-        DLOG(INFO) << tx->batch_id << ":" <<  tx->id << " reserve get, current tx(" << entry.batch_id_get << ":" << entry.reserved_get_tx << ")" << std::endl;
+        DLOG(INFO) << tx->batch_id << ":" <<  tx->id << " reserve get " << k << ", current tx(" << entry.batch_id_get << ":" << entry.reserved_get_tx << ")" << std::endl;
         if (entry.batch_id_get != tx->batch_id || entry.reserved_get_tx == nullptr || entry.reserved_get_tx->id > tx->id) {
             entry.reserved_get_tx = tx;
             entry.batch_id_get = tx->batch_id;
-            DLOG(INFO) << tx->batch_id << ":" << tx->id << " reserve get ok" << std::endl;
+            DLOG(INFO) << tx->batch_id << ":" << tx->id << " reserve get " << k << " ok" << std::endl;
         }
     });
 }
@@ -138,11 +138,11 @@ void AriaTable::ReserveGet(T* tx, const K& k) {
 /// @param k the reserved key
 void AriaTable::ReservePut(T* tx, const K& k) {
     Table::Put(k, [&](AriaEntry& entry) {
-        DLOG(INFO) << tx->batch_id << ":" <<  tx->id << " reserve put, current tx(" << entry.batch_id_put << ":" << entry.reserved_put_tx << ")" << std::endl;
+        DLOG(INFO) << tx->batch_id << ":" <<  tx->id << " reserve put " << k << ", current tx(" << entry.batch_id_put << ":" << entry.reserved_put_tx << ")" << std::endl;
         if (entry.batch_id_put != tx->batch_id || entry.reserved_put_tx == nullptr || entry.reserved_put_tx->id > tx->id) {
             entry.reserved_put_tx = tx;
             entry.batch_id_put = tx->batch_id;
-            DLOG(INFO) << tx->batch_id << ":" << tx->id << " reserve put ok" << std::endl;
+            DLOG(INFO) << tx->batch_id << ":" << tx->id << " reserve put " << k << " ok" << std::endl;
         }
     });
 }
@@ -209,6 +209,7 @@ void AriaExecutor::Run() {
         if (_stop) {return;}
         if (stop_flag.load()) { confirm_exit.compare_exchange_weak(worker_id, worker_id + 1);}
         has_conflict.store(false);
+        DLOG(INFO) << "worker " << worker_id << " executing" << std::endl;
         for (auto& tx : batch) {
             // execute transaction
             this->Execute(&tx);
@@ -217,6 +218,7 @@ void AriaExecutor::Run() {
         }
         // stage 2: verify + commit
         barrier.arrive_and_wait();
+        DLOG(INFO) << "worker " << worker_id << " verifying" << std::endl;
         for (auto& tx : batch) {
             this->Verify(&tx);
             if (tx.flag_conflict) {
@@ -228,6 +230,7 @@ void AriaExecutor::Run() {
         }
         // stage 3: fallback
         barrier.arrive_and_wait();
+        DLOG(INFO) << "worker " << worker_id << " fallbacking" << std::endl;
         if (!has_conflict.load()) {
             continue;
         }
@@ -238,6 +241,7 @@ void AriaExecutor::Run() {
         }
         // stage 4: clean up
         barrier.arrive_and_wait();
+        DLOG(INFO) << "worker " << worker_id << " cleaning up" << std::endl;
         for (auto& tx : batch) {
             this->CleanLockTable(&tx);
         }
@@ -253,26 +257,28 @@ void AriaExecutor::Execute(T* tx) {
     tx->InstallGetStorageHandler([&](
         const std::unordered_set<string>& readSet
     ) {
-        DLOG(INFO) << "tx " << tx->id << std::endl;
+        string keys;
         for (auto& key : readSet) {
-            DLOG(INFO) << "read " << key << std::endl;
+            keys += key + " ";
             string value;
-            table.Get(key, [&](auto& entry){
+            table.Put(key, [&](auto& entry){
                 value = entry.value;
             });
             tx->local_get[key] = value;
         }
+        DLOG(INFO) << "tx " << tx->id << " read: " << keys << std::endl;
     });
     // write locally to local storage
     tx->InstallSetStorageHandler([&](
         const std::unordered_set<string>& writeSet,
         const std::string& value
     ) {
-        DLOG(INFO) << "tx " << tx->id << std::endl;
+        string keys;
         for (auto& key : writeSet) {
-            DLOG(INFO) << "write " << key << std::endl;
+            keys += key + " ";
             tx->local_put[key] = value;
         }
+        DLOG(INFO) << "tx " << tx->id << " write: " << keys << std::endl;
     });
     // execute the transaction
     tx->Execute();
@@ -283,13 +289,13 @@ void AriaExecutor::Execute(T* tx) {
 /// @param table the table
 void AriaExecutor::Reserve(T* tx) {
     // journal all entries to the reservation table
-    DLOG(INFO) << "tx " << tx->id << " reserve" << std::endl;
     for (auto& tup: tx->local_get) {
         table.ReserveGet(tx, std::get<0>(tup));
     }
     for (auto& tup: tx->local_put) {
         table.ReservePut(tx, std::get<0>(tup));
     }
+    DLOG(INFO) << "tx " << tx->id << " reserved" << std::endl;
 }
 
 /// @brief verify transaction by checking dependencies
@@ -302,24 +308,25 @@ void AriaExecutor::Verify(T* tx) {
     // therefore, we have to pick some transactions and arange them into a sequence. 
     // this algorithm implicitly does it for us. 
     bool war = false, waw = false, raw = false;
-    for (auto& tup : tx->local_get){
+    for (auto& tup : tx->local_get) {
         // the value is updated, snapshot contains out-dated value
-        raw |= table.CompareReservedPut(tx, std::get<0>(tup));
+        raw |= !table.CompareReservedPut(tx, std::get<0>(tup));
     }
-    for (auto& tup : tx->local_put){
+    for (auto& tup : tx->local_put) {
         // the value is read before, therefore we should not update it
-        war |= table.CompareReservedGet(tx, std::get<0>(tup));
+        war |= !table.CompareReservedGet(tx, std::get<0>(tup));
     }
-    for (auto& tup : tx->local_put){
+    for (auto& tup : tx->local_put) {
         // if some write happened after write
-        waw |= table.CompareReservedPut(tx, std::get<0>(tup));
+        waw |= !table.CompareReservedPut(tx, std::get<0>(tup));
     }
     if (enable_reordering) {
         tx->flag_conflict = waw || (raw && war);
-        DLOG(INFO) << "abort " << tx->batch_id << ":" << tx->id << std::endl;
     } else {
         tx->flag_conflict = waw || raw;
-        DLOG(INFO) << "abort " << tx->batch_id << ":" << tx->id << std::endl;
+    }
+    if (tx->flag_conflict) {
+        DLOG(INFO) << "abort " << tx->batch_id << ":" << tx->id << " raw: " << raw << " war: " << war << " waw: " << waw << std::endl;
     }
 }
 
@@ -331,6 +338,7 @@ void AriaExecutor::Commit(T* tx) {
             entry.value = std::get<1>(tup);
         });
     }
+    DLOG(INFO) << "tx " << tx->id << " committed" << std::endl;
 }
 
 /// @brief put transaction id (local id) into table
@@ -355,28 +363,30 @@ void AriaExecutor::Fallback(T* tx) {
     tx->InstallGetStorageHandler([&](
         const std::unordered_set<string>& readSet
     ) {
-        DLOG(INFO) << "tx " << tx->id << " fallbacking" << std::endl;
+        string keys;
         for (auto& key : readSet) {
-            DLOG(INFO) << "read " << key << std::endl;
+            keys += key + " ";
             string value;
             table.Get(key, [&](auto& entry){
                 value = entry.value;
             });
             tx->local_get[key] = value;
         }
+        DLOG(INFO) << "tx " << tx->id << " fallbacking, read: " << keys << std::endl;
     });
     // write directly into the public table
     tx->InstallSetStorageHandler([&](
         const std::unordered_set<string>& writeSet,
         const std::string& value
     ) {
-        DLOG(INFO) << "tx " << tx->id << " fallbacking" << std::endl;
+        string keys;
         for (auto& key : writeSet) {
-            DLOG(INFO) << "write " << key << std::endl;
+            keys += key + " ";
             table.Put(key, [&](auto& entry){
                 entry.value = value;
             });
         }
+        DLOG(INFO) << "tx " << tx->id << " fallbacking, write: " << keys << std::endl;
     });
 
     // get the latest dependency and wait on it
@@ -397,6 +407,7 @@ void AriaExecutor::Fallback(T* tx) {
     while(should_wait && !should_wait->committed.load()) {}
     tx->Execute();
     tx->committed.store(true);
+    DLOG(INFO) << "tx " << tx->id << " committed" << std::endl;
 }
 
 /// @brief clean up the lock table

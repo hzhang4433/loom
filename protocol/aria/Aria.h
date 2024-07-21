@@ -4,7 +4,7 @@
 #include <barrier>
 #include <thread>
 #include <glog/logging.h>
-#include <Loom/common/lock-util.h>
+#include <Loom/utils/Ulock.h>
 #include <Loom/protocol/common.h>
 #include <Loom/common/Block.h>
 #include <Loom/common/Transaction.h>

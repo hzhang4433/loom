@@ -122,16 +122,20 @@ Table<K, V, Hasher>::Table(size_t partitions)
 template<typename K, typename V, typename Hasher>
 void Table<K, V, Hasher>::Get(const K& k, std::function<void(const V& v)>&& vmap) {
     auto partition_id = ((size_t)Hasher()(k)) % num_partitions;
-    DLOG(INFO) << "at partition " << partition_id;
+    DLOG(INFO) << "Get key: " << k << " at partition " << partition_id;
     auto guard = Guard{locks[partition_id]};
     auto& partition = this->partitions[partition_id];
-    if (partition.contains(k)) vmap(partition[k]);
+    if (partition.contains(k)) {
+        vmap(partition[k]);
+    } else {
+        DLOG(INFO) << "key not found";
+    }
 }
 
 template<typename K, typename V, typename Hasher>
 void Table<K, V, Hasher>::Put(const K& k, std::function<void(V& v)>&& vmap) {
     auto partition_id = ((size_t)Hasher()(k)) % num_partitions;
-    DLOG(INFO) << "at partition " << partition_id;
+    DLOG(INFO) << "Put key: " << k << " at partition " << partition_id;
     auto guard = Guard{locks[partition_id]};
     auto& partition = this->partitions[partition_id];
     vmap(partition[k]);

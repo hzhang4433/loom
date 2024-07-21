@@ -11,7 +11,7 @@ TEST(LoomTest, TestTxGenerator) {
     // 定义变量
     TxGenerator txGenerator(loom::BLOCK_SIZE * 10);
     auto start = chrono::high_resolution_clock::now();
-    auto blocks = txGenerator.generateWorkload();
+    auto blocks = txGenerator.generateWorkload(true);
     auto end = chrono::high_resolution_clock::now();
     auto duration = chrono::duration_cast<chrono::microseconds>(end - start);
     cout << "Generate Workload Time: " << duration.count() / 1000.0 << "ms" << endl;
@@ -20,7 +20,7 @@ TEST(LoomTest, TestTxGenerator) {
 TEST(LoomTest, TestTxGenerator2MinW) {
     // 定义变量
     TxGenerator txGenerator(loom::BLOCK_SIZE);
-    auto blocks = txGenerator.generateWorkload();
+    auto blocks = txGenerator.generateWorkload(true);
     UThreadPoolPtr threadPool = UAllocator::safeMallocTemplateCObject<UThreadPool>();
     std::vector<std::future<void>> futures;
 
@@ -70,7 +70,7 @@ TEST(LoomTest, TestTxGenerator2MinW) {
 TEST(LoomTest, TestTxGenerator2ReExecute) {
     // 定义变量
     TxGenerator txGenerator(loom::BLOCK_SIZE);
-    auto blocks = txGenerator.generateWorkload();
+    auto blocks = txGenerator.generateWorkload(true);
     UThreadPoolPtr threadPool = UAllocator::safeMallocTemplateCObject<UThreadPool>();
     // threadpool::Ptr threadPool = std::make_unique<threadpool>((unsigned short)48);
     std::vector<std::future<void>> futures;
@@ -161,7 +161,7 @@ TEST(LoomTest, TestTxGenerator2ReExecute) {
 TEST(LoomTest, TestConcurrentRollback) {
     // 定义变量
     TxGenerator txGenerator(loom::BLOCK_SIZE);
-    auto blocks = txGenerator.generateWorkload();
+    auto blocks = txGenerator.generateWorkload(true);
     UThreadPoolPtr threadPool = UAllocator::safeMallocTemplateCObject<UThreadPool>();
     // threadpool::Ptr threadPool = std::make_unique<threadpool>((unsigned short)48);
     std::vector<std::future<void>> futures;

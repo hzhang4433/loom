@@ -40,7 +40,7 @@ HyperVertex::Ptr MinWRollback::execute(const TPCCTransaction::Ptr& tx, bool isNe
     }
 
     // 记录超节点
-    m_hyperVertices.insert(hyperVertex);
+    m_hyperVertices.push_back(hyperVertex);
     
     return hyperVertex;
 }
@@ -67,23 +67,29 @@ void MinWRollback::onWarm2SCC() {
     // 拿到所有scc
     auto start = std::chrono::high_resolution_clock::now();
     
+    /* Tarjan
     int index = 0;
     stack<HyperVertex::Ptr> S;
-    unordered_map<HyperVertex::Ptr, int, HyperVertex::HyperVertexHash> indices;
-    unordered_map<HyperVertex::Ptr, int, HyperVertex::HyperVertexHash> lowlinks;
-    unordered_map<HyperVertex::Ptr, bool, HyperVertex::HyperVertexHash> onStack;
-    vector<unordered_set<HyperVertex::Ptr, HyperVertex::HyperVertexHash>> components;
+    unordered_map<HyperVertex::Ptr, int, HyperVertex::HyperVertexHash> indices(m_hyperVertices.size());
+    unordered_map<HyperVertex::Ptr, int, HyperVertex::HyperVertexHash> lowlinks(m_hyperVertices.size());
+    unordered_map<HyperVertex::Ptr, bool, HyperVertex::HyperVertexHash> onStack(m_hyperVertices.size());
 
     for (const auto& hv : m_hyperVertices) {
         if (indices.find(hv) == indices.end()) { //没有访问过
-            strongconnect(m_hyperVertices, hv, index, S, indices, lowlinks, onStack, components);
+            strongconnect(hv, index, S, indices, lowlinks, onStack);
         }
     }
+    */
 
-    // 只返回大小大于1的强连通分量
-    for (const auto& component : components) {
-        if (component.size() > 1) {
-            m_sccs.push_back(component);
+    /* Gabow */
+    int index = 0;
+    stack<HyperVertex::Ptr> S, B;
+    unordered_map<HyperVertex::Ptr, int, HyperVertex::HyperVertexHash> indices(m_hyperVertices.size());
+    unordered_map<HyperVertex::Ptr, bool, HyperVertex::HyperVertexHash> onStack(m_hyperVertices.size());
+
+    for (const auto& hv : m_hyperVertices) {
+        if (indices.find(hv) == indices.end()) {
+            Gabow(hv, index, S, B, indices, onStack);
         }
     }
 
@@ -880,12 +886,13 @@ void MinWRollback::rollbackOpt1Concurrent(UThreadPoolPtr& Pool, std::vector<std:
     vector<unordered_set<HyperVertex::Ptr, HyperVertex::HyperVertexHash>> sccs;
     
     auto start = std::chrono::high_resolution_clock::now();
-    recognizeSCC(m_hyperVertices, sccs);
+    // recognizeSCC(m_hyperVertices, sccs);
+    onWarm2SCC();
     auto end = std::chrono::high_resolution_clock::now();
     cout << "recognizeSCC time: " << (double)chrono::duration_cast<chrono::microseconds>(end - start).count() / 1000 << "ms" << endl;
 
     // 遍历所有scc回滚节点
-    for (auto& scc : sccs) {
+    for (auto& scc : m_sccs) {
         futures.emplace_back(Pool->commit([this, scc] {
             auto scc_copy = scc;
             // 统计每个scc rollback耗时
@@ -993,13 +1000,14 @@ void MinWRollback::rollbackNoEdge(bool fastMode) {
     vector<unordered_set<HyperVertex::Ptr, HyperVertex::HyperVertexHash>> sccs;
     
     auto start = std::chrono::high_resolution_clock::now();
-    recognizeSCC(m_hyperVertices, sccs);
+    // recognizeSCC(m_hyperVertices, sccs);
+    onWarm2SCC();
     auto end = std::chrono::high_resolution_clock::now();
     cout << "recognizeSCC time: " << (double)chrono::duration_cast<chrono::microseconds>(end - start).count() / 1000 << "ms" << endl;
 
 
     // 遍历所有scc回滚节点
-    for (auto& scc : sccs) {
+    for (auto& scc : m_sccs) {
         // cout << "===== 输出scc中的每一个元素的详细信息 =====" << endl;
         // cout << "size = " << scc.size() << ", all vertexs:"; 
         // for (auto hv : scc) {
@@ -1084,13 +1092,14 @@ void MinWRollback::rollbackNoEdgeConcurrent(UThreadPoolPtr& Pool, std::vector<st
     vector<unordered_set<HyperVertex::Ptr, HyperVertex::HyperVertexHash>> sccs;
     
     auto start = std::chrono::high_resolution_clock::now();
-    recognizeSCC(m_hyperVertices, sccs);
+    // recognizeSCC(m_hyperVertices, sccs);
+    onWarm2SCC();
     auto end = std::chrono::high_resolution_clock::now();
     cout << "recognizeSCC time: " << (double)chrono::duration_cast<chrono::microseconds>(end - start).count() / 1000 << "ms" << endl;
 
 
     // 遍历所有scc回滚节点
-    for (auto& scc : sccs) {
+    for (auto& scc : m_sccs) {
         
         futures.emplace_back(Pool->commit([this, scc]{
             auto scc_copy = scc;
@@ -1175,6 +1184,87 @@ void MinWRollback::strongconnect(unordered_set<HyperVertex::Ptr, HyperVertex::Hy
             component.insert(w);
         } while (w != v);
         components.push_back(component);
+    }
+}
+
+void MinWRollback::strongconnect(const HyperVertex::Ptr& v, int& index, stack<HyperVertex::Ptr>& S, unordered_map<HyperVertex::Ptr, int, HyperVertex::HyperVertexHash>& indices,
+                   unordered_map<HyperVertex::Ptr, int, HyperVertex::HyperVertexHash>& lowlinks, unordered_map<HyperVertex::Ptr, bool, HyperVertex::HyperVertexHash>& onStack) {
+    indices[v] = lowlinks[v] = ++index;
+    S.push(v);
+    onStack[v] = true;
+
+    if (v->m_out_hv.empty()) {
+        S.pop();
+        onStack[v] = false;
+        return;
+    }
+    
+    for (const auto& w : v->m_out_hv) {
+        auto indices_it = indices.find(w);
+        if (indices_it == indices.end()) {
+            strongconnect(w, index, S, indices, lowlinks, onStack);
+            lowlinks[v] = min(lowlinks[v], lowlinks[w]);
+        } else if (onStack[w]) {
+            lowlinks[v] = min(lowlinks[v], indices_it->second);
+        }
+    }
+
+    if (lowlinks[v] == indices[v]) {
+        unordered_set<HyperVertex::Ptr, HyperVertex::HyperVertexHash> scc;
+        HyperVertex::Ptr w;
+        do {
+            w = S.top();
+            S.pop();
+            onStack[w] = false;
+            scc.insert(w);
+        } while (w != v);
+
+        if (scc.size() > 1) {
+            m_sccs.push_back(scc);
+        }
+    }
+}
+
+void MinWRollback::Gabow(const HyperVertex::Ptr& v, int& index, stack<HyperVertex::Ptr>& S, stack<HyperVertex::Ptr>& B,
+                    unordered_map<HyperVertex::Ptr, int, HyperVertex::HyperVertexHash>& indices, 
+                    unordered_map<HyperVertex::Ptr, bool, HyperVertex::HyperVertexHash>& onStack) {
+    indices[v] = index++;
+
+    if (v->m_out_hv.empty()) {
+        return;
+    }
+
+    S.push(v);
+    B.push(v);
+    onStack[v] = true;
+
+    for (const auto& w : v->m_out_hv) {
+        if (indices.find(w) == indices.end()) {
+            // Successor w has not yet been visited; recurse on it
+            Gabow(w, index, S, B, indices, onStack);
+        } else if (onStack[w]) {
+            // Successor w is in stack S and hence in the current SCC
+            while (indices[B.top()] > indices[w]) {
+                B.pop();
+            }
+        }
+    }
+
+    // If v is a root node, pop the stack and generate an SCC
+    if (B.top() == v) {
+        unordered_set<HyperVertex::Ptr, HyperVertex::HyperVertexHash> scc;
+        HyperVertex::Ptr w;
+        do {
+            w = S.top();
+            S.pop();
+            onStack[w] = false;
+            scc.insert(w);
+        } while (w != v);
+        B.pop();
+
+        if (scc.size() > 1) {
+            m_sccs.push_back(scc);
+        }
     }
 }
 
@@ -2697,53 +2787,62 @@ void MinWRollback::calculateWeight(HyperVertex::Ptr& hyperVertex, loom::EdgeType
 }
 
 /* 基于RBIndex快速回滚 */
-// void MinWRollback::fastRollback(const unordered_map<string, set<Vertex::Ptr, Vertex::VertexCompare>>& RBIndex, std::vector<Vertex::Ptr>& rbList) {
-//     cout << "RBIndex size: " << RBIndex.size() << endl;
-//     for (auto& rbMap : RBIndex) {
-//         auto& rbKey = rbMap.first;
-//         auto& rbSet = rbMap.second;
-//         // rbKey.substr(0, 5) == "Dytd-" || rbKey.substr(0, 2) == "S-" || rbKey.substr(0, 10) == "Cdelivery-"
-//         // if (rbKey.substr(0, 10) == "Cdelivery-") {
-//         //     // 把rbset中除第一个元素的其它元素的回滚子事务加入rbList中
-//         //     auto it = std::next(rbSet.begin());
-//         //     std::for_each(it, rbSet.end(), [&](const auto& elem) {
-//         //         std::copy(elem->cascadeVertices.begin(), elem->cascadeVertices.end(), std::back_inserter(rbList));
-//         //     });
-//         // } 
-//         // else if (rbKey.substr(0, 5) == "Dytd-") {
-//         //     // 把rbSet中除第一个元素的其它元素加入rbList中
-//         //     auto it = std::next(rbSet.begin());
-//         //     std::copy(it, rbSet.end(), std::back_inserter(rbList));
-//         // }
-//         if (rbKey.substr(0, 2) == "S-") {
-//             // 把rbSet中除第一个元素的其它元素加入rbList中
-//             auto it = std::next(rbSet.begin());
-//             std::copy(it, rbSet.end(), std::back_inserter(rbList));
-//         }
-//         // else {
-//         //     // 把rbSet中除第一个元素的其它元素加入rbList中
-//         //     auto it = std::next(rbSet.begin());
-//         //     std::copy(it, rbSet.end(), std::back_inserter(rbList));
-//         // }
-//     }
-// }
+void MinWRollback::fastRollback(const unordered_map<string, set<Vertex::Ptr, Vertex::VertexCompare>>& RBIndex, std::vector<Vertex::Ptr>& rbList) {
+    cout << "RBIndex size: " << RBIndex.size() << endl;
+    for (auto& rbMap : RBIndex) {
+        auto& rbKey = rbMap.first;
+        auto& rbSet = rbMap.second;
+        // // rbKey.substr(0, 5) == "Dytd-" || rbKey.substr(0, 2) == "S-" || rbKey.substr(0, 10) == "Cdelivery-"
+        if (rbKey.substr(0, 10) == "Cdelivery-") {
+            // 把rbset中除第一个元素的其它元素的回滚子事务加入rbList中
+            auto it = std::next(rbSet.begin());
+            std::for_each(it, rbSet.end(), [&](const auto& elem) {
+                std::copy(elem->cascadeVertices.begin(), elem->cascadeVertices.end(), std::back_inserter(rbList));
+            });
+        } 
+        // else {
+        //     // 把rbSet中除第一个元素的其它元素加入rbList中
+        //     auto it = std::next(rbSet.begin());
+        //     std::copy(it, rbSet.end(), std::back_inserter(rbList));
+        // }
+
+        // if (rbKey.substr(0, 2) == "S-" || rbKey.substr(0, 5) == "Dytd-") {
+        //     // 把rbSet中除第一个元素的其它元素加入rbList中
+        //     auto it = std::next(rbSet.begin());
+        //     std::copy(it, rbSet.end(), std::back_inserter(rbList));
+        // }
+
+        // if (rbKey.substr(0, 2) == "S-") {
+        //     // 把rbSet中除第一个元素的其它元素加入rbList中
+        //     auto it = std::next(rbSet.begin());
+        //     std::copy(it, rbSet.end(), std::back_inserter(rbList));
+        // }
+
+        // if (rbKey.substr(0, 5) == "Dytd-") {
+        //     // 把rbSet中除第一个元素的其它元素加入rbList中
+        //     auto it = std::next(rbSet.begin());
+        //     std::copy(it, rbSet.end(), std::back_inserter(rbList));
+        // }
+    }
+}
 
 /* 基于RBIndex快速回滚 */
-// void MinWRollback::fastNormalRollback(const unordered_map<string, set<Vertex::Ptr, Vertex::VertexCompare>>& RBIndex, std::vector<Vertex::Ptr>& rbList) {
-//     cout << "RBIndex size: " << RBIndex.size() << endl;
-//     for (auto& rbMap : RBIndex) {
-//         auto& rbKey = rbMap.first;
-//         auto& rbSet = rbMap.second;
-//         // rbKey.substr(0, 5) == "Dytd-" ||  || rbKey.substr(0, 10) == "Cdelivery-"
-//         // rbKey.substr(0, 5) == "Dytd-" || rbKey.substr(0, 10) == "Cdelivery-"
-//         if (rbKey.substr(0, 2) == "S-") {
-//             // 把rbset中除第一个元素的其它元素的回滚子事务加入res中
-//             auto it = std::next(rbSet.begin());
-//             std::copy(it, rbSet.end(), std::back_inserter(rbList));
-//         }
-//     }
-// }
+void MinWRollback::fastNormalRollback(const unordered_map<string, set<Vertex::Ptr, Vertex::VertexCompare>>& RBIndex, std::vector<Vertex::Ptr>& rbList) {
+    cout << "RBIndex size: " << RBIndex.size() << endl;
+    for (auto& rbMap : RBIndex) {
+        auto& rbKey = rbMap.first;
+        auto& rbSet = rbMap.second;
+        // rbKey.substr(0, 5) == "Dytd-" ||  || rbKey.substr(0, 10) == "Cdelivery-"
+        // rbKey.substr(0, 5) == "Dytd-" || rbKey.substr(0, 10) == "Cdelivery-"
+        if (rbKey.substr(0, 2) == "S-") {
+            // 把rbset中除第一个元素的其它元素的回滚子事务加入res中
+            auto it = std::next(rbSet.begin());
+            std::copy(it, rbSet.end(), std::back_inserter(rbList));
+        }
+    }
+}
 
+/*
 void MinWRollback::fastRollback(const unordered_map<string, set<Vertex::Ptr, Vertex::VertexCompare>>& RBIndex, std::vector<Vertex::Ptr>& rbList) {
     cout << "RBIndex size: " << RBIndex.size() << endl;
     set<Vertex::Ptr, Vertex::VertexCompare> res;
@@ -2775,6 +2874,7 @@ void MinWRollback::fastNormalRollback(const unordered_map<string, set<Vertex::Pt
     }
     std::copy(res.begin(), res.end(), std::back_inserter(rbList));
 }
+*/
 
 // 打印超图
 void MinWRollback::printHyperGraph() {

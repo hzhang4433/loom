@@ -39,6 +39,7 @@ class DeterReExecute {
         std::vector<Vertex::Ptr>& getRbList(); // 获取事务列表
         void updateDependenciesAndScheduleTime(Vertex::Ptr& Tj, const Vertex::Ptr& Ti, std::unordered_set<Vertex::Ptr, Vertex::VertexHash>& unflictTxs, bool forward);
         bool canReorder(const Vertex::Ptr& Tx1, const Vertex::Ptr& Tx2); // 判断两个事务是否可调序
+        static void setNormalList(const vector<Vertex::Ptr>& rbList, vector<Vertex::Ptr>& normalList);
 
 
     // 定义私有变量

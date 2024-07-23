@@ -51,11 +51,11 @@ class Block {
         const std::unordered_map<string, std::set<Vertex::Ptr, Vertex::VertexCompare>> getRBIndex() const {return m_RBIndex;}
 
         // 获得区块事务信息
-        const std::unordered_set<HyperVertex::Ptr, HyperVertex::HyperVertexHash> getTxList() const {
-            std::unordered_set<HyperVertex::Ptr, HyperVertex::HyperVertexHash> txInfo;
-            for (auto& tx : m_txs) {
-                txInfo.insert(tx->GetTx());
-            }
+        const std::vector<HyperVertex::Ptr> getTxList() const {
+            std::vector<HyperVertex::Ptr> txInfo;
+            txInfo.reserve(m_txs.size()); // 预留空间
+            std::transform(m_txs.begin(), m_txs.end(), std::back_inserter(txInfo),
+                        [](const auto& tx) { return tx->GetTx(); });
             return txInfo;
         }
 

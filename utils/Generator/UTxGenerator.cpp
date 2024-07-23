@@ -114,7 +114,7 @@ void TxGenerator::generateIndex(vector<Vertex::Ptr> txLists, unordered_map<strin
                                 unordered_map<Vertex::Ptr, unordered_set<Vertex::Ptr, Vertex::VertexHash>, Vertex::VertexHash>& RWIndex, 
                                 unordered_map<Vertex::Ptr, unordered_set<Vertex::Ptr, Vertex::VertexHash>, Vertex::VertexHash>& conflictIndex,
                                 unordered_map<string, set<Vertex::Ptr, Vertex::VertexCompare>>& RBIndex) {
-    // 利用倒排索引构建RWIndex
+    // 利用invertedIndex构建RWIndex
     for (auto& kv : invertedIndex) {
         auto& readTxs = kv.second.readSet;
         auto& writeTxs = kv.second.writeSet;
@@ -144,7 +144,7 @@ void TxGenerator::generateIndex(vector<Vertex::Ptr> txLists, unordered_map<strin
         }
     }
 
-    // 利用RWIndex构建conflictIndex
+    // 利用invertedIndex构建conflictIndex
     for (auto& tx : txLists) {
         // 遍历交易写集，获得并保存与写集冲突的所有交易
         for (auto& wKey : tx->writeSet) {

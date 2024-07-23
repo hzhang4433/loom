@@ -37,20 +37,10 @@ void DeterReExecute::buildGraphOrigin() {
         // 判断本事务与前序事务间冲突
         for (int i = 0; i < m_rbList.size(); i++) {
             auto Ti = m_rbList[i];
-            // 不对，应该是同一个超节点的事务作为一个整体，而不是部分了，这里的逻辑不行
-            if (Ti->m_hyperId == Tj->m_hyperId && Ti->m_layer > Tj->m_layer) { // Tj是NO事务
-                // 若Ti和Tj属于同一个超节点，记录冲突
-                Tj->dependencies_in.insert(Ti);
-                Ti->dependencies_out.insert(Tj);
-                int newScheduledTime = Ti->scheduledTime + Ti->m_cost;
-                Tj->scheduledTime = std::max(Tj->scheduledTime, newScheduledTime);
-                continue;
-            }
-
             // conflictTxs.find(Ti) != conflictTxs.end()
-            if (loom::hasConflict(Tj->allWriteSet, Ti->allReadSet) || 
-                loom::hasConflict(Tj->allWriteSet, Ti->allWriteSet) || 
-                loom::hasConflict(Tj->allReadSet, Ti->allWriteSet)) {
+            if (loom::hasConflict(Tj->writeSet, Ti->readSet) || 
+                loom::hasConflict(Tj->writeSet, Ti->writeSet) || 
+                loom::hasConflict(Tj->readSet, Ti->writeSet)) {
                 // 若Ti和Tj冲突
                 if (i < j) {
                     counter++;
@@ -58,7 +48,7 @@ void DeterReExecute::buildGraphOrigin() {
                     // 更新依赖关系和调度时间
                     Tj->dependencies_in.insert(Ti);
                     Ti->dependencies_out.insert(Tj);
-                    int newScheduledTime = Ti->scheduledTime + Ti->m_cost;
+                    int newScheduledTime = Ti->scheduledTime + Ti->m_self_cost;
                     Tj->scheduledTime = std::max(Tj->scheduledTime, newScheduledTime);
                 }
             } else {
@@ -531,4 +521,30 @@ void DeterReExecute::updateDependenciesAndScheduleTime(Vertex::Ptr& Tj, const Ve
 
 std::vector<Vertex::Ptr>& DeterReExecute::getRbList() { // 获取事务列表
     return m_rbList;
+}
+
+/* 利用rbList构造normalList */
+void DeterReExecute::setNormalList(const vector<Vertex::Ptr>& rbList, vector<Vertex::Ptr>& normalList) {
+    /* 具体逻辑如下：
+        将rbList中属于同一个超节点（即tx->m_hyperId相同）的所有事务组合成一个事务，这个事务拥有它们所有的读写集，执行时间为所有事务的执行时间总和
+        将这些事务按照超节点在rbList中的出现顺序插入normalList
+    */
+    unordered_map<int, Vertex::Ptr> hyperId2Tx;
+    unordered_map<int, bool> hyperId2Flag;
+    for (auto& rb : rbList) {
+        int hyperId = rb->m_hyperId;
+        if (hyperId2Flag.find(hyperId) == hyperId2Flag.end()) {
+            // 不能直接使用rbList中的元素，需要深拷贝形成一个新的vertex对象
+            auto tx = std::make_shared<Vertex>(*rb);
+            hyperId2Flag[tx->m_hyperId] = true;
+            hyperId2Tx[tx->m_hyperId] = tx;
+            normalList.push_back(tx);
+        } else {
+            auto& tx = hyperId2Tx[hyperId];
+            // 合并事务
+            tx->m_self_cost += rb->m_self_cost;
+            tx->readSet.insert(rb->readSet.begin(), rb->readSet.end());
+            tx->writeSet.insert(rb->writeSet.begin(), rb->writeSet.end());
+        }
+    }
 }

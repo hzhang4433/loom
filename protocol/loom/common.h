@@ -111,8 +111,8 @@ namespace loom {
     }
 
     template <typename T>
-    int printNestedRollbackTxs(vector<T>& rollbackTxs) {
-        cout << "====================Nested Rollback Transactions====================" << endl;
+    int printRollbackTxs(vector<T>& rollbackTxs) {
+        cout << "====================Rollback Transactions====================" << endl;
         cout << "total size: " << rollbackTxs.size() << endl;
         int totalRollbackCost = 0;
         for (auto& tx : rollbackTxs) {

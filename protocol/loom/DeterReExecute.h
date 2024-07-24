@@ -2,7 +2,7 @@
 
 #include <vector>
 #include <tbb/concurrent_unordered_map.h>
-#include "utils/ThreadPool/UThreadPool.h"
+#include <loom/utils/ThreadPool/UThreadPool.h>
 #include "common.h"
 
 using namespace loom;
@@ -20,7 +20,7 @@ class DeterReExecute {
         void buildGraphByIndex();
         void buildGraphOrigin(); // 构建原始时空图,即不考虑嵌套事务结构的时空图
         void buildGraphOriginByIndex();
-        void buildGraphConcurrent(Util::UThreadPoolPtr& Pool); // 并发构建时空图
+        void buildGraphConcurrent(Util::UThreadPoolPtr& Pool, std::vector<std::future<void>>& futures); // 并发构建时空图
         void rescheduleTransactions(); // 重调度事务
         void getCandidateTxSet(const Vertex::Ptr& Tx, std::set<Vertex::Ptr, loom::lessScheduledTime>& Ts); // 获取候选重调度事务集
         void reschedule(Vertex::Ptr& Tx, int startTime); // 重调度事务，移动至时空图目标位置

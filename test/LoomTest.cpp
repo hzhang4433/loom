@@ -164,7 +164,7 @@ TEST(LoomTest, TestConcurrentRollback) {
     auto blocks = txGenerator.generateWorkload(true);
     UThreadPoolPtr threadPool = UAllocator::safeMallocTemplateCObject<UThreadPool>();
     // threadpool::Ptr threadPool = std::make_unique<threadpool>((unsigned short)48);
-    std::vector<std::future<void>> futures;
+    std::vector<std::future<void>> futures, TSGFutures;
     std::vector<std::future<loom::ReExecuteInfo>> reExecuteFutures;
 
     // std::this_thread::sleep_for(std::chrono::seconds(5));
@@ -191,7 +191,7 @@ TEST(LoomTest, TestConcurrentRollback) {
         // 识别scc
         minw.onWarm2SCC();
         vector<vector<int>> serialOrders;
-        std::vector<Vertex::Ptr> normalList, nestedList, rbList;
+        std::vector<Vertex::Ptr> normalList, rbList;
         serialOrders.reserve(minw.m_sccs.size());
         // 回滚事务
         start = chrono::high_resolution_clock::now();
@@ -216,7 +216,7 @@ TEST(LoomTest, TestConcurrentRollback) {
         for (auto& future : reExecuteFutures) {
             auto res = future.get();
             // 获得回滚事务顺序
-            loom::printTxsOrder(res.m_serialOrder);
+            // loom::printTxsOrder(res.m_serialOrder);
             serialOrders.push_back(std::move(res.m_serialOrder));
             // loom::printRollbackTxs(res.m_orderedRollbackTxs);
             // 将排序后的交易插入rbList
@@ -247,12 +247,15 @@ TEST(LoomTest, TestConcurrentRollback) {
 
         start = chrono::high_resolution_clock::now();
         // nestedReExecute.buildGraph();
-        nestedReExecute.buildGraphByIndex();
+        // nestedReExecute.buildGraphByIndex();
+        nestedReExecute.buildGraphConcurrent(threadPool, TSGFutures);
         end = chrono::high_resolution_clock::now();
         duration = chrono::duration_cast<chrono::microseconds>(end - start);
         cout << "txList size: " << rbList.size() << ", Nested Build Time: " << duration.count() / 1000.0 << "ms" << endl;
-        // loom::printRollbackTxs(nestedList);
         int nestedBuildTime = nestedReExecute.calculateTotalExecutionTime();
+        // loom::printRollbackTxs(rbList);
+
+        // 重调度
         nestedReExecute.rescheduleTransactions();
         int nestedRescheduleTime = nestedReExecute.calculateTotalExecutionTime();
 
@@ -266,10 +269,10 @@ TEST(LoomTest, TestConcurrentRollback) {
 
 
         // 计算优化效率
-        double normalEfficient = (1.0 * serialTime / normalBuildTime) * 100.0;
-        double nestedEfficient = (1.0 * normalBuildTime / nestedBuildTime) * 100.0;
-        cout << "Normal Optimized Percent: " << normalEfficient << "%" << endl;
-        cout << "Nested Optimized Percent: " << nestedEfficient << "%" << endl;
+        double normalEfficient = (1.0 * serialTime / normalBuildTime);
+        double nestedEfficient = (1.0 * normalBuildTime / nestedRescheduleTime);
+        cout << "Normal Optimized Percent: " << normalEfficient << endl;
+        cout << "Nested Optimized Percent: " << nestedEfficient << endl;
 
     }
     

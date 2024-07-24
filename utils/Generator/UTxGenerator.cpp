@@ -25,7 +25,8 @@ Block::Ptr TxGenerator::generateBlock(bool isNest) {
     unordered_map<Vertex::Ptr, unordered_set<Vertex::Ptr, Vertex::VertexHash>, Vertex::VertexHash> conflictIndex;// 冲突索引
     unordered_map<string, set<Vertex::Ptr, Vertex::VertexCompare>> RBIndex;// 回滚索引
 
-    workload.set_seed(uint64_t(140716047624829));
+    // 140716047624829
+    workload.set_seed(uint64_t(140703587571293));
     auto seed = workload.get_seed();
     cout << "seed: " << seed << endl;
 
@@ -49,25 +50,8 @@ Block::Ptr TxGenerator::generateBlock(bool isNest) {
         // } else {
         //     txVertex = generateTransaction(tx, true, invertedIndex);
         // }
-
-        // // 全部生成NewOrder事务
-        // auto tx = NO_txGenerator->makeTransaction();
-
-        // // 48%的NewOrder事务,48%的Payment事务,4%的Delivery事务
-        // TPCCTransaction::Ptr tx;
-        // uint64_t option = random.uniform_dist(1, 100);
-        // if (option <= 49) {
-        //     tx = NO_txGenerator->makeTransaction();
-        // } 
-        // else if (option <= 96) {
-        //     tx = P_txGenerator->makeTransaction();
-        // } 
-        // else {
-        //     tx = D_txGenerator->makeTransaction();
-        // }
-        // cout << "tx " << i + 1 << " type: " << TPCC::transactionTypeToString(tx->getType()) << endl;
         HyperVertex::Ptr txVertex = generateTransaction(tx, isNest, invertedIndex);
-        
+
         // 记录所有子事务
         txLists.insert(txLists.end(), txVertex->m_vertices.begin(), txVertex->m_vertices.end());
         // 记录所有事务

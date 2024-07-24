@@ -50,8 +50,8 @@ static const int UTIL_LONG_TIME_TASK_STRATEGY = -101;                           
 /**
  * 以下为线程池配置信息
  */
-static const int UTIL_DEFAULT_THREAD_SIZE = 43;                                           // 默认开启主线程个数
-static const int UTIL_SECONDARY_THREAD_SIZE = 13;                                          // 默认开启辅助线程个数
+static const int UTIL_DEFAULT_THREAD_SIZE = 36;                                           // 默认开启主线程个数
+static const int UTIL_SECONDARY_THREAD_SIZE = 4;                                          // 默认开启辅助线程个数
 static const int UTIL_MAX_THREAD_SIZE = UTIL_CPU_NUM;                                     // 最大线程个数
 static const int UTIL_MAX_TASK_STEAL_RANGE = 4;                                           // 盗取机制相邻范围
 static const bool UTIL_BATCH_TASK_ENABLE = false;                                         // 是否开启批量任务功能

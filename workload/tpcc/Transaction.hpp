@@ -242,7 +242,8 @@ class NewOrderTransaction : public TPCCTransaction
             // newOrder子事务
             TPCCTransaction::Ptr noAccess = std::make_shared<TPCCTransaction>(random);
             noAccess->addReadRow("NO-" + std::to_string(newOrderTx->w_id) + "-" + std::to_string(newOrderTx->d_id) + "-" + std::to_string(next_o_id));
-            noAccess->addUpdateRow("NO-" + std::to_string(newOrderTx->w_id) + "-" + std::to_string(newOrderTx->d_id) + "-" + std::to_string(next_o_id));
+            // noAccess->addUpdateRow("NO-" + std::to_string(newOrderTx->w_id) + "-" + std::to_string(newOrderTx->d_id) + "-" + std::to_string(next_o_id));
+            noAccess->addUpdateRow("NO-" + std::to_string(newOrderTx->w_id) + "-" + std::to_string(newOrderTx->d_id));
             
             // order子事务
             TPCCTransaction::Ptr oAccess = std::make_shared<TPCCTransaction>(random);
@@ -691,8 +692,10 @@ class DeliveryTransaction : public TPCCTransaction
 
 
                 // 添加newOrder子事务读写集
-                no_cAccess->addReadRow("NO-" + wd_key);
+                // no_cAccess->addReadRow("NO-" + wd_key);
                 no_cAccess->addUpdateRow("NO-" + wd_key + "-" + std::to_string(oldestNewOrder.o_id));
+                no_cAccess->addUpdateRow("NO-" + wd_key);
+
                 no_cAccess->setExecutionTime(TPCC::ConsumptionType::HIGH);
 
                 // order子事务

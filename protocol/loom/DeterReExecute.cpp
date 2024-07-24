@@ -1,7 +1,7 @@
 #include "DeterReExecute.h"
 
 using namespace std;
-
+using namespace Util;
 
 /* 构造函数 */
 DeterReExecute::DeterReExecute(std::vector<Vertex::Ptr>& rbList, const vector<vector<int>>& serialOrders, const std::unordered_map<Vertex::Ptr, unordered_set<Vertex::Ptr, Vertex::VertexHash>, Vertex::VertexHash>& conflictIndex) : m_rbList(rbList), m_conflictIndex(conflictIndex) { // 构造函数
@@ -27,6 +27,35 @@ DeterReExecute::DeterReExecute(std::vector<Vertex::Ptr>& rbList, const vector<ve
 /* 构建初始时空图
     即不考虑嵌套事务结构的时空图 => 为了做对比
 */
+void DeterReExecute::buildGraphOrigin() {
+    auto counter = 0;
+    // 按队列顺序，依次遍历事务
+    for (int j = 0; j < m_rbList.size(); j++) {
+        auto Tj = m_rbList[j];
+
+        // 判断本事务与前序事务间冲突
+        for (int i = j - 1; i > 0; i--) {
+            auto Ti = m_rbList[i];
+            // conflictTxs.find(Ti) != conflictTxs.end()
+            if (loom::hasConflict(Tj->writeSet, Ti->readSet) || 
+                loom::hasConflict(Tj->writeSet, Ti->writeSet) || 
+                loom::hasConflict(Tj->readSet, Ti->writeSet)) {
+                // 若Ti和Tj冲突
+                counter++;
+                // cout << "hasconflict on: " << i << ": " << Ti->m_id << " and " << j << ": " << Tj->m_id << endl;
+                // 更新依赖关系和调度时间
+                Tj->dependencies_in.insert(Ti);
+                Ti->dependencies_out.insert(Tj);
+                int newScheduledTime = Ti->scheduledTime + Ti->m_self_cost;
+                Tj->scheduledTime = std::max(Tj->scheduledTime, newScheduledTime);
+            }
+        }
+    }
+
+    cout << "counter in buildGraphOrigin: " << counter << endl;
+}
+
+/* old version
 void DeterReExecute::buildGraphOrigin() {
     auto counter = 0;
     // 按队列顺序，依次遍历事务
@@ -60,6 +89,7 @@ void DeterReExecute::buildGraphOrigin() {
 
     cout << "counter in buildGraphOrigin: " << counter << endl;
 }
+*/
 
 
 void DeterReExecute::buildGraphOriginByIndex() {
@@ -174,6 +204,7 @@ void DeterReExecute::buildGraph() {
     // cout << "counter: " << counter << endl;
 }
 
+/* 通过索引构建时空图 */
 void DeterReExecute::buildGraphByIndex() {
     int counter = 0;
     // 按队列顺序，依次遍历事务
@@ -223,11 +254,66 @@ void DeterReExecute::buildGraphByIndex() {
     cout << "counter in buildGraphByIndex: " << counter << endl;
 }
 
-/* 并发构建时空图 
-*/
-void DeterReExecute::buildGraphConcurrent(Util::UThreadPoolPtr& Pool) {
+/* 通过索引并发构建时空图 */
+void DeterReExecute::buildGraphConcurrent(UThreadPoolPtr& Pool, std::vector<std::future<void>>& futures) {
 
+    size_t totalTasks = m_rbList.size();
+    size_t chunkSize = (totalTasks + UTIL_DEFAULT_THREAD_SIZE - 1) / (UTIL_DEFAULT_THREAD_SIZE * 1);
+    cout << "totalTasks: " << totalTasks << " chunkSize: " << chunkSize << endl;
+
+    for (size_t i = 0; i < totalTasks; i += chunkSize) {
+        futures.emplace_back(Pool->commit([this, i, chunkSize, totalTasks] {
+            size_t end = std::min(i + chunkSize, totalTasks);
+            for (size_t j = i; j < end; ++j) {
+                // 遍历队列事务
+                auto Tj = m_rbList[j];
+                auto& unflictTxs = m_unConflictTxMap[Tj->m_id];
+                auto& conflictTxs = m_conflictIndex[Tj];
+                
+                // 遍历本事务的所有冲突事务
+                for (auto& Ti : conflictTxs) {
+                    unflictTxs.erase(Ti);
+                    if (m_txOrder.find(Ti) != m_txOrder.end() && m_txOrder[Ti] < j) {
+                        // 本事务记录前序事务
+                        Tj->dependencies_in.insert(Ti);
+                        
+                        // 所有前序事务记录本事务
+                        Ti->dependencies_out.insert(Tj);
+                        
+                        // 本事务调度时间为前序事务结束时间
+                        int newScheduledTime = Ti->scheduledTime + Ti->m_self_cost;
+                        Tj->scheduledTime = std::max(Tj->scheduledTime, newScheduledTime);
+                    }
+                }
+
+                /* 考虑嵌套结构：若存在强依赖子节点，则将其添加至依赖关系 */
+                if (Tj->hasStrong) {
+                    for (auto Ti : Tj->m_strongChildren) {
+                        // 父事务记录强依赖子事务
+                        Tj->dependencies_in.insert(Ti);
+                        // 子事务记录强依赖父事务
+                        Ti->dependencies_out.insert(Tj);
+                        // 父事务调度时间为前序事务结束时间
+                        int newScheduledTime = Ti->scheduledTime + Ti->m_self_cost;
+                        Tj->scheduledTime = std::max(Tj->scheduledTime, newScheduledTime);
+                        unflictTxs.erase(Ti);
+                    }
+                }
+
+                // 移除自己
+                unflictTxs.erase(Tj);
+                
+            }
+        }));
+    }
+
+    // 等待所有任务完成
+    for (auto &future : futures) {
+        future.get();
+    }
 }
+
+
 
 /* 重调度事务 */
 void DeterReExecute::rescheduleTransactions() {

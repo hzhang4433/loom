@@ -2788,7 +2788,7 @@ void MinWRollback::calculateWeight(HyperVertex::Ptr& hyperVertex, loom::EdgeType
 
 /* 基于RBIndex快速回滚 */
 void MinWRollback::fastRollback(const unordered_map<string, set<Vertex::Ptr, Vertex::VertexCompare>>& RBIndex, std::vector<Vertex::Ptr>& rbList) {
-    cout << "RBIndex size: " << RBIndex.size() << endl;
+    // cout << "RBIndex size: " << RBIndex.size() << endl;
     for (auto& rbMap : RBIndex) {
         auto& rbKey = rbMap.first;
         auto& rbSet = rbMap.second;
@@ -2799,18 +2799,11 @@ void MinWRollback::fastRollback(const unordered_map<string, set<Vertex::Ptr, Ver
             std::for_each(it, rbSet.end(), [&](const auto& elem) {
                 std::copy(elem->cascadeVertices.begin(), elem->cascadeVertices.end(), std::back_inserter(rbList));
             });
-        } 
-        // else {
-        //     // 把rbSet中除第一个元素的其它元素加入rbList中
-        //     auto it = std::next(rbSet.begin());
-        //     std::copy(it, rbSet.end(), std::back_inserter(rbList));
-        // }
-
-        // if (rbKey.substr(0, 2) == "S-" || rbKey.substr(0, 5) == "Dytd-") {
-        //     // 把rbSet中除第一个元素的其它元素加入rbList中
-        //     auto it = std::next(rbSet.begin());
-        //     std::copy(it, rbSet.end(), std::back_inserter(rbList));
-        // }
+        } else {
+            // 把rbSet中除第一个元素的其它元素加入rbList中
+            auto it = std::next(rbSet.begin());
+            std::copy(it, rbSet.end(), std::back_inserter(rbList));
+        }
 
         // if (rbKey.substr(0, 2) == "S-") {
         //     // 把rbSet中除第一个元素的其它元素加入rbList中

@@ -1,6 +1,7 @@
 #pragma once
 
 #include <set>
+#include <glog/logging.h>
 #include "common/HyperVertex.h"
 
 namespace loom {
@@ -112,25 +113,25 @@ namespace loom {
 
     template <typename T>
     int printRollbackTxs(vector<T>& rollbackTxs) {
-        cout << "====================Rollback Transactions====================" << endl;
-        cout << "total size: " << rollbackTxs.size() << endl;
+        DLOG(INFO) << "====================Rollback Transactions====================";
+        DLOG(INFO) << "total size: " << rollbackTxs.size();
         int totalRollbackCost = 0;
         for (auto& tx : rollbackTxs) {
-            cout << "======== Tx =========" << endl;
+            DLOG(INFO) << "======== Tx =========";
             totalRollbackCost += tx->m_self_cost;
-            cout << "id: " << tx->m_id << " cost: " << tx->m_self_cost << " scheduledTime: " << tx->scheduledTime << endl;
-            cout << "tx read set: ";
+            DLOG(INFO) << "id: " << tx->m_id << " cost: " << tx->m_self_cost << " scheduledTime: " << tx->scheduledTime;
+            string readKeys, writeKeys;
             for (auto& readKey : tx->readSet) {
-                cout << readKey << " ";
+                readKeys += readKey + " ";
             }
-            cout << endl << "tx write set: ";
+            DLOG(INFO) << "tx read set: " << readKeys;
             for (auto& writeKey : tx->writeSet) {
-                cout << writeKey << " ";
+                writeKeys += writeKey + " ";
             }
-            cout << endl;
+            DLOG(INFO) << "tx write set: " << writeKeys;
         }
-        cout << "rollback cost: " << totalRollbackCost << endl;
-        cout << "=============================================================" << endl;
+        DLOG(INFO) << "rollback cost: " << totalRollbackCost;
+        DLOG(INFO) << "=============================================================";
         return totalRollbackCost;
     }
 

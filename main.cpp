@@ -14,7 +14,7 @@ using namespace std;
 
 int main(int argc, char** argv) {
     // 设置日志输出路径
-    FLAGS_log_dir = "/home/z/zh/Loom/log";
+    FLAGS_log_dir = "/home/z/zh/loom/log";
     // 初始化glog
     google::InitGoogleLogging(argv[0]);
 

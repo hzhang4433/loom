@@ -1,9 +1,9 @@
 #include <chrono>
 #include <gtest/gtest.h>
 #include <glog/logging.h>
-#include <Loom/protocol/aria/Aria.h>
-#include <Loom/utils/Generator/UTxGenerator.h>
-#include <Loom/utils/UGlogPrefix.hpp>
+#include <loom/protocol/aria/Aria.h>
+#include <loom/utils/Generator/UTxGenerator.h>
+#include <loom/utils/UGlogPrefix.hpp>
 
 using namespace std;
 

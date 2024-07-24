@@ -1,5 +1,5 @@
-#include <Loom/common/Transaction.h>
-#include <Loom/protocol/common.h>
+#include <loom/common/Transaction.h>
+#include <loom/protocol/common.h>
 #include <glog/logging.h>
 
 Transaction::Transaction(

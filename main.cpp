@@ -1,13 +1,13 @@
 #include <iostream>
 #include <gtest/gtest.h>
 #include <glog/logging.h>
-#include <Loom/test/TpccTest.cpp>
-#include <Loom/test/MinWRollbackTest.cpp>
-#include <Loom/test/FabricPPTest.cpp>
-#include <Loom/test/CompareTest.cpp>
-#include <Loom/test/DeterReExecuteTest.cpp>
-#include <Loom/test/LoomTest.cpp>
-#include <Loom/test/AriaTest.cpp>
+#include <loom/test/TpccTest.cpp>
+#include <loom/test/MinWRollbackTest.cpp>
+#include <loom/test/FabricPPTest.cpp>
+#include <loom/test/CompareTest.cpp>
+#include <loom/test/DeterReExecuteTest.cpp>
+#include <loom/test/LoomTest.cpp>
+#include <loom/test/AriaTest.cpp>
 
 
 using namespace std;

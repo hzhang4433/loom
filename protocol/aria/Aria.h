@@ -4,10 +4,10 @@
 #include <barrier>
 #include <thread>
 #include <glog/logging.h>
-#include <Loom/utils/Ulock.h>
-#include <Loom/protocol/common.h>
-#include <Loom/common/Block.h>
-#include <Loom/common/Transaction.h>
+#include <loom/utils/Ulock.h>
+#include <loom/protocol/common.h>
+#include <loom/common/Block.h>
+#include <loom/common/Transaction.h>
 
 using namespace std;
 

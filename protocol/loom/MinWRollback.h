@@ -135,7 +135,8 @@ class MinWRollback
 
         //opt3:FastRollback
         void fastRollback(const unordered_map<string, set<Vertex::Ptr, Vertex::VertexCompare>>& RBIndex, std::vector<Vertex::Ptr>& rbList);
-        void fastNormalRollback(const unordered_map<string, set<Vertex::Ptr, Vertex::VertexCompare>>& RBIndex, std::vector<Vertex::Ptr>& rbList);
+        void fastRollback(const unordered_map<string, set<Vertex::Ptr, Vertex::VertexCompare>>& RBIndex, std::vector<Vertex::Ptr>& rbList, std::vector<Vertex::Ptr>& nestedList);
+        
 
         // 打印超图
         void printHyperGraph();

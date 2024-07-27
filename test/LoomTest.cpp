@@ -165,6 +165,7 @@ TEST(LoomTest, TestConcurrentRollback) {
     UThreadPoolPtr threadPool = UAllocator::safeMallocTemplateCObject<UThreadPool>();
     // threadpool::Ptr threadPool = std::make_unique<threadpool>((unsigned short)48);
     std::vector<std::future<void>> futures, TSGFutures;
+    std::future<void> futureRbList, futureNestedList;
     std::vector<std::future<loom::ReExecuteInfo>> reExecuteFutures;
 
     // std::this_thread::sleep_for(std::chrono::seconds(5));
@@ -191,12 +192,14 @@ TEST(LoomTest, TestConcurrentRollback) {
         // 识别scc
         minw.onWarm2SCC();
         vector<vector<int>> serialOrders;
-        std::vector<Vertex::Ptr> normalList, rbList;
+        std::vector<Vertex::Ptr> rbList, nestedList, normalList;
+        // std::vector<HyperVertex::Ptr> normalList;
         serialOrders.reserve(minw.m_sccs.size());
         // 回滚事务
         start = chrono::high_resolution_clock::now();
         // 局部快速回滚
         minw.fastRollback(block->getRBIndex(), rbList);
+        // minw.fastRollback(block->getRBIndex(), rbList, nestedList);
         
         // 全局并发回滚
         // cout << "scc size: " << minw.m_sccs.size() << endl;
@@ -229,48 +232,56 @@ TEST(LoomTest, TestConcurrentRollback) {
         cout << "Rollback Time: " << duration.count() / 1000.0 << "ms" << endl;
         cout << "Rollback Size: " << rbList.size() << endl;
         
+        start = chrono::high_resolution_clock::now();
         DeterReExecute::setNormalList(rbList, normalList);
+        end = chrono::high_resolution_clock::now();
+        cout << "Normal List Get Time: " << chrono::duration_cast<chrono::microseconds>(end - start).count() / 1000.0 << "ms" << endl;
 
         // 重调度
         DeterReExecute normalReExecute(normalList, serialOrders, block->getConflictIndex());
         DeterReExecute nestedReExecute(rbList, serialOrders, block->getConflictIndex());
         // 遍历构图
         start = chrono::high_resolution_clock::now();
-        normalReExecute.buildGraphOrigin();
-        // normalReExecute.buildGraphOriginByIndex();
+        // normalReExecute.buildGraphOrigin();
+        normalReExecute.buildByWRSet();
         end = chrono::high_resolution_clock::now();
-        duration = chrono::duration_cast<chrono::microseconds>(end - start);
-        cout << "txList size: " << normalList.size() << ", Normal Build Time: " << duration.count() / 1000.0 << "ms" << endl;
-        int normalBuildTime = normalReExecute.calculateTotalExecutionTime();
+        cout << "txList size: " << normalList.size() << ", Normal Build Time: " << chrono::duration_cast<chrono::microseconds>(end - start).count() / 1000.0 << "ms" << endl;
+        int normalBuildTime = normalReExecute.calculateTotalNormalExecutionTime();
         // loom::printRollbackTxs(normalList);
         
 
         start = chrono::high_resolution_clock::now();
         // nestedReExecute.buildGraph();
-        // nestedReExecute.buildGraphByIndex();
-        nestedReExecute.buildGraphConcurrent(threadPool, TSGFutures);
+        // nestedReExecute.buildGraphByIndex(); // 12ms
+        // nestedReExecute.buildGraphConcurrent(threadPool, TSGFutures); // 13ms
+        // nestedReExecute.buildByWRSetNested(rbList); // 多线程版：4ms
+        nestedReExecute.buildByWRSetNested(); // 1ms
+
         end = chrono::high_resolution_clock::now();
-        duration = chrono::duration_cast<chrono::microseconds>(end - start);
-        cout << "txList size: " << rbList.size() << ", Nested Build Time: " << duration.count() / 1000.0 << "ms" << endl;
-        int nestedBuildTime = nestedReExecute.calculateTotalExecutionTime();
+        cout << "txList size: " << rbList.size() << ", Nested Build Time: " << chrono::duration_cast<chrono::microseconds>(end - start).count() / 1000.0 << "ms" << endl;
+        int nestedBuildTime = nestedReExecute.calculateTotalNormalExecutionTime();
         // loom::printRollbackTxs(rbList);
 
-        // 重调度
-        nestedReExecute.rescheduleTransactions();
-        int nestedRescheduleTime = nestedReExecute.calculateTotalExecutionTime();
+        
+        // // 重调度
+        // start = chrono::high_resolution_clock::now();
+        // nestedReExecute.rescheduleTransactions();
+        // end = chrono::high_resolution_clock::now();
+        // cout << "Reschedule Time: " << chrono::duration_cast<chrono::microseconds>(end - start).count() / 1000.0 << "ms" << endl;
+        // int nestedRescheduleTime = nestedReExecute.calculateTotalExecutionTime();
 
 
         // 重执行
-        int serialTime = normalReExecute.calculateSerialTime();
+        int serialTime = nestedReExecute.calculateSerialTime();
         cout << "Serial Execute Time: " << serialTime << endl;
         cout << "Normal Execute Time: " << normalBuildTime << endl;
         cout << "Nested build Time: " << nestedBuildTime << endl;
-        cout << "Nested Execute Time: " << nestedRescheduleTime << endl;
+        // cout << "Nested Execute Time: " << nestedRescheduleTime << endl;
 
 
-        // 计算优化效率
+        // // 计算优化效率
         double normalEfficient = (1.0 * serialTime / normalBuildTime);
-        double nestedEfficient = (1.0 * normalBuildTime / nestedRescheduleTime);
+        double nestedEfficient = (1.0 * normalBuildTime / nestedBuildTime);
         cout << "Normal Optimized Percent: " << normalEfficient << endl;
         cout << "Nested Optimized Percent: " << nestedEfficient << endl;
 
@@ -279,10 +290,15 @@ TEST(LoomTest, TestConcurrentRollback) {
 }
 
 TEST(LoomTest, TestLooptime) {
-    size_t loopTime = 3500;
+    size_t loopTime = 1000;
+    volatile int dummy = 0; // 使用volatile防止编译器优化
     auto start = chrono::high_resolution_clock::now();
-    for (int i = 0; i < loopTime; i++) {}
+    for (int i = 0; i < loopTime; i++) {dummy++;}
     auto end = chrono::high_resolution_clock::now();
     auto duration = chrono::duration_cast<chrono::microseconds>(end - start);
     cout << "Loop Time: " << duration.count() << "us" << endl;
+}
+
+TEST(LoomTest, TestLoom) {
+
 }

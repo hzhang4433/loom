@@ -2819,55 +2819,41 @@ void MinWRollback::fastRollback(const unordered_map<string, set<Vertex::Ptr, Ver
     }
 }
 
-/* 基于RBIndex快速回滚 */
-void MinWRollback::fastNormalRollback(const unordered_map<string, set<Vertex::Ptr, Vertex::VertexCompare>>& RBIndex, std::vector<Vertex::Ptr>& rbList) {
-    cout << "RBIndex size: " << RBIndex.size() << endl;
+void MinWRollback::fastRollback(const unordered_map<string, set<Vertex::Ptr, Vertex::VertexCompare>>& RBIndex, std::vector<Vertex::Ptr>& rbList, std::vector<Vertex::Ptr>& nestedList) {
+    // cout << "RBIndex size: " << RBIndex.size() << endl;
     for (auto& rbMap : RBIndex) {
         auto& rbKey = rbMap.first;
         auto& rbSet = rbMap.second;
-        // rbKey.substr(0, 5) == "Dytd-" ||  || rbKey.substr(0, 10) == "Cdelivery-"
-        // rbKey.substr(0, 5) == "Dytd-" || rbKey.substr(0, 10) == "Cdelivery-"
-        if (rbKey.substr(0, 2) == "S-") {
-            // 把rbset中除第一个元素的其它元素的回滚子事务加入res中
+        // // rbKey.substr(0, 5) == "Dytd-" || rbKey.substr(0, 2) == "S-" || rbKey.substr(0, 10) == "Cdelivery-"
+        if (rbKey.substr(0, 10) == "Cdelivery-") {
+            // 把rbset中除第一个元素的其它元素的回滚子事务加入rbList中
             auto it = std::next(rbSet.begin());
-            std::copy(it, rbSet.end(), std::back_inserter(rbList));
-        }
-    }
-}
-
-/*
-void MinWRollback::fastRollback(const unordered_map<string, set<Vertex::Ptr, Vertex::VertexCompare>>& RBIndex, std::vector<Vertex::Ptr>& rbList) {
-    cout << "RBIndex size: " << RBIndex.size() << endl;
-    set<Vertex::Ptr, Vertex::VertexCompare> res;
-    for (auto& rbMap : RBIndex) {
-        auto& rbKey = rbMap.first;
-        auto& rbSet = rbMap.second;
-        if (rbKey.substr(0, 2) == "S-") {
+            std::for_each(it, rbSet.end(), [&](const auto& elem) {
+                std::copy(elem->cascadeVertices.begin(), elem->cascadeVertices.end(), std::back_inserter(rbList));
+            });
+        } else if (rbKey.substr(0, 2) == "S-") {
             // 把rbSet中除第一个元素的其它元素加入rbList中
             auto it = std::next(rbSet.begin());
-            std::copy(it, rbSet.end(), std::inserter(res, res.end()));
-        }
-    }
-    std::copy(res.begin(), res.end(), std::back_inserter(rbList));
-}
-
-void MinWRollback::fastNormalRollback(const unordered_map<string, set<Vertex::Ptr, Vertex::VertexCompare>>& RBIndex, std::vector<Vertex::Ptr>& rbList) {
-    cout << "RBIndex size: " << RBIndex.size() << endl;
-    set<Vertex::Ptr, Vertex::VertexCompare> res;
-    for (auto& rbMap : RBIndex) {
-        auto& rbKey = rbMap.first;
-        auto& rbSet = rbMap.second;
-        // rbKey.substr(0, 5) == "Dytd-" ||  || rbKey.substr(0, 10) == "Cdelivery-"
-        // rbKey.substr(0, 5) == "Dytd-" || rbKey.substr(0, 10) == "Cdelivery-"
-        if (rbKey.substr(0, 2) == "S-") {
-            // 把rbset中除第一个元素的其它元素的回滚子事务加入res中
+            std::copy(it, rbSet.end(), std::back_inserter(rbList));
+        } else {
+            // 把rbSet中除第一个元素的其它元素加入rbList中
             auto it = std::next(rbSet.begin());
-            std::copy(it, rbSet.end(), std::inserter(res, res.end()));
+            std::copy(it, rbSet.end(), std::back_inserter(nestedList));
         }
+
+        // if (rbKey.substr(0, 2) == "S-") {
+        //     // 把rbSet中除第一个元素的其它元素加入rbList中
+        //     auto it = std::next(rbSet.begin());
+        //     std::copy(it, rbSet.end(), std::back_inserter(rbList));
+        // }
+
+        // if (rbKey.substr(0, 5) == "Dytd-") {
+        //     // 把rbSet中除第一个元素的其它元素加入rbList中
+        //     auto it = std::next(rbSet.begin());
+        //     std::copy(it, rbSet.end(), std::back_inserter(rbList));
+        // }
     }
-    std::copy(res.begin(), res.end(), std::back_inserter(rbList));
 }
-*/
 
 // 打印超图
 void MinWRollback::printHyperGraph() {

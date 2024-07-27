@@ -2,10 +2,11 @@
 
 #include <set>
 #include <glog/logging.h>
+#include <mutex>
 #include "common/HyperVertex.h"
 
 namespace loom {
-    // 优先队列比较函数: 按照回滚代价从小到大排序
+    /// @brief 优先队列比较函数: 按照回滚代价从小到大排序
     struct cmp {
         bool operator()(const HyperVertex::Ptr& a, const HyperVertex::Ptr& b) const {
             if (a->m_cost == b->m_cost) {
@@ -15,14 +16,14 @@ namespace loom {
         }
     };
     
-    // 比较vertex id,从大到小排序
+    /// @brief 比较vertex id,从大到小排序
     struct idcmp {
         bool operator()(const Vertex::Ptr& a, const Vertex::Ptr& b) const {
             return a->m_id > b->m_id;
         }
     };
 
-    // 自定义比较函数: 根据给定的顺序对Vertex进行排序
+    /// @brief 自定义比较函数: 根据给定的顺序对Vertex进行排序
     struct customCompare {
         unordered_map<int, int> idToOrder;
 
@@ -46,14 +47,14 @@ namespace loom {
         }
     };
 
-    // 重执行信息
+    /// @brief 重执行信息
     struct ReExecuteInfo {
         vector<int> m_serialOrder;                                    // 回滚事务串行化顺序
         unordered_set<Vertex::Ptr, Vertex::VertexHash> m_rollbackTxs; // 回滚事务集合
         set<Vertex::Ptr, customCompare> m_orderedRollbackTxs;         // 排序后的回滚事务集合
     };
 
-    // 输出回滚子事务
+    /// @brief 输出回滚子事务
     template <typename T, typename Cmp>
     int printRollbackTxs(set<T, Cmp>& rollbackTxs) {
         cout << "================Ordered Rollback Transactions================" << endl;
@@ -72,6 +73,7 @@ namespace loom {
         return totalRollbackCost;
     }
 
+    /// @brief 输出回滚子事务
     template <typename T, typename Hash>
     int printRollbackTxs(unordered_set<T, Hash>& rollbackTxs) {
         cout << "====================Rollback Transactions====================" << endl;
@@ -86,7 +88,7 @@ namespace loom {
         return totalRollbackCost;
     }
 
-    // 输出回滚子事务
+    /// @brief 输出回滚子事务
     template <typename T>
     int printNormalRollbackTxs(vector<T>& rollbackTxs) {
         cout << "====================Normal Rollback Transactions====================" << endl;
@@ -111,6 +113,7 @@ namespace loom {
         return totalRollbackCost;
     }
 
+    /// @brief 输出回滚子事务
     template <typename T>
     int printRollbackTxs(vector<T>& rollbackTxs) {
         DLOG(INFO) << "====================Rollback Transactions====================";
@@ -135,7 +138,7 @@ namespace loom {
         return totalRollbackCost;
     }
 
-    // 输出回滚子事务提交顺序
+    /// @brief 输出回滚子事务提交顺序
     template <typename T>
     void printTxsOrder(vector<T>& txsOrder) {
         cout << "Rollback Order: ";
@@ -145,7 +148,7 @@ namespace loom {
         cout << endl;
     }
 
-    // 按照scheduledTime从小到大排序，如果scheduledTime相等，则按照id从小到大排序
+    /// @brief 按照scheduledTime从小到大排序，如果scheduledTime相等，则按照id从小到大排序
     struct lessScheduledTime {
         bool operator()(const Vertex::Ptr& lhs, const Vertex::Ptr& rhs) const {
             if (lhs->scheduledTime != rhs->scheduledTime) {
@@ -155,7 +158,7 @@ namespace loom {
         }
     };
 
-    // 按照scheduledTime从大到小排序，如果scheduledTime相等，则按照id从小到大排序
+    /// @brief 按照scheduledTime从大到小排序，如果scheduledTime相等，则按照id从小到大排序
     struct greaterScheduledTime {
         bool operator()(const Vertex::Ptr& lhs, const Vertex::Ptr& rhs) const {
             if (lhs->scheduledTime != rhs->scheduledTime) {
@@ -163,5 +166,15 @@ namespace loom {
             }
             return lhs->m_id < rhs->m_id;
         }
+    };
+
+    /// @brief loom table entry for determinisim re-execution
+    template <typename T>
+    struct LoomLockEntry {
+        LoomLockEntry() : total_time(0), mtx(make_shared<mutex>()) {}
+        std::vector<T>      deps_get;
+        std::vector<T>      deps_put;
+        int                 total_time = 0;
+        shared_ptr<mutex>   mtx; // 为每个 Entry 添加独立的锁
     };
 }

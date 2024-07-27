@@ -40,6 +40,12 @@ class Vertex : public std::enable_shared_from_this<Vertex>
             }
         };
 
+        struct VertexCmp {
+            bool operator()(const Vertex::Ptr& a, const Vertex::Ptr& b) const {
+                return a->m_id < b->m_id;
+            }
+        };
+
         struct VertexCmpCycle {
             bool operator()(const Vertex::Ptr& a, const Vertex::Ptr& b) const {
                 if (a->m_cycle_num == b->m_cycle_num) {
@@ -118,13 +124,13 @@ class Vertex : public std::enable_shared_from_this<Vertex>
         unordered_set<string> allWriteSet;                                       // 记录所有写集(包括子事务)
         bool isNested;                                                           // 标记节点是否是嵌套节点
         unordered_set<ChildVertex, ChildVertexHash, ChildVertexEqual> m_children;// 记录子节点
+        
+
+        // 时空图模块,用于事务重调度
+        tbb::concurrent_unordered_set<Vertex::Ptr, Vertex::VertexHash> dependencies_in; // 事务依赖关系
+        tbb::concurrent_unordered_set<Vertex::Ptr, Vertex::VertexHash> dependencies_out; // 事务依赖关系
         int scheduledTime;                                                       // 记录事务执行时刻
         bool hasStrong;                                                          // 记录是否有强依赖
         unordered_set<Vertex::Ptr, VertexHash> m_strongChildren;                 // 记录强依赖子节点
         Vertex::Ptr m_strongParent;                                              // 记录强依赖父节点
-
-        
-        // 时空图模块,用于事务重调度
-        tbb::concurrent_unordered_set<Vertex::Ptr, Vertex::VertexHash> dependencies_in; // 事务依赖关系
-        tbb::concurrent_unordered_set<Vertex::Ptr, Vertex::VertexHash> dependencies_out; // 事务依赖关系
 };

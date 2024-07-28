@@ -18,8 +18,10 @@ std::vector<Block::Ptr> TxGenerator::generateWorkload(bool isNest) {
 // 生成区块
 Block::Ptr TxGenerator::generateBlock(bool isNest) {
     Workload workload;
+    size_t totalCost = 0;
     vector<Vertex::Ptr> txLists;
-    std::vector<Transaction::Ptr> txs;
+    vector<Transaction::Ptr> txs;
+    vector<HyperVertex::Ptr> txInfos;
     unordered_map<string, loom::RWSets<Vertex::Ptr>> invertedIndex;// 倒排索引
     unordered_map<Vertex::Ptr, unordered_set<Vertex::Ptr, Vertex::VertexHash>, Vertex::VertexHash> RWIndex;// rw冲突索引
     unordered_map<Vertex::Ptr, unordered_set<Vertex::Ptr, Vertex::VertexHash>, Vertex::VertexHash> conflictIndex;// 冲突索引
@@ -56,13 +58,16 @@ Block::Ptr TxGenerator::generateBlock(bool isNest) {
         txLists.insert(txLists.end(), txVertex->m_vertices.begin(), txVertex->m_vertices.end());
         // 记录所有事务
         txs.push_back(make_shared<Transaction>(txVertex));
+        txInfos.push_back(txVertex);
+        // 计算总成本
+        totalCost += txVertex->m_rootVertex->m_cost;
     }
 
     // 生成索引
     generateIndex(txLists, invertedIndex, RWIndex, conflictIndex, RBIndex);
     
     // 生成并返回区块
-    return make_shared<Block>(txs, invertedIndex, RWIndex, conflictIndex, RBIndex);
+    return make_shared<Block>(txs, txInfos, invertedIndex, RWIndex, conflictIndex, RBIndex, totalCost);
 }
 
 // 生成事务

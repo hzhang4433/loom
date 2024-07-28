@@ -30,7 +30,7 @@ TEST(LoomTest, TestTxGenerator2MinW) {
             // 并行执行所有交易
         }
         // 执行完成 => 构图 => 回滚
-        MinWRollback minw(block->getRWIndex());
+        MinWRollback minw(block->getTxList(), block->getRWIndex());
         auto start = chrono::high_resolution_clock::now();
         minw.buildGraphNoEdgeC(threadPool, futures);
         auto end = chrono::high_resolution_clock::now();
@@ -83,7 +83,7 @@ TEST(LoomTest, TestTxGenerator2ReExecute) {
             // 并行执行所有交易
         }
         // 执行完成 => 构图 => 回滚 => 重调度 => 重执行
-        MinWRollback minw(block->getRWIndex());
+        MinWRollback minw(block->getTxList(), block->getRWIndex());
         auto start = chrono::high_resolution_clock::now();
         minw.buildGraphNoEdgeC(threadPool, futures);
         // minw.buildGraphConcurrent(threadPool, futures);
@@ -306,8 +306,12 @@ TEST(LoomTest, TestLoom) {
     auto blocks = txGenerator.generateWorkload(true);
     // 定义线程池
     UThreadPoolPtr threadPool = UAllocator::safeMallocTemplateCObject<UThreadPool>();
-    std::vector<std::future<void>> preExecFutures;
+    std::vector<std::future<void>> preExecFutures, buildFutures;
     std::vector<std::future<loom::ReExecuteInfo>> reExecuteFutures;
+    // 定义回滚变量
+    vector<vector<int>> serialOrders;
+    std::vector<Vertex::Ptr> rbList;
+
     // 定义计时变量
     chrono::steady_clock::time_point start, end;
 
@@ -316,8 +320,11 @@ TEST(LoomTest, TestLoom) {
 
     // 执行每个区块
     for (auto& block : blocks) {
-        size_t allTime = 0;
+        size_t allTime = block->getTotalCost();
+        cout << "Serial Execution Time: " << allTime / 1000.0 << "ms" << endl;
+        
         start = chrono::steady_clock::now();
+        // 1. 并发执行所有交易
         for (auto& tx : block->getTxs()) {
             // 放入线程池并行执行所有交易
             preExecFutures.emplace_back(threadPool->commit([this, tx] {
@@ -346,8 +353,6 @@ TEST(LoomTest, TestLoom) {
                 });
                 tx->Execute();
             }));
-            // 计算交易执行时间
-            allTime += tx->GetTx()->m_rootVertex->m_cost;
         }
         // 等待所有交易执行完成
         for (auto& future : preExecFutures) {
@@ -355,6 +360,57 @@ TEST(LoomTest, TestLoom) {
         }
         end = chrono::steady_clock::now();
         cout << "Concurrent Pre-Execution Time: " << chrono::duration_cast<chrono::microseconds>(end - start).count() / 1000.0 << "ms" << endl;
-        cout << "Serial Execution Time: " << allTime / 1000.0 << "ms" << endl;
+
+        // 2. 确定性回滚
+        MinWRollback minw(block->getTxList(), block->getRWIndex());
+        // end = chrono::steady_clock::now();
+        // cout << "step0: " << chrono::duration_cast<chrono::microseconds>(end - start).count() / 1000.0 << "ms" << endl;
+
+        minw.buildGraphNoEdgeC(threadPool, buildFutures);
+        minw.onWarm2SCC();
+        // 局部快速回滚
+        minw.fastRollback(block->getRBIndex(), rbList);
+        // 全局并发回滚
+        for (auto& scc : minw.m_sccs) {
+            reExecuteFutures.emplace_back(threadPool->commit([this, &scc, &minw] {
+                // 回滚事务
+                auto reExecuteInfo = minw.rollbackNoEdge(scc, true);
+                // 获得回滚事务并根据事务顺序排序
+                set<Vertex::Ptr, loom::customCompare> rollbackTxs(loom::customCompare(reExecuteInfo.m_serialOrder));            
+                rollbackTxs.insert(reExecuteInfo.m_rollbackTxs.begin(), reExecuteInfo.m_rollbackTxs.end());
+                // 更新m_orderedRollbackTxs
+                reExecuteInfo.m_orderedRollbackTxs = std::move(rollbackTxs);
+                return std::move(reExecuteInfo);
+            }));
+        }
+        // 收集回滚结果
+        for (auto& future : reExecuteFutures) {
+            auto res = future.get();
+            // 获得回滚事务顺序
+            // loom::printTxsOrder(res.m_serialOrder);
+            serialOrders.push_back(std::move(res.m_serialOrder));
+            // loom::printRollbackTxs(res.m_orderedRollbackTxs);
+            // 将排序后的交易插入rbList
+            rbList.insert(rbList.end(), std::make_move_iterator(res.m_orderedRollbackTxs.begin()), 
+                                                  std::make_move_iterator(res.m_orderedRollbackTxs.end()));
+        }
+        end = chrono::steady_clock::now();
+        cout << "Rollback Time: " << chrono::duration_cast<chrono::microseconds>(end - start).count() / 1000.0 << "ms" << endl;
+
+        // 3. 确定性重执行
+        DeterReExecute reExecute(rbList, serialOrders, block->getConflictIndex());
+        // end = chrono::steady_clock::now();
+        // cout << "step1: " << chrono::duration_cast<chrono::microseconds>(end - start).count() / 1000.0 << "ms" << endl;
+
+        reExecute.buildByWRSetNested(); // 1ms
+        // end = chrono::steady_clock::now();
+        // cout << "step2: " << chrono::duration_cast<chrono::microseconds>(end - start).count() / 1000.0 << "ms" << endl;
+
+        int nestedBuildTime = reExecute.calculateTotalNormalExecutionTime();
+        
+
+
+        end = chrono::steady_clock::now();
+        cout << "Total Time: " << chrono::duration_cast<chrono::microseconds>(end - start).count() / 1000.0 << "ms" << endl;
     }
 }

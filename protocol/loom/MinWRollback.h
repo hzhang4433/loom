@@ -14,13 +14,11 @@ using namespace Util;
 class MinWRollback
 {
     public:
-        MinWRollback() : id_counter(0) {}
+        MinWRollback() : id_counter(0), m_hyperVertices(dummyHyperVertices), m_RWIndex(dummyRWIndex) {}
         
-        MinWRollback(std::vector<HyperVertex::Ptr> hyperVertices, unordered_map<Vertex::Ptr, unordered_set<Vertex::Ptr, Vertex::VertexHash>, Vertex::VertexHash> RWIndex)
+        MinWRollback(std::vector<HyperVertex::Ptr>& hyperVertices, unordered_map<Vertex::Ptr, unordered_set<Vertex::Ptr, Vertex::VertexHash>, Vertex::VertexHash>& RWIndex)
          : id_counter(0), m_hyperVertices(hyperVertices), m_RWIndex(RWIndex) {}
         
-        MinWRollback(unordered_map<Vertex::Ptr, unordered_set<Vertex::Ptr, Vertex::VertexHash>, Vertex::VertexHash> RWIndex) : id_counter(0), m_RWIndex(RWIndex) {}
-
         ~MinWRollback() = default;
 
         int getId() {
@@ -156,14 +154,19 @@ class MinWRollback
         unordered_set<Vertex::Ptr, Vertex::VertexHash> m_vertices; 
         // 超图中所有超节点
         // std::unordered_set<HyperVertex::Ptr, HyperVertex::HyperVertexHash> m_hyperVertices; 
-        std::vector<HyperVertex::Ptr> m_hyperVertices; 
+        std::vector<HyperVertex::Ptr>& m_hyperVertices; 
         // 记录所有可能的scc
         tbb::concurrent_unordered_map<long long, std::unordered_set<HyperVertex::Ptr, HyperVertex::HyperVertexHash>> m_min2HyperVertex;
         // 记录所有回滚事务
         tbb::concurrent_unordered_set<Vertex::Ptr, Vertex::VertexHash> m_rollbackTxs;
         // 建立倒排索引
         unordered_map<string, loom::RWSets<Vertex::Ptr>> m_invertedIndex;
-        unordered_map<Vertex::Ptr, unordered_set<Vertex::Ptr, Vertex::VertexHash>, Vertex::VertexHash> m_RWIndex;
+        unordered_map<Vertex::Ptr, unordered_set<Vertex::Ptr, Vertex::VertexHash>, Vertex::VertexHash>& m_RWIndex;
         // 记录图中所有强连通分量
         vector<unordered_set<HyperVertex::Ptr, HyperVertex::HyperVertexHash>> m_sccs;
+    
+    private:
+        // 定义虚拟变量以供默认构造函数使用
+        static std::vector<HyperVertex::Ptr> dummyHyperVertices;
+        static std::unordered_map<Vertex::Ptr, std::unordered_set<Vertex::Ptr, Vertex::VertexHash>, Vertex::VertexHash> dummyRWIndex;
 };

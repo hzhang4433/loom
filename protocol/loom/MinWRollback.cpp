@@ -64,8 +64,8 @@ void MinWRollback::onWarm2RWIndex() {
 
 /* 获取图中所有强连通分量 */
 void MinWRollback::onWarm2SCC() {
-    // 拿到所有scc
-    auto start = std::chrono::high_resolution_clock::now();
+    // // 拿到所有scc
+    // auto start = std::chrono::high_resolution_clock::now();
     
     /* Tarjan
     int index = 0;
@@ -93,8 +93,8 @@ void MinWRollback::onWarm2SCC() {
         }
     }
 
-    auto end = std::chrono::high_resolution_clock::now();
-    cout << "recognizeSCC time: " << (double)chrono::duration_cast<chrono::microseconds>(end - start).count() / 1000 << "ms" << endl;
+    // auto end = std::chrono::high_resolution_clock::now();
+    // cout << "recognizeSCC time: " << (double)chrono::duration_cast<chrono::microseconds>(end - start).count() / 1000 << "ms" << endl;
 }
 
 /* 构建超图
@@ -174,7 +174,7 @@ void MinWRollback::buildGraphNoEdge() {
 }
 
 void MinWRollback::buildGraphNoEdgeC(UThreadPoolPtr& Pool, std::vector<std::future<void>>& futures) {
-    edgeCounter = 0;
+    // edgeCounter = 0;
 
     // // 遍历倒排索引
     // for (auto& kv : m_invertedIndex) {
@@ -209,7 +209,7 @@ void MinWRollback::buildGraphNoEdgeC(UThreadPoolPtr& Pool, std::vector<std::futu
     if (chunkSize == 0) {
         chunkSize = totalPairs;
     }
-    cout << "totalPairs: " << totalPairs << " chunkSize: " << chunkSize << endl;
+    // cout << "totalPairs: " << totalPairs << " chunkSize: " << chunkSize << endl;
 
     for (size_t i = 0; i < totalPairs; i += chunkSize) {
         futures.emplace_back(Pool->commit([this, &rwPairs, i, chunkSize, totalPairs] {
@@ -2984,3 +2984,7 @@ void MinWRollback::printEdgeRollBack(HyperVertex::Ptr& hyperVertex, const tbb::c
     // }
     // cout << endl;
 }
+
+// 初始化静态成员
+std::vector<HyperVertex::Ptr> MinWRollback::dummyHyperVertices;
+std::unordered_map<Vertex::Ptr, std::unordered_set<Vertex::Ptr, Vertex::VertexHash>, Vertex::VertexHash> MinWRollback::dummyRWIndex;

@@ -5,26 +5,30 @@ using namespace std;
 using namespace Util;
 
 /* 构造函数 */
-DeterReExecute::DeterReExecute(std::vector<Vertex::Ptr>& rbList, const vector<vector<int>>& serialOrders, const std::unordered_map<Vertex::Ptr, unordered_set<Vertex::Ptr, Vertex::VertexHash>, Vertex::VertexHash>& conflictIndex) : m_rbList(rbList), m_serialOrders(serialOrders), m_conflictIndex(conflictIndex) { // 构造函数
+DeterReExecute::DeterReExecute(std::vector<Vertex::Ptr>& rbList, vector<vector<int>>& serialOrders, std::unordered_map<Vertex::Ptr, unordered_set<Vertex::Ptr, Vertex::VertexHash>, Vertex::VertexHash>& conflictIndex) : m_rbList(rbList), m_serialOrders(serialOrders), m_conflictIndex(conflictIndex), m_normalList(dummyNormalList) {
     // 构建串行化序索引
-    for (int i = 0; i < serialOrders.size(); i++) {
-        for (auto txId : serialOrders[i]) {
+    for (int i = 0; i < m_serialOrders.size(); i++) {
+        for (auto txId : m_serialOrders[i]) {
             this->m_orderIndex[txId] = i;
         }
     }
+    
     // 记录事务顺序
     int counter = 0;
-    std::unordered_set<Vertex::Ptr, Vertex::VertexHash> rbSet(m_rbList.begin(), m_rbList.end());
+    // std::unordered_set<Vertex::Ptr, Vertex::VertexHash> rbSet(m_rbList.begin(), m_rbList.end());
     for (auto& tx : m_rbList) {
         m_txOrder[tx] = counter++;
-        m_unConflictTxMap[tx->m_id] = rbSet;
+        // m_unConflictTxMap[tx->m_id] = rbSet;
     }
+
     // 重排序轮次定义为事务数的20%
     this->N = rbList.size() * 0.2;
     m_totalExecTime = 0;
-}
+} 
 
-DeterReExecute::DeterReExecute(std::vector<HyperVertex::Ptr>& normalList, const vector<vector<int>>& serialOrders, const std::unordered_map<Vertex::Ptr, unordered_set<Vertex::Ptr, Vertex::VertexHash>, Vertex::VertexHash>& conflictIndex) : m_normalList(normalList), m_serialOrders(serialOrders), m_conflictIndex(conflictIndex) {
+
+DeterReExecute::DeterReExecute(std::vector<HyperVertex::Ptr>& normalList, vector<vector<int>>& serialOrders, std::unordered_map<Vertex::Ptr, unordered_set<Vertex::Ptr, Vertex::VertexHash>, Vertex::VertexHash>& conflictIndex, std::vector<Vertex::Ptr>& rbList) 
+    : m_normalList(normalList), m_serialOrders(serialOrders), m_conflictIndex(conflictIndex), m_rbList(rbList) {
     // 构建串行化序索引
     for (int i = 0; i < serialOrders.size(); i++) {
         for (auto txId : serialOrders[i]) {
@@ -818,3 +822,5 @@ void DeterReExecute::setNormalList(const vector<Vertex::Ptr>& rbList, vector<Hyp
         }
     }
 }
+
+std::vector<HyperVertex::Ptr> DeterReExecute::dummyNormalList;

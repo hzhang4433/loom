@@ -29,7 +29,7 @@ Aria::Aria(
 
 /// @brief start aria protocol
 void Aria::Start() {
-    DLOG(INFO) << "aria start";
+    LOG(INFO) << "aria start";
     
     // split blocks into batches
     vector<vector<vector<T>>> batches;
@@ -79,7 +79,7 @@ void Aria::Stop() {
     for (size_t i = 0; i < num_threads; ++i) {
         workers[i].join();
     }
-    DLOG(INFO) << "aria stop";
+    LOG(INFO) << "aria stop";
 }
 
 /// @brief construct an empty aria transaction

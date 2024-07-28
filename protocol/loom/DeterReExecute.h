@@ -12,9 +12,10 @@ using namespace loom;
 class DeterReExecute {
     // 定义公有函数
     public:
-        DeterReExecute(std::vector<Vertex::Ptr>& rbList, const vector<vector<int>>& serialOrders, const std::unordered_map<Vertex::Ptr, unordered_set<Vertex::Ptr, Vertex::VertexHash>, Vertex::VertexHash>& conflictIndex); // 构造函数
         
-        DeterReExecute(std::vector<HyperVertex::Ptr>& normalList, const vector<vector<int>>& serialOrders, const std::unordered_map<Vertex::Ptr, unordered_set<Vertex::Ptr, Vertex::VertexHash>, Vertex::VertexHash>& conflictIndex); // 构造函数
+        DeterReExecute(std::vector<Vertex::Ptr>& rbList, vector<vector<int>>& serialOrders, std::unordered_map<Vertex::Ptr, unordered_set<Vertex::Ptr, Vertex::VertexHash>, Vertex::VertexHash>& conflictIndex); // 构造函数
+        
+        DeterReExecute(std::vector<HyperVertex::Ptr>& normalList, vector<vector<int>>& serialOrders, std::unordered_map<Vertex::Ptr, unordered_set<Vertex::Ptr, Vertex::VertexHash>, Vertex::VertexHash>& conflictIndex, std::vector<Vertex::Ptr>& rbList); // 构造函数
 
         ~DeterReExecute(){}; // 析构函数
 
@@ -55,11 +56,11 @@ class DeterReExecute {
         // 时空图模块
         tbb::concurrent_unordered_map<string, LoomLockEntry<Vertex::Ptr>> m_tsGraph; // 时空图
         // std::unordered_map<string, LoomLockEntry<Vertex::Ptr>> m_tsGraph; // 时空图
-        std::vector<Vertex::Ptr> m_rbList;                          // 事务列表
-        std::vector<HyperVertex::Ptr> m_normalList;                 // 普通事务列表
+        std::vector<Vertex::Ptr>& m_rbList;                         // 事务列表
+        std::vector<HyperVertex::Ptr>& m_normalList;                // 普通事务列表
         std::unordered_map<int, int> m_orderIndex;                  // 事务顺序索引,用于判断两个事务是否在一个集合中.在一个集合代表无法调序,不在一个集合代表可以调序
-        std::unordered_map<Vertex::Ptr, unordered_set<Vertex::Ptr, Vertex::VertexHash>, Vertex::VertexHash> m_conflictIndex; // 读写冲突索引
-        std::vector<vector<int>> m_serialOrders;                    // 事务串行化顺序
+        std::unordered_map<Vertex::Ptr, unordered_set<Vertex::Ptr, Vertex::VertexHash>, Vertex::VertexHash>& m_conflictIndex; // 读写冲突索引
+        std::vector<vector<int>>& m_serialOrders;                    // 事务串行化顺序
         std::unordered_map<Vertex::Ptr, int> m_txOrder;             // 事务到顺序的映射
         // tbb::concurrent_unordered_map<string, std::unordered_set<Vertex::Ptr, Vertex::VertexHash>> m_unConflictTxMap;  // 无冲突事务映射，记录与每个事务不冲突的事务集合
         std::unordered_map<string, std::unordered_set<Vertex::Ptr, Vertex::VertexHash>> m_unConflictTxMap;  // 无冲突事务映射，记录与每个事务不冲突的事务集合
@@ -71,5 +72,8 @@ class DeterReExecute {
         int m_threadsNum;                                           // 线程数
         int m_totalExecTime;                                        // 总执行时间
         std::mutex mtx; // 用于并发访问 m_tsGraph
+
+        // others
+        static std::vector<HyperVertex::Ptr> dummyNormalList;
 
 };

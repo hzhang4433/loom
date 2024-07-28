@@ -13,8 +13,17 @@
 using namespace std;
 
 int main(int argc, char** argv) {
+#ifdef NDEBUG
+    std::cout << "NDEBUG is defined" << std::endl;
+#else
+    std::cout << "NDEBUG is not defined" << std::endl;
+#endif
+
     // 设置日志输出路径
     FLAGS_log_dir = "/home/z/zh/loom/log";
+    // 设置日志级别：0-INFO
+    FLAGS_v = 0;
+
     // 初始化glog
     google::InitGoogleLogging(argv[0]);
 
@@ -26,8 +35,8 @@ int main(int argc, char** argv) {
     // ::testing::GTEST_FLAG(filter) = "FabricPPTest.TestRollback";
     // ::testing::GTEST_FLAG(filter) = "CompareTest.TestRollback";
     // ::testing::GTEST_FLAG(filter) = "DeterReExecuteTest.TestTimeSpaceGraph";
-    ::testing::GTEST_FLAG(filter) = "LoomTest.TestConcurrentRollback";
-    // ::testing::GTEST_FLAG(filter) = "AriaTest.TestAria";
+    // ::testing::GTEST_FLAG(filter) = "LoomTest.TestLoom";
+    ::testing::GTEST_FLAG(filter) = "AriaTest.TestAria";
     
     int result = RUN_ALL_TESTS();
 

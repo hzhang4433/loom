@@ -708,7 +708,7 @@ class DeliveryTransaction : public TPCCTransaction
                 for (int j = 0; j < oldestNewOrder.o_ol_cnt; j++) {
                     // orderLine子事务
                     TPCCTransaction::Ptr olAccess = std::make_shared<TPCCTransaction>(random);
-                    olAccess->addReadRow("OL-" + wd_key + "-" + std::to_string(oldestNewOrder.o_id));
+                    olAccess->addReadRow("OLdelivery-" + wd_key + "-" + std::to_string(oldestNewOrder.o_id) + "-" + std::to_string(j));
                     // olAccess->addUpdateRow("OLdelivery-" + wd_key + "-" + std::to_string(oldestNewOrder.o_id) + "-" + std::to_string(j));
                     // orderlines子事务添加依赖
                     olsAccess->addChild(olAccess, loom::DependencyType::STRONG);

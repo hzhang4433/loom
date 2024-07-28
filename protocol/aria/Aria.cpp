@@ -18,7 +18,7 @@ Aria::Aria(
     bool enable_reordering, size_t table_partitions
 ):
     blocks(blocks),
-    barrier(num_threads, []{ DLOG(INFO) << "batch complete" << std::endl; }),
+    barrier(num_threads, []{ LOG(INFO) << "batch complete" << std::endl; }),
     table{table_partitions},
     lock_table{table_partitions},
     enable_reordering{enable_reordering},
@@ -54,18 +54,15 @@ void Aria::Start() {
                 subBatch.emplace_back(std::move(tx_inner), txid, batch_id);
             }
             // store thread batch
-            // batch.push_back(subBatch);
             batch.push_back(std::move(subBatch));
         }
         // store block batch
-        // batches.push_back(batch);
         batches.push_back(std::move(batch));
     }
 
     for (size_t i = 0; i < num_threads; ++i) {
         vector<vector<T>> thread_batches;
         for (size_t j = 0; j < blocks.size(); ++j) {
-            // thread_batches.push_back(batches[j][i]);
             thread_batches.push_back(std::move(batches[j][i]));
         }
         workers.push_back(std::thread([this, i, thread_batches]() {

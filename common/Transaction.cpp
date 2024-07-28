@@ -23,13 +23,13 @@ void Transaction::InstallGetStorageHandler(GetStorage &&handler) {
 }
 
 void Transaction::Execute() {
-    DLOG(INFO) << "execute transaction: " << m_tx->m_hyperId << std::endl;
+    DLOG(INFO) << "tx: " << m_tx << " execute transaction: " << m_tx->m_hyperId << std::endl;
     if (getHandler) {
-        getHandler(m_tx->m_rootVertex->readSet);
+        getHandler(m_tx->m_rootVertex->allReadSet);
     }
     if (setHandler) {
-        setHandler(m_tx->m_rootVertex->writeSet, "value");
+        setHandler(m_tx->m_rootVertex->allWriteSet, "value");
     }
-    auto tx = m_tx->m_rootVertex->m_cost;
+    auto& tx = m_tx->m_rootVertex->m_cost;
     loom::Exec(tx);
 }

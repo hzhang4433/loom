@@ -84,6 +84,9 @@ HyperVertex::Ptr TxGenerator::generateTransaction(const TPCCTransaction::Ptr& tx
         hyperVertex->buildVertexs(tx, rootVertex, invertedIndex);
         // 添加回滚代价
         rootVertex->m_cost = rootVertex->m_self_cost;
+        // 更新读写集
+        rootVertex->allReadSet = rootVertex->readSet;
+        rootVertex->allWriteSet = rootVertex->writeSet;
         // 添加自己
         rootVertex->cascadeVertices.insert(rootVertex);
         hyperVertex->m_vertices.insert(rootVertex);

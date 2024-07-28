@@ -1,5 +1,5 @@
 set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
-set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -O3 -funroll-loops -march=native")
+# set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -O3 -funroll-loops -march=native")
 # set(CMAKE_CXX_FLAGS_RELEASE "-O3")
 # set(CMAKE_CXX_FLAGS_DEBUG "-O0")
 
@@ -14,42 +14,36 @@ set(CMAKE_CXX_COMPILER "/usr/bin/g++-11")
 set(CMAKE_CXX_STANDARD 20)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 
-# 找gtest
+option(ENABLE_NDEBUG "Enable NDEBUG" ON)
+
+# find gtest
 find_package(GTest REQUIRED)
 include_directories(${GTEST_INCLUDE_DIRS})
 
-# 找tbb
+# find tbb
 set(TBB_INCLUDE_DIRS /usr/include/tbb)
 set(TBB_LIBRARIES /usr/lib/x86_64-linux-gnu/libtbb.so)
 
-# 找boost
+# find boost
 find_package(Boost REQUIRED)
 include_directories(${Boost_INCLUDE_DIRS})
 
-# 找glog
-# find_package(PkgConfig REQUIRED)
-# pkg_check_modules(GLOG REQUIRED glog)
-# include_directories(${GLOG_INCLUDE_DIRS})
-# link_directories(${GLOG_LIBRARY_DIRS})
-# add_definitions(-DGLOG_EXPORT -DGLOG_NO_EXPORT)
-
+# find glog
 set(GLOG_INCLUDE_DIRS /usr/include/glog)
 set(GLOG_LIBRARIES /usr/lib/x86_64-linux-gnu/libglog.so)
 include_directories(${GLOG_INCLUDE_DIRS})
 
-# 找gflags
+# find gflags
 find_package(GFlags REQUIRED)
 include_directories(${GFLAGS_INCLUDE_DIRS})
 
-
-# 找fmt
+# find fmt
 set(FMT_DIR /usr/include/fmt)
 set(FMT_LIBRARIES /usr/lib/x86_64-linux-gnu/libfmt.a)
 include_directories(${FMT_INCLUDE_DIRS})
 
 
 include_directories(${CMAKE_SOURCE_DIR})
-
 file(GLOB_RECURSE SRC_LIST "*.cpp")
 list(FILTER SRC_LIST EXCLUDE REGEX ".*/test/.*")
 list(FILTER SRC_LIST EXCLUDE REGEX ".*/build/.*")
@@ -62,7 +56,20 @@ add_executable(loom ${SRC_LIST} ${HEADERS})
 target_link_libraries(
     loom 
     PUBLIC ${GTEST_LIBRARIES} ${TBB_LIBRARIES} ${Boost_LIBRARIES} ${GLOG_LIBRARIES} ${FMT_LIBRARIES} pthread)
+
+# Manage Compile Options
+if(ENABLE_NDEBUG)
+    target_compile_options(loom PRIVATE
+        -O3 -funroll-loops -march=native
+        -DNDEBUG=1
+    )
+else()
+    target_compile_options(loom PRIVATE
+        -O0 -ggdb
+    )
+endif()
+
 target_compile_options(loom PRIVATE -Wno-deprecated -Wpedantic -Wno-unused-variable -Wno-unused-parameter -Wno-comment -Wno-sign-compare -Wno-pedantic -Wno-return-type -Wno-uninitialized)
 # add project to include path
-# message(STATUS "Project source directory: ${PROJECT_SOURCE_DIR}")
+message(STATUS "Project source directory: ${PROJECT_SOURCE_DIR}")
 target_include_directories(loom PRIVATE ${PROJECT_SOURCE_DIR}/..)

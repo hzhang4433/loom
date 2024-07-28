@@ -12,7 +12,7 @@ TEST(AriaTest, TestAria) {
     TxGenerator txGenerator(loom::BLOCK_SIZE);
     auto blocks = txGenerator.generateWorkload(false);
     // Create a Aria instance
-    auto protocol = Aria(blocks, 36, true, 16);
+    auto protocol = Aria(blocks, 36, true, 36);
     // Start the protocol
     protocol.Start();
     // Wait for the protocol to finish

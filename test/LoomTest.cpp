@@ -290,7 +290,7 @@ TEST(LoomTest, TestConcurrentRollback) {
 }
 
 TEST(LoomTest, TestLooptime) {
-    size_t loopTime = 1000;
+    size_t loopTime = 1100;
     volatile int dummy = 0; // 使用volatile防止编译器优化
     auto start = chrono::high_resolution_clock::now();
     for (int i = 0; i < loopTime; i++) {dummy++;}
@@ -300,5 +300,61 @@ TEST(LoomTest, TestLooptime) {
 }
 
 TEST(LoomTest, TestLoom) {
+    // 定义变量
+    TxGenerator txGenerator(loom::BLOCK_SIZE);
+    // 生成交易
+    auto blocks = txGenerator.generateWorkload(true);
+    // 定义线程池
+    UThreadPoolPtr threadPool = UAllocator::safeMallocTemplateCObject<UThreadPool>();
+    std::vector<std::future<void>> preExecFutures;
+    std::vector<std::future<loom::ReExecuteInfo>> reExecuteFutures;
+    // 定义计时变量
+    chrono::steady_clock::time_point start, end;
 
+    // 休眠2s
+    std::this_thread::sleep_for(std::chrono::seconds(2));
+
+    // 执行每个区块
+    for (auto& block : blocks) {
+        size_t allTime = 0;
+        start = chrono::steady_clock::now();
+        for (auto& tx : block->getTxs()) {
+            // 放入线程池并行执行所有交易
+            preExecFutures.emplace_back(threadPool->commit([this, tx] {
+                tx->InstallGetStorageHandler([&](
+                    const std::unordered_set<string>& readSet
+                ) {
+                    string keys;
+                    std::unordered_map<string, string> local_get;
+                    for (auto& key : readSet) {
+                        keys += key + " ";
+                        string value;
+                        local_get[key] = value;
+                    }
+                });
+                // write locally to local storage
+                tx->InstallSetStorageHandler([&](
+                    const std::unordered_set<string>& writeSet,
+                    const std::string& value
+                ) {
+                    string keys;
+                    std::unordered_map<string, string> local_put;
+                    for (auto& key : writeSet) {
+                        keys += key + " ";
+                        local_put[key] = value;
+                    }
+                });
+                tx->Execute();
+            }));
+            // 计算交易执行时间
+            allTime += tx->GetTx()->m_rootVertex->m_cost;
+        }
+        // 等待所有交易执行完成
+        for (auto& future : preExecFutures) {
+            future.get();
+        }
+        end = chrono::steady_clock::now();
+        cout << "Concurrent Pre-Execution Time: " << chrono::duration_cast<chrono::microseconds>(end - start).count() / 1000.0 << "ms" << endl;
+        cout << "Serial Execution Time: " << allTime / 1000.0 << "ms" << endl;
+    }
 }

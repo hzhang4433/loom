@@ -5,6 +5,11 @@
 #include <atomic>
 #include "common/HyperVertex.h"
 
+struct FabricPPTransaction: public Vertex{
+    int m_cycle_num;                                                         // 记录节点所在环路数
+    unordered_set<Vertex::Ptr, VertexHash> m_in_edges;                       // 记录节点的入边, 格式：节点指针 => 可抵达最小id
+    unordered_set<Vertex::Ptr, VertexHash> m_out_edges;                      // 记录节点的出边, 格式：节点指针 => 可到达最小id
+};
 
 class FabricPP {
     public:

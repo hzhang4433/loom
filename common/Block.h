@@ -29,7 +29,7 @@ class Block {
         void setTxs(const std::vector<Transaction::Ptr>& txs) {m_txs = txs;}
 
         // 获取区块内事务
-        const std::vector<Transaction::Ptr> getTxs() const {return m_txs;}
+        const std::vector<Transaction::Ptr>& getTxs() const {return m_txs;}
 
         // 获得区块事务信息
         std::vector<HyperVertex::Ptr>& getTxList() {return m_txInfo;}

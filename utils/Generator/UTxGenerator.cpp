@@ -28,7 +28,7 @@ Block::Ptr TxGenerator::generateBlock(bool isNest) {
     unordered_map<string, set<Vertex::Ptr, Vertex::VertexCompare>> RBIndex;// 回滚索引
 
     // 140716047624829
-    workload.set_seed(uint64_t(140703587571293));
+    // workload.set_seed(uint64_t(140703587571293));
     auto seed = workload.get_seed();
     cout << "seed: " << seed << endl;
 

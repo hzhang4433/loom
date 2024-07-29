@@ -335,7 +335,7 @@ void DeterReExecute::buildGraphConcurrent(UThreadPoolPtr& Pool, std::vector<std:
 
 /* 根据读写集构建时空图 */
 void DeterReExecute::buildByWRSet() {
-    int counter = 0;
+    // int counter = 0;
     // 按队列顺序，依次遍历事务
     for (auto& Ti : m_rbList) {
         // auto& Ti = rb->m_rootVertex;
@@ -387,6 +387,8 @@ void DeterReExecute::buildByWRSet() {
             entry.total_time = std::max(Ti->scheduledTime + Ti->m_self_cost, entry.total_time);
             // counter++;
         }
+
+        // Ti->committed = std::make_shared<std::atomic<bool>>(false);
     }
     // cout << "counter in buildByWRSet: " << counter << endl;
 }
@@ -453,6 +455,8 @@ void DeterReExecute::buildByWRSetNested() {
                 }
             }
         }
+
+        // Ti->committed = std::make_shared<std::atomic<bool>>(false);
     }
 }
 
@@ -809,12 +813,34 @@ void DeterReExecute::reExcution(UThreadPoolPtr& Pool, std::vector<std::future<vo
     
     for (auto& tx : m_rbList) {
         if (tx->m_should_wait) {
-            // dependencyGraph[tx->m_should_wait].push_back(vertex);
-        } else {
-            Pool->commit([this, tx] { tx->Execute(); });
+            dependencyGraph[tx->m_should_wait].push_back(tx);
         }
     }
 
+    // 在依赖关系完整建立后，提交无依赖的任务
+    for (auto& tx : m_rbList) {
+        if (!tx->m_should_wait) {
+            futures.emplace_back(Pool->commit([this, tx] {
+                this->executeTransaction(tx);
+            }));
+        }
+    }
+
+    for (auto &future : futures) {
+        future.get();
+    }
+}
+
+void DeterReExecute::executeTransaction(const Vertex::Ptr& tx) {
+    tx->Execute();  // 执行当前交易
+    auto it = dependencyGraph.find(tx);
+    if (it != dependencyGraph.end()) {
+        auto& dependents = it->second;
+        // 递归地执行所有依赖此交易的后续交易
+        for (auto& dependent : dependents) {
+            executeTransaction(dependent);
+        }
+    }
 }
 
 

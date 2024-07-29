@@ -201,7 +201,7 @@ namespace loom {
     };
 
     static void Exec(size_t tx) {
-        size_t TENMILL = 1100;
+        size_t TENMILL = 1000;
         size_t loopTime = TENMILL * tx / 10;
         volatile int dummy = 0;
         for (int i = 0; i < loopTime; i++) {dummy++;}

@@ -1,6 +1,7 @@
 #pragma once
 
 #include <memory>
+#include <atomic>
 #include <string>
 #include <map>
 #include <set>
@@ -56,14 +57,14 @@ class Vertex : public std::enable_shared_from_this<Vertex>, public Transaction
             }
         };
 
-        struct VertexCmpCycle {
-            bool operator()(const Vertex::Ptr& a, const Vertex::Ptr& b) const {
-                if (a->m_cycle_num == b->m_cycle_num) {
-                    return a->m_id < b->m_id;
-                }
-                return a->m_cycle_num < b->m_cycle_num;
-            }
-        };
+        // struct VertexCmpCycle {
+        //     bool operator()(const Vertex::Ptr& a, const Vertex::Ptr& b) const {
+        //         if (a->m_cycle_num == b->m_cycle_num) {
+        //             return a->m_id < b->m_id;
+        //         }
+        //         return a->m_cycle_num < b->m_cycle_num;
+        //     }
+        // };
 
         struct MapCompare {
             bool operator()(const std::map<Vertex::Ptr, Vertex::Ptr, Vertex::VertexCompare>& map1,
@@ -101,6 +102,10 @@ class Vertex : public std::enable_shared_from_this<Vertex>, public Transaction
 
         Vertex(shared_ptr<HyperVertex> hyperVertex, int hyperId, std::string id, int layer, bool isNested = false);
 
+        // Vertex(const Vertex& other) : Transaction(other), committed(other.committed.load()) {}
+
+        // Vertex(Vertex&& other) noexcept;
+        
         ~Vertex();
 
         const unordered_set<ChildVertex, ChildVertexHash, ChildVertexEqual>& getChildren() const;
@@ -116,18 +121,20 @@ class Vertex : public std::enable_shared_from_this<Vertex>, public Transaction
 
         int mapToHyperId() const;
 
+        void Execute() override;
+
     // 公共变量
         int m_hyperId;                                                           // 记录节点对应的超节点id
-        // shared_ptr<HyperVertex> m_tx;                                   // 记录节点对应的超节点
+        // shared_ptr<HyperVertex> m_hyperVertex;                                // 记录节点对应的超节点
         string m_id;                                                             // 记录节点自身的id
         int m_layer;                                                             // 记录节点所在层
         int m_cost;                                                              // 记录节点的执行代价 => 由执行时间正则化得到
         int m_self_cost;                                                         // 记录节点自身的执行代价
         int m_degree;                                                            // 记录节点的度
-        int m_cycle_num;                                                         // 记录节点所在环路数
-        unordered_set<Vertex::Ptr, VertexHash> m_in_edges;                       // 记录节点的入边, 格式：节点指针 => 可抵达最小id
-        unordered_set<Vertex::Ptr, VertexHash> m_out_edges;                      // 记录节点的出边, 格式：节点指针 => 可到达最小id
-        set<Vertex::Ptr, VertexCompare2> cascadeVertices;                         // 记录级联回滚节点
+        // int m_cycle_num;                                                      // 记录节点所在环路数
+        // unordered_set<Vertex::Ptr, VertexHash> m_in_edges;                    // 记录节点的入边, 格式：节点指针 => 可抵达最小id
+        // unordered_set<Vertex::Ptr, VertexHash> m_out_edges;                   // 记录节点的出边, 格式：节点指针 => 可到达最小id
+        set<Vertex::Ptr, VertexCompare2> cascadeVertices;                        // 记录级联回滚节点
         unordered_set<string> readSet;                                           // 记录读集
         unordered_set<string> writeSet;                                          // 记录写集
         unordered_set<string> allReadSet;                                        // 记录所有读集(包括子事务)
@@ -144,6 +151,7 @@ class Vertex : public std::enable_shared_from_this<Vertex>, public Transaction
         unordered_set<Vertex::Ptr, VertexHash> m_strongChildren;                 // 记录强依赖子节点
         Vertex::Ptr m_strongParent;                                              // 记录强依赖父节点
         Vertex::Ptr m_should_wait;                                               // 记录应该等待的节点
+        // std::shared_ptr<std::atomic<bool>> committed;
 };
 
 }

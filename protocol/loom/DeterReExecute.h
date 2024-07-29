@@ -50,6 +50,7 @@ class DeterReExecute {
         static void setNormalList(const vector<Vertex::Ptr>& rbList, vector<Vertex::Ptr>& normalList);
         static void setNormalList(const vector<Vertex::Ptr>& rbList, vector<HyperVertex::Ptr>& normalList);
         void reExcution(Util::UThreadPoolPtr& Pool, std::vector<std::future<void>>& futures);
+        void executeTransaction(const Vertex::Ptr& tx);
 
 
     // 定义私有变量
@@ -72,7 +73,8 @@ class DeterReExecute {
         // 线程模块
         int m_threadsNum;                                           // 线程数
         int m_totalExecTime;                                        // 总执行时间
-        std::mutex mtx; // 用于并发访问 m_tsGraph
+        std::mutex mtx;                                             // 用于并发访问 m_tsGraph
+        std::unordered_map<Vertex::Ptr, std::vector<Vertex::Ptr>> dependencyGraph; // 记录依赖关系
 
         // others
         static std::vector<HyperVertex::Ptr> dummyNormalList;

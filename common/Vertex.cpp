@@ -1,13 +1,12 @@
 #include <iostream>
 #include "Vertex.h"
+#include "HyperVertex.h"
 
 
 namespace loom {
 
 Vertex::Vertex(shared_ptr<HyperVertex> hyperVertex, int hyperId, string id, int layer, bool isNested) 
 : Transaction(hyperVertex), m_hyperId(hyperId), m_id(id), m_layer(layer), isNested(isNested) {
-    // m_min_in = -1;
-    // m_min_out = -1;
     m_degree = 0;
     m_cost = 0;
     m_self_cost = 0;
@@ -16,6 +15,21 @@ Vertex::Vertex(shared_ptr<HyperVertex> hyperVertex, int hyperId, string id, int 
     scheduledTime = 0;
     m_should_wait = nullptr;
 }
+
+// // 移动构造函数
+// Vertex::Vertex(Vertex&& other) noexcept 
+//     : Transaction(std::move(other)), 
+//         committed(other.committed.load()), 
+//         m_hyperId(other.m_hyperId),
+//         scheduledTime(other.scheduledTime),
+//         hasStrong(other.hasStrong),
+//         m_strongChildren(std::move(other.m_strongChildren)),
+//         m_self_cost(other.m_self_cost),
+//         readSet(std::move(other.readSet)),
+//         writeSet(std::move(other.writeSet)),
+//         m_should_wait(other.m_should_wait) {
+//     // other.committed.store(false); // 重置源对象的 flag
+// }
 
 Vertex::~Vertex() {}
 
@@ -70,6 +84,18 @@ string Vertex::DependencyTypeToString(loom::DependencyType type) {
     default:
         return "UNKNOWN";
     }
+}
+
+void Vertex::Execute() {
+    DLOG(INFO) << "subtx: " << this << " execute transaction: " << m_id << std::endl;
+    if (getHandler) {
+        getHandler(readSet);
+    }
+    if (setHandler) {
+        setHandler(writeSet, "value");
+    }
+    auto& tx = m_cost;
+    loom::Exec(tx);
 }
 
 }

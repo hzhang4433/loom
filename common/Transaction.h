@@ -22,11 +22,11 @@ class Transaction : public std::enable_shared_from_this<Transaction>
         Transaction(const Transaction& other); // copy constructor
         void InstallSetStorageHandler(SetStorage &&handler);
         void InstallGetStorageHandler(GetStorage &&handler);
-        void Execute();
+        virtual void Execute();
         const std::shared_ptr<HyperVertex> GetTx() const {return m_tx;}
         std::shared_ptr<HyperVertex> m_tx;
 
-    private:
+    protected:
         // Handler functions for get and set operations
         SetStorage setHandler;
         GetStorage getHandler;

@@ -306,7 +306,7 @@ TEST(LoomTest, TestLoom) {
     auto blocks = txGenerator.generateWorkload(true);
     // 定义线程池
     UThreadPoolPtr threadPool = UAllocator::safeMallocTemplateCObject<UThreadPool>();
-    std::vector<std::future<void>> preExecFutures, buildFutures;
+    std::vector<std::future<void>> preExecFutures, buildFutures, reExecFutures;
     std::vector<std::future<loom::ReExecuteInfo>> reExecuteFutures;
     // 定义回滚变量
     vector<vector<int>> serialOrders;
@@ -326,8 +326,8 @@ TEST(LoomTest, TestLoom) {
         start = chrono::steady_clock::now();
         // 1. 并发执行所有交易
         for (auto& tx : block->getTxs()) {
-            // 放入线程池并行执行所有交易
             preExecFutures.emplace_back(threadPool->commit([this, tx] {
+                // read locally from local storage
                 tx->InstallGetStorageHandler([&](
                     const std::unordered_set<string>& readSet
                 ) {
@@ -354,6 +354,47 @@ TEST(LoomTest, TestLoom) {
                 tx->Execute();
             }));
         }
+
+        /*
+        auto txs = block->getTxs();
+        size_t txSize = txs.size();
+        size_t chunkSize = (txSize + UTIL_DEFAULT_THREAD_SIZE - 1) / (UTIL_DEFAULT_THREAD_SIZE * 1.2);
+        for (size_t i = 0; i < txSize; i += chunkSize) {
+            // 放入线程池并行执行所有交易
+            preExecFutures.emplace_back(threadPool->commit([this, txs, i, chunkSize, txSize] {
+                size_t end = std::min(i + chunkSize, txSize);
+                for (size_t j = i; j < end; j++) {
+                    auto& tx = txs[j];
+                    // read locally from local storage
+                    tx->InstallGetStorageHandler([&](
+                        const std::unordered_set<string>& readSet
+                    ) {
+                        string keys;
+                        std::unordered_map<string, string> local_get;
+                        for (auto& key : readSet) {
+                            keys += key + " ";
+                            string value;
+                            local_get[key] = value;
+                        }
+                    });
+                    // write locally to local storage
+                    tx->InstallSetStorageHandler([&](
+                        const std::unordered_set<string>& writeSet,
+                        const std::string& value
+                    ) {
+                        string keys;
+                        std::unordered_map<string, string> local_put;
+                        for (auto& key : writeSet) {
+                            keys += key + " ";
+                            local_put[key] = value;
+                        }
+                    });
+                    tx->Execute();
+                }
+            }));
+        }
+        */
+        
         // 等待所有交易执行完成
         for (auto& future : preExecFutures) {
             future.get();
@@ -406,11 +447,21 @@ TEST(LoomTest, TestLoom) {
         // end = chrono::steady_clock::now();
         // cout << "step2: " << chrono::duration_cast<chrono::microseconds>(end - start).count() / 1000.0 << "ms" << endl;
 
-        int nestedBuildTime = reExecute.calculateTotalNormalExecutionTime();
-        cout << "Nested Build Time: " << nestedBuildTime / 1000.0 << "ms" << endl;
+        // for (auto& tx : rbList) {
+        //     reExecFutures.emplace_back(threadPool->commit([this, tx] {
+        //         // read locally from local storage
+        //         tx->Execute();
+        //     }));
+        // }
+        // for (auto& future : reExecFutures) {
+        //     future.get();
+        // }
+
+        reExecute.reExcution(threadPool, reExecFutures);
         
-
-
+        // int nestedBuildTime = reExecute.calculateTotalNormalExecutionTime();
+        // cout << "Nested Build Time: " << nestedBuildTime / 1000.0 << "ms" << endl;
+        
         end = chrono::steady_clock::now();
         cout << "Total Time: " << chrono::duration_cast<chrono::microseconds>(end - start).count() / 1000.0 << "ms" << endl;
     }

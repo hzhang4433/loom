@@ -31,7 +31,7 @@ class MinWRollback
 
         void onWarm2SCC();
 
-        void build(set<Vertex::Ptr, Vertex::VertexCompare>& vertices);
+        void build(set<Vertex::Ptr, Vertex::VertexCompare2>& vertices);
 
         void onRW(const Vertex::Ptr &rTx, const Vertex::Ptr &wTx);
 

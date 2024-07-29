@@ -347,11 +347,21 @@ void DeterReExecute::buildByWRSet() {
             auto& entry = m_tsGraph[wKey];
             if (!entry.deps_get.empty()) {
                 auto& Tj = entry.deps_get.back();
-                Ti->scheduledTime = std::max(Ti->scheduledTime, Tj->scheduledTime + Tj->m_self_cost);
+                // Ti->scheduledTime = std::max(Ti->scheduledTime, Tj->scheduledTime + Tj->m_self_cost);
+                auto newScheduledTime = Tj->scheduledTime + Tj->m_self_cost;
+                if (newScheduledTime > Ti->scheduledTime) {
+                    Ti->scheduledTime = newScheduledTime;
+                    Ti->m_should_wait = Tj;
+                }
             }
             if (!entry.deps_put.empty()) {
                 auto& Tj = entry.deps_put.back();
-                Ti->scheduledTime = std::max(Ti->scheduledTime, Tj->scheduledTime + Tj->m_self_cost);
+                // Ti->scheduledTime = std::max(Ti->scheduledTime, Tj->scheduledTime + Tj->m_self_cost);
+                auto newScheduledTime = Tj->scheduledTime + Tj->m_self_cost;
+                if (newScheduledTime > Ti->scheduledTime) {
+                    Ti->scheduledTime = newScheduledTime;
+                    Ti->m_should_wait = Tj;
+                }
             }
             entry.deps_put.push_back(Ti);
             entry.total_time = std::max(Ti->scheduledTime + Ti->m_self_cost, entry.total_time);
@@ -361,13 +371,17 @@ void DeterReExecute::buildByWRSet() {
         // then read set
         for (auto& rKey : Ti->readSet) {
             if (processedKeys.find(rKey) != processedKeys.end()) {
-                // entry.deps_get.push_back(Ti);
                 continue;
             }
             auto& entry = m_tsGraph[rKey];
             if (!entry.deps_put.empty()) {
                 auto& Tj = entry.deps_put.back();
-                Ti->scheduledTime = std::max(Ti->scheduledTime, Tj->scheduledTime + Tj->m_self_cost);
+                // Ti->scheduledTime = std::max(Ti->scheduledTime, Tj->scheduledTime + Tj->m_self_cost);
+                auto newScheduledTime = Tj->scheduledTime + Tj->m_self_cost;
+                if (newScheduledTime > Ti->scheduledTime) {
+                    Ti->scheduledTime = newScheduledTime;
+                    Ti->m_should_wait = Tj;
+                }
             }
             entry.deps_get.push_back(Ti);
             entry.total_time = std::max(Ti->scheduledTime + Ti->m_self_cost, entry.total_time);
@@ -379,7 +393,6 @@ void DeterReExecute::buildByWRSet() {
 
 /* 根据读写集构建时空图:考虑嵌套结构 */
 void DeterReExecute::buildByWRSetNested() {
-    // int counter = 0;
     // 按队列顺序，依次遍历事务
     for (auto& Ti : m_rbList) {
         std::unordered_set<string> processedKeys;
@@ -389,16 +402,25 @@ void DeterReExecute::buildByWRSetNested() {
             auto& entry = m_tsGraph[wKey];
             if (!entry.deps_get.empty()) {
                 auto& Tj = entry.deps_get.back();
-                Ti->scheduledTime = std::max(Ti->scheduledTime, Tj->scheduledTime + Tj->m_self_cost);
+                // Ti->scheduledTime = std::max(Ti->scheduledTime, Tj->scheduledTime + Tj->m_self_cost);
+                auto newScheduledTime = Tj->scheduledTime + Tj->m_self_cost;
+                if (newScheduledTime > Ti->scheduledTime) {
+                    Ti->scheduledTime = newScheduledTime;
+                    Ti->m_should_wait = Tj;
+                }
             }
             if (!entry.deps_put.empty()) {
                 auto& Tj = entry.deps_put.back();
-                Ti->scheduledTime = std::max(Ti->scheduledTime, Tj->scheduledTime + Tj->m_self_cost);
+                // Ti->scheduledTime = std::max(Ti->scheduledTime, Tj->scheduledTime + Tj->m_self_cost);
+                auto newScheduledTime = Tj->scheduledTime + Tj->m_self_cost;
+                if (newScheduledTime > Ti->scheduledTime) {
+                    Ti->scheduledTime = newScheduledTime;
+                    Ti->m_should_wait = Tj;
+                }
             }
             entry.total_time = std::max(Ti->scheduledTime + Ti->m_self_cost, entry.total_time);
             entry.deps_put.push_back(Ti);
             processedKeys.insert(wKey);
-            // counter++;
         }
         // then read set
         for (auto& rKey : Ti->readSet) {
@@ -408,22 +430,30 @@ void DeterReExecute::buildByWRSetNested() {
             auto& entry = m_tsGraph[rKey];
             if (!entry.deps_put.empty()) {
                 auto& Tj = entry.deps_put.back();
-                Ti->scheduledTime = std::max(Ti->scheduledTime, Tj->scheduledTime + Tj->m_self_cost);
+                // Ti->scheduledTime = std::max(Ti->scheduledTime, Tj->scheduledTime + Tj->m_self_cost);
+                auto newScheduledTime = Tj->scheduledTime + Tj->m_self_cost;
+                if (newScheduledTime > Ti->scheduledTime) {
+                    Ti->scheduledTime = newScheduledTime;
+                    Ti->m_should_wait = Tj;
+                }
             }
             entry.total_time = std::max(Ti->scheduledTime + Ti->m_self_cost, entry.total_time);
             entry.deps_get.push_back(Ti);
-            // counter++;
         }
 
         // 考虑嵌套结构：若存在强依赖子节点，则将其添加至依赖关系
         if (Ti->hasStrong) {
             for (auto Tj : Ti->m_strongChildren) {
                 // 父事务调度时间为前序事务结束时间
-                Ti->scheduledTime = std::max(Ti->scheduledTime, Tj->scheduledTime + Tj->m_self_cost);
+                // Ti->scheduledTime = std::max(Ti->scheduledTime, Tj->scheduledTime + Tj->m_self_cost);
+                auto newScheduledTime = Tj->scheduledTime + Tj->m_self_cost;
+                if (newScheduledTime > Ti->scheduledTime) {
+                    Ti->scheduledTime = newScheduledTime;
+                    Ti->m_should_wait = Tj;
+                }
             }
         }
     }
-    // cout << "counter in buildByWRSet: " << counter << endl;
 }
 
 
@@ -774,9 +804,22 @@ void DeterReExecute::updateDependenciesAndScheduleTime(Vertex::Ptr& Tj, const Ve
     }
 }
 
-std::vector<Vertex::Ptr>& DeterReExecute::getRbList() { // 获取事务列表
-    return m_rbList;
+/* 确定性重执行模块 */
+void DeterReExecute::reExcution(UThreadPoolPtr& Pool, std::vector<std::future<void>>& futures) {
+    
+    for (auto& tx : m_rbList) {
+        if (tx->m_should_wait) {
+            // dependencyGraph[tx->m_should_wait].push_back(vertex);
+        } else {
+            Pool->commit([this, tx] { tx->Execute(); });
+        }
+    }
+
 }
+
+
+/* 获取事务列表 */
+std::vector<Vertex::Ptr>& DeterReExecute::getRbList() {return m_rbList;}
 
 /* 利用rbList构造normalList */
 void DeterReExecute::setNormalList(const vector<Vertex::Ptr>& rbList, vector<Vertex::Ptr>& normalList) {
@@ -808,7 +851,7 @@ void DeterReExecute::setNormalList(const vector<Vertex::Ptr>& rbList, vector<Hyp
     unordered_map<int, bool> hyperId2Flag;
     for (auto& rb : rbList) {
         int& hyperId = rb->m_hyperId;
-        auto& hvTx = rb->m_hyperVertex;
+        auto& hvTx = rb->m_tx;
         if (hyperId2Flag.find(hyperId) == hyperId2Flag.end()) {
             // 形成一个新的vertex对象
             hvTx->m_rootVertex = rb;

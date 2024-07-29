@@ -7,13 +7,17 @@
 #include <unordered_set>
 #include <tbb/concurrent_unordered_map.h>
 #include <tbb/concurrent_unordered_set.h>
+#include <glog/logging.h>
+#include "Transaction.h"
 #include "common.h"
 
 using namespace std;
 
+namespace loom {
+
 class HyperVertex;
 
-class Vertex : public std::enable_shared_from_this<Vertex>
+class Vertex : public std::enable_shared_from_this<Vertex>, public Transaction
 {
     public:
         typedef std::shared_ptr<Vertex> Ptr;
@@ -33,10 +37,16 @@ class Vertex : public std::enable_shared_from_this<Vertex>
 
         struct VertexCompare {
             bool operator()(const Vertex::Ptr& a, const Vertex::Ptr& b) const {
-                if (a->m_hyperVertex != b->m_hyperVertex) {
-                    return a->m_hyperVertex < b->m_hyperVertex;
+                if (a->m_tx != b->m_tx) {
+                    return a->m_tx < b->m_tx;
                 }
                 return a->m_id < b->m_id;
+            }
+        };
+
+        struct VertexCompare2 {
+            bool operator()(const Vertex::Ptr& a, const Vertex::Ptr& b) const {
+                return a->m_id > b->m_id;
             }
         };
 
@@ -108,7 +118,7 @@ class Vertex : public std::enable_shared_from_this<Vertex>
 
     // 公共变量
         int m_hyperId;                                                           // 记录节点对应的超节点id
-        shared_ptr<HyperVertex> m_hyperVertex;                                   // 记录节点对应的超节点
+        // shared_ptr<HyperVertex> m_tx;                                   // 记录节点对应的超节点
         string m_id;                                                             // 记录节点自身的id
         int m_layer;                                                             // 记录节点所在层
         int m_cost;                                                              // 记录节点的执行代价 => 由执行时间正则化得到
@@ -117,7 +127,7 @@ class Vertex : public std::enable_shared_from_this<Vertex>
         int m_cycle_num;                                                         // 记录节点所在环路数
         unordered_set<Vertex::Ptr, VertexHash> m_in_edges;                       // 记录节点的入边, 格式：节点指针 => 可抵达最小id
         unordered_set<Vertex::Ptr, VertexHash> m_out_edges;                      // 记录节点的出边, 格式：节点指针 => 可到达最小id
-        set<Vertex::Ptr, VertexCompare> cascadeVertices;                         // 记录级联回滚节点
+        set<Vertex::Ptr, VertexCompare2> cascadeVertices;                         // 记录级联回滚节点
         unordered_set<string> readSet;                                           // 记录读集
         unordered_set<string> writeSet;                                          // 记录写集
         unordered_set<string> allReadSet;                                        // 记录所有读集(包括子事务)
@@ -133,4 +143,7 @@ class Vertex : public std::enable_shared_from_this<Vertex>
         bool hasStrong;                                                          // 记录是否有强依赖
         unordered_set<Vertex::Ptr, VertexHash> m_strongChildren;                 // 记录强依赖子节点
         Vertex::Ptr m_strongParent;                                              // 记录强依赖父节点
+        Vertex::Ptr m_should_wait;                                               // 记录应该等待的节点
 };
+
+}

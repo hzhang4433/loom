@@ -49,6 +49,7 @@ class DeterReExecute {
         bool canReorder(const Vertex::Ptr& Tx1, const Vertex::Ptr& Tx2); // 判断两个事务是否可调序
         static void setNormalList(const vector<Vertex::Ptr>& rbList, vector<Vertex::Ptr>& normalList);
         static void setNormalList(const vector<Vertex::Ptr>& rbList, vector<HyperVertex::Ptr>& normalList);
+        void reExcution(Util::UThreadPoolPtr& Pool, std::vector<std::future<void>>& futures);
 
 
     // 定义私有变量

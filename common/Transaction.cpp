@@ -1,6 +1,9 @@
 #include <loom/common/Transaction.h>
 #include <loom/protocol/common.h>
 #include <glog/logging.h>
+#include "HyperVertex.h"
+
+namespace loom {
 
 Transaction::Transaction(
     HyperVertex::Ptr tx
@@ -32,4 +35,6 @@ void Transaction::Execute() {
     }
     auto& tx = m_tx->m_rootVertex->m_cost;
     loom::Exec(tx);
+}
+
 }

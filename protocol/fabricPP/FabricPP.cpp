@@ -31,8 +31,8 @@ void FabricPP::buildGraph() {
         // 遍历现有事务集，依次判断依赖关系
         for (auto& oldV : m_vertices) {
             // // 0. 获取超节点
-            // auto& newHyperVertex = newV->m_hyperVertex;
-            // auto& oldHyperVertex = oldV->m_hyperVertex;
+            // auto& newHyperVertex = newV->m_tx;
+            // auto& oldHyperVertex = oldV->m_tx;
             // 1. 判断rw冲突
             if (loom::hasConflict(newV->readSet, oldV->writeSet)) {
                 // 添加出边

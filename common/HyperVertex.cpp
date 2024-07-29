@@ -3,6 +3,8 @@
 
 using namespace std;
 
+namespace loom {
+
 HyperVertex::HyperVertex(int id, bool isNested): m_hyperId(id), m_isNested(isNested) {
     m_min_in = INT_MAX;
     m_min_out = INT_MAX;
@@ -82,7 +84,7 @@ int HyperVertex::buildVertexs(const TPCCTransaction::Ptr& tx, HyperVertex::Ptr& 
     vertex->writeSet = tx->getUpdateRows();
     vertex->allReadSet.insert(tx->getReadRows().begin(), tx->getReadRows().end());
     vertex->allWriteSet.insert(tx->getUpdateRows().begin(), tx->getUpdateRows().end());
-    auto hv = vertex->m_hyperVertex;
+    auto hv = vertex->m_tx;
     // 构建倒排索引
     for (auto& readKey : vertex->readSet) {
         invertedIndex[readKey].readSet.insert(vertex);
@@ -134,4 +136,6 @@ void HyperVertex::printVertexTree() {
     if (m_rootVertex) {
         m_rootVertex->printVertex();
     }
+}
+
 }

@@ -407,6 +407,7 @@ TEST(LoomTest, TestLoom) {
         // cout << "step2: " << chrono::duration_cast<chrono::microseconds>(end - start).count() / 1000.0 << "ms" << endl;
 
         int nestedBuildTime = reExecute.calculateTotalNormalExecutionTime();
+        cout << "Nested Build Time: " << nestedBuildTime / 1000.0 << "ms" << endl;
         
 
 

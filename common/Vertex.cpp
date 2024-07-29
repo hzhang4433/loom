@@ -2,7 +2,10 @@
 #include "Vertex.h"
 
 
-Vertex::Vertex(shared_ptr<HyperVertex> hyperVertex, int hyperId, string id, int layer, bool isNested) : m_hyperVertex(hyperVertex), m_hyperId(hyperId), m_id(id), m_layer(layer), isNested(isNested) {
+namespace loom {
+
+Vertex::Vertex(shared_ptr<HyperVertex> hyperVertex, int hyperId, string id, int layer, bool isNested) 
+: Transaction(hyperVertex), m_hyperId(hyperId), m_id(id), m_layer(layer), isNested(isNested) {
     // m_min_in = -1;
     // m_min_out = -1;
     m_degree = 0;
@@ -11,6 +14,7 @@ Vertex::Vertex(shared_ptr<HyperVertex> hyperVertex, int hyperId, string id, int 
     hasStrong = false;
     m_strongParent = nullptr;
     scheduledTime = 0;
+    m_should_wait = nullptr;
 }
 
 Vertex::~Vertex() {}
@@ -66,4 +70,6 @@ string Vertex::DependencyTypeToString(loom::DependencyType type) {
     default:
         return "UNKNOWN";
     }
+}
+
 }

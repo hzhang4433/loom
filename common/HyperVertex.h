@@ -8,6 +8,8 @@
 
 using namespace std;
 
+namespace loom {
+
 class HyperVertex : public std::enable_shared_from_this<HyperVertex>
 {
     public:
@@ -101,3 +103,5 @@ class HyperVertex : public std::enable_shared_from_this<HyperVertex>
         Vertex::Ptr m_rootVertex;                               // 根节点
         
 };
+
+}

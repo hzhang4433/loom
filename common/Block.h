@@ -5,6 +5,9 @@
 #include <unordered_set>
 #include <set>
 #include "Transaction.h"
+#include "HyperVertex.h"
+
+namespace loom {
 
 class Block {
     public:
@@ -75,3 +78,5 @@ class Block {
         // 区块总成本
         size_t m_totalCost;
 };
+
+}

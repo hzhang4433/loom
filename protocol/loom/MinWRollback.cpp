@@ -477,28 +477,28 @@ void MinWRollback::buildGraphConcurrent(threadpool::Ptr& Pool) {
 /*  构图算法（初始版）: 将hyperVertex转化为hyperGraph
     详细算法流程: 依次遍历超节点中的所有节点与现有节点进行依赖分析，构建超图
         1. 若与节点存在rw依赖(出边)
-            1.1 在v1.m_out_edges数组（记录所有out边）中新增一条边（v2），并尝试更新v1.m_hyperVertex.m_min_out
-                为min_out = min(v2.m_hyperVertex.m_min_out, v2.m_hyperId)
-                1. 若v1.m_hyperVertex.m_min_out更新，且m_in_edges存在记录，则依次遍历其中的节点v_in【out更新 => out更新】
+            1.1 在v1.m_out_edges数组（记录所有out边）中新增一条边（v2），并尝试更新v1.m_tx.m_min_out
+                为min_out = min(v2.m_tx.m_min_out, v2.m_hyperId)
+                1. 若v1.m_tx.m_min_out更新，且m_in_edges存在记录，则依次遍历其中的节点v_in【out更新 => out更新】
                     1. 尝试更新v_in.m_min_out为min(v_in.m_min_out, min_out)
                     2. 若v_in.m_min_out更新成功，则尝试递归更新
                     3. 若更新失败，则返回
-            1.2 在v2.m_in_edges数组（记录所有in边）中新增一条边（v1），并尝试更新v2.m_hyperVertex.m_min_in
-                为min_in = min(v1.m_hyperVertex.m_min_in，v1.m_hyperId)
-                1. 若v2.m_hyperVertex.m_min_in更新，且m_out_edges存在记录，则依次遍历其中的节点v_out【in更新 => in更新】
+            1.2 在v2.m_in_edges数组（记录所有in边）中新增一条边（v1），并尝试更新v2.m_tx.m_min_in
+                为min_in = min(v1.m_tx.m_min_in，v1.m_hyperId)
+                1. 若v2.m_tx.m_min_in更新，且m_out_edges存在记录，则依次遍历其中的节点v_out【in更新 => in更新】
                     1. 尝试更新v_out.m_min_in为min(v_out.m_min_in, min_in)
                     2. v_out.m_min_in更新成功，则尝试递归更新
                     3. 若更新失败，则返回
         2. 若与节点存在wr依赖（入边）与1相反
     状态: 待测试...
  */
-void MinWRollback::build(set<Vertex::Ptr, Vertex::VertexCompare>& vertices) {
+void MinWRollback::build(set<Vertex::Ptr, Vertex::VertexCompare2>& vertices) {
     
     for (auto& newV: vertices) {
         for (auto& oldV: m_vertices) {
             // 获取超节点
-            auto& newHyperVertex = newV->m_hyperVertex;
-            auto& oldHyperVertex = oldV->m_hyperVertex;
+            auto& newHyperVertex = newV->m_tx;
+            auto& oldHyperVertex = oldV->m_tx;
             int newHyperIdx = newV->m_hyperId;
             int oldHyperIdx = oldV->m_hyperId;
 
@@ -575,8 +575,8 @@ void MinWRollback::build(set<Vertex::Ptr, Vertex::VertexCompare>& vertices) {
 
 void MinWRollback::onRWC(const Vertex::Ptr &rTx, const Vertex::Ptr &wTx) {
     // 获取超节点
-    auto& rHyperVertex = rTx->m_hyperVertex;
-    auto& wHyperVertex = wTx->m_hyperVertex;
+    auto& rHyperVertex = rTx->m_tx;
+    auto& wHyperVertex = wTx->m_tx;
     auto rhvIdx = rTx->m_hyperId;
     auto whvIdx = wTx->m_hyperId;
 
@@ -603,8 +603,8 @@ void MinWRollback::onRWC(const Vertex::Ptr &rTx, const Vertex::Ptr &wTx) {
 
 void MinWRollback::onRW(const Vertex::Ptr &rTx, const Vertex::Ptr &wTx) {
     // 获取超节点
-    auto& rHyperVertex = rTx->m_hyperVertex;
-    auto& wHyperVertex = wTx->m_hyperVertex;
+    auto& rHyperVertex = rTx->m_tx;
+    auto& wHyperVertex = wTx->m_tx;
     auto rhvIdx = rTx->m_hyperId;
     auto whvIdx = wTx->m_hyperId;
 
@@ -643,8 +643,8 @@ void MinWRollback::onRW(const Vertex::Ptr &rTx, const Vertex::Ptr &wTx) {
 
 void MinWRollback::onRWCNoEdge(const Vertex::Ptr &rTx, const Vertex::Ptr &wTx) {
     // 获取超节点
-    auto& rHyperVertex = rTx->m_hyperVertex;
-    auto& wHyperVertex = wTx->m_hyperVertex;
+    auto& rHyperVertex = rTx->m_tx;
+    auto& wHyperVertex = wTx->m_tx;
     auto rhvIdx = rTx->m_hyperId;
     auto whvIdx = wTx->m_hyperId;
 
@@ -675,8 +675,8 @@ void MinWRollback::onRWCNoEdge(const Vertex::Ptr &rTx, const Vertex::Ptr &wTx) {
 
 void MinWRollback::onRWNoEdge(const Vertex::Ptr &rTx, const Vertex::Ptr &wTx) {
     // 获取超节点
-    auto& rHyperVertex = rTx->m_hyperVertex;
-    auto& wHyperVertex = wTx->m_hyperVertex;
+    auto& rHyperVertex = rTx->m_tx;
+    auto& wHyperVertex = wTx->m_tx;
     auto rhvIdx = rTx->m_hyperId;
     auto whvIdx = wTx->m_hyperId;
 

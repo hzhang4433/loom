@@ -447,16 +447,6 @@ TEST(LoomTest, TestLoom) {
         // end = chrono::steady_clock::now();
         // cout << "step2: " << chrono::duration_cast<chrono::microseconds>(end - start).count() / 1000.0 << "ms" << endl;
 
-        // for (auto& tx : rbList) {
-        //     reExecFutures.emplace_back(threadPool->commit([this, tx] {
-        //         // read locally from local storage
-        //         tx->Execute();
-        //     }));
-        // }
-        // for (auto& future : reExecFutures) {
-        //     future.get();
-        // }
-
         reExecute.reExcution(threadPool, reExecFutures);
         
         // int nestedBuildTime = reExecute.calculateTotalNormalExecutionTime();

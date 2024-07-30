@@ -27,7 +27,7 @@ class DeterReExecute {
         void buildGraphOriginByIndex();
         void buildGraphConcurrent(Util::UThreadPoolPtr& Pool, std::vector<std::future<void>>& futures); // 并发构建时空图
         void buildByWRSet();
-        void buildByWRSetNested();
+        void buildAndReSchedule();
         void buildByWRSetNested(vector<Vertex::Ptr>& txList);
         void rescheduleTransactions(); // 重调度事务
         void getCandidateTxSet(const Vertex::Ptr& Tx, std::set<Vertex::Ptr, loom::lessScheduledTime>& Ts); // 获取候选重调度事务集

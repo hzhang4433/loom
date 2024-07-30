@@ -394,7 +394,7 @@ void DeterReExecute::buildByWRSet() {
 }
 
 /* 根据读写集构建时空图:考虑嵌套结构 */
-void DeterReExecute::buildByWRSetNested() {
+void DeterReExecute::buildAndReSchedule() {
     // 按队列顺序，依次遍历事务
     for (auto& Ti : m_rbList) {
         std::unordered_set<string> processedKeys;

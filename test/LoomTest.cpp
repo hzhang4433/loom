@@ -163,7 +163,7 @@ TEST(LoomTest, TestConcurrentRollback) {
     TxGenerator txGenerator(loom::BLOCK_SIZE);
     auto blocks = txGenerator.generateWorkload(true);
     UThreadPoolPtr threadPool = UAllocator::safeMallocTemplateCObject<UThreadPool>();
-    // threadpool::Ptr threadPool = std::make_unique<threadpool>((unsigned short)48);
+    // threadpool::Ptr threadPool = std::make_unique<threadpool>(36);
     std::vector<std::future<void>> futures, TSGFutures;
     std::future<void> futureRbList, futureNestedList;
     std::vector<std::future<loom::ReExecuteInfo>> reExecuteFutures;
@@ -255,7 +255,7 @@ TEST(LoomTest, TestConcurrentRollback) {
         // nestedReExecute.buildGraphByIndex(); // 12ms
         // nestedReExecute.buildGraphConcurrent(threadPool, TSGFutures); // 13ms
         // nestedReExecute.buildByWRSetNested(rbList); // 多线程版：4ms
-        nestedReExecute.buildByWRSetNested(); // 1ms
+        nestedReExecute.buildAndReSchedule(); // 1ms
 
         end = chrono::high_resolution_clock::now();
         cout << "txList size: " << rbList.size() << ", Nested Build Time: " << chrono::duration_cast<chrono::microseconds>(end - start).count() / 1000.0 << "ms" << endl;
@@ -404,9 +404,6 @@ TEST(LoomTest, TestLoom) {
 
         // 2. 确定性回滚
         MinWRollback minw(block->getTxList(), block->getRWIndex());
-        // end = chrono::steady_clock::now();
-        // cout << "step0: " << chrono::duration_cast<chrono::microseconds>(end - start).count() / 1000.0 << "ms" << endl;
-
         minw.buildGraphNoEdgeC(threadPool, buildFutures);
         minw.onWarm2SCC();
         // 局部快速回滚
@@ -435,24 +432,102 @@ TEST(LoomTest, TestLoom) {
             rbList.insert(rbList.end(), std::make_move_iterator(res.m_orderedRollbackTxs.begin()), 
                                                   std::make_move_iterator(res.m_orderedRollbackTxs.end()));
         }
-        end = chrono::steady_clock::now();
-        cout << "Rollback Time: " << chrono::duration_cast<chrono::microseconds>(end - start).count() / 1000.0 << "ms" << endl;
+        // end = chrono::steady_clock::now();
+        // cout << "Rollback Time: " << chrono::duration_cast<chrono::microseconds>(end - start).count() / 1000.0 << "ms" << endl;
 
         // 3. 确定性重执行
         DeterReExecute reExecute(rbList, serialOrders, block->getConflictIndex());
         // end = chrono::steady_clock::now();
         // cout << "step1: " << chrono::duration_cast<chrono::microseconds>(end - start).count() / 1000.0 << "ms" << endl;
 
-        reExecute.buildByWRSetNested(); // 1ms
+        reExecute.buildAndReSchedule(); // 1ms
         // end = chrono::steady_clock::now();
         // cout << "step2: " << chrono::duration_cast<chrono::microseconds>(end - start).count() / 1000.0 << "ms" << endl;
 
         reExecute.reExcution(threadPool, reExecFutures);
         
-        // int nestedBuildTime = reExecute.calculateTotalNormalExecutionTime();
-        // cout << "Nested Build Time: " << nestedBuildTime / 1000.0 << "ms" << endl;
-        
         end = chrono::steady_clock::now();
         cout << "Total Time: " << chrono::duration_cast<chrono::microseconds>(end - start).count() / 1000.0 << "ms" << endl;
+    }
+}
+
+TEST(LoomTest, TestPreExecute) {
+    // 定义变量
+    TxGenerator txGenerator(loom::BLOCK_SIZE);
+    // 生成交易
+    auto blocks = txGenerator.generateWorkload(true);
+    // 定义线程池
+    UThreadPoolPtr threadPool = UAllocator::safeMallocTemplateCObject<UThreadPool>();
+    // ThreadPool::Ptr threadPool = make_shared<ThreadPool>(36);
+    // threadpool::Ptr threadPool = make_unique<threadpool>(36);
+
+    std::vector<std::future<void>> preExecFutures;
+    // 定义计时变量
+    chrono::steady_clock::time_point start, end;
+
+    // 休眠2s
+    std::this_thread::sleep_for(std::chrono::seconds(2));
+
+    // 执行每个区块
+    for (auto& block : blocks) {
+        size_t allTime = block->getTotalCost();
+        cout << "Serial Execution Time: " << allTime / 1000.0 << "ms" << endl;
+        // 事先分好交易并交给不同线程
+        vector<vector<Transaction::Ptr>> batches;
+        auto& txs = block->getTxs();
+        auto tx_per_thread = (txs.size() + UTIL_DEFAULT_THREAD_SIZE - 1) / UTIL_DEFAULT_THREAD_SIZE;
+        size_t index = 0;
+        batches.reserve(UTIL_DEFAULT_THREAD_SIZE);
+        for (size_t j = 0; j < UTIL_DEFAULT_THREAD_SIZE; j++) {
+            size_t end = std::min(index + tx_per_thread, txs.size());
+            vector<Transaction::Ptr> subBatch;
+            // get one thread batch
+            for (; index < end; ++index) {
+                subBatch.push_back(txs[index]);
+            }
+            // store thread batch
+            batches.push_back(subBatch);
+        }
+
+        // 1. 并发执行所有交易
+        start = chrono::steady_clock::now();
+        for (auto& batch : batches) {
+            preExecFutures.emplace_back(threadPool->commit([this, batch] {
+                for (auto& tx : batch) {
+                    // read locally from local storage
+                    tx->InstallGetStorageHandler([&](
+                        const std::unordered_set<string>& readSet
+                    ) {
+                        string keys;
+                        std::unordered_map<string, string> local_get;
+                        for (auto& key : readSet) {
+                            keys += key + " ";
+                            string value;
+                            local_get[key] = value;
+                        }
+                    });
+                    // write locally to local storage
+                    tx->InstallSetStorageHandler([&](
+                        const std::unordered_set<string>& writeSet,
+                        const std::string& value
+                    ) {
+                        string keys;
+                        std::unordered_map<string, string> local_put;
+                        for (auto& key : writeSet) {
+                            keys += key + " ";
+                            local_put[key] = value;
+                        }
+                    });
+                    tx->Execute();
+                }
+            }));
+        }
+        
+        // 等待所有交易执行完成
+        for (auto& future : preExecFutures) {
+            future.get();
+        }
+        end = chrono::steady_clock::now();
+        cout << "Concurrent Pre-Execution Time: " << chrono::duration_cast<chrono::microseconds>(end - start).count() / 1000.0 << "ms" << endl;
     }
 }

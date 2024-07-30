@@ -20,6 +20,31 @@ class ThreadPool : public std::enable_shared_from_this<ThreadPool>
 
         std::future<void> enqueue(std::function<void()> task);
 
+        // 添加任务到任务队列
+        template<class F, class... Args>
+        auto enqueue(F&& f, Args&&... args) -> std::future<typename std::result_of<F(Args...)>::type> {
+            using return_type = typename std::result_of<F(Args...)>::type;
+
+            // 创建一个packaged_task，它包装了你的任务
+            auto task = std::make_shared<std::packaged_task<return_type()>>(
+                std::bind(std::forward<F>(f), std::forward<Args>(args)...)
+            );
+
+            // 获取与packaged_task关联的future
+            std::future<return_type> future = task->get_future();
+            {
+                // 锁住任务队列
+                std::unique_lock<std::mutex> lock(queue_mutex);
+                // 如果收到停止信号，就抛出异常
+                if(stop) throw std::runtime_error("enqueue on stopped ThreadPool");
+                // 将任务添加到任务队列
+                tasks.emplace([task](){ (*task)(); });
+            }
+            // 唤醒一个等待的线程
+            condition.notify_one();
+            return future;
+        }
+
         const std::vector<std::chrono::microseconds>& getThreadDurations() const;
 
         const std::vector<size_t>& getTaskCounts() const; // 新增获取任务计数的方法

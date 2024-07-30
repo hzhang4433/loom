@@ -531,3 +531,128 @@ TEST(LoomTest, TestPreExecute) {
         cout << "Concurrent Pre-Execution Time: " << chrono::duration_cast<chrono::microseconds>(end - start).count() / 1000.0 << "ms" << endl;
     }
 }
+
+TEST(LoomTest, TestOtherPool) {
+    // 定义变量
+    TxGenerator txGenerator(loom::BLOCK_SIZE);
+    // 生成交易
+    auto blocks = txGenerator.generateWorkload(true);
+    // 定义线程池
+    // UThreadPoolPtr threadPool = UAllocator::safeMallocTemplateCObject<UThreadPool>();
+    ThreadPool::Ptr threadPool = std::make_shared<ThreadPool>(36);
+    std::vector<std::future<void>> preExecFutures, buildFutures, reExecFutures;
+    std::vector<std::future<loom::ReExecuteInfo>> reExecuteFutures;
+    // 定义回滚变量
+    vector<vector<int>> serialOrders;
+    std::vector<Vertex::Ptr> rbList;
+
+    // 定义计时变量
+    chrono::steady_clock::time_point start, end;
+
+    // 休眠2s
+    std::this_thread::sleep_for(std::chrono::seconds(2));
+
+    // 执行每个区块
+    for (auto& block : blocks) {
+        size_t allTime = block->getTotalCost();
+        cout << "Serial Execution Time: " << allTime / 1000.0 << "ms" << endl;
+        
+        // 事先分好交易并交给不同线程
+        
+        // 1. 并发执行所有交易
+        auto txs = block->getTxs();
+        size_t txSize = txs.size();
+        size_t chunkSize = (txSize + UTIL_DEFAULT_THREAD_SIZE - 1) / (UTIL_DEFAULT_THREAD_SIZE * 1);
+        
+        start = chrono::steady_clock::now();
+        for (size_t i = 0; i < txSize; i += chunkSize) {
+            // 放入线程池并行执行所有交易
+            preExecFutures.emplace_back(threadPool->enqueue([this, txs, i, chunkSize, txSize] {
+                size_t end = std::min(i + chunkSize, txSize);
+                for (size_t j = i; j < end; j++) {
+                    auto& tx = txs[j];
+                    // read locally from local storage
+                    tx->InstallGetStorageHandler([&](
+                        const std::unordered_set<string>& readSet
+                    ) {
+                        string keys;
+                        std::unordered_map<string, string> local_get;
+                        for (auto& key : readSet) {
+                            keys += key + " ";
+                            string value;
+                            local_get[key] = value;
+                        }
+                    });
+                    // write locally to local storage
+                    tx->InstallSetStorageHandler([&](
+                        const std::unordered_set<string>& writeSet,
+                        const std::string& value
+                    ) {
+                        string keys;
+                        std::unordered_map<string, string> local_put;
+                        for (auto& key : writeSet) {
+                            keys += key + " ";
+                            local_put[key] = value;
+                        }
+                    });
+                    tx->Execute();
+                }
+            }));
+        }
+        
+        // 等待所有交易执行完成
+        for (auto& future : preExecFutures) {
+            future.get();
+        }
+        end = chrono::steady_clock::now();
+        cout << "Concurrent Pre-Execution Time: " << chrono::duration_cast<chrono::microseconds>(end - start).count() / 1000.0 << "ms" << endl;
+
+        // 2. 确定性回滚
+        MinWRollback minw(block->getTxList(), block->getRWIndex());
+        minw.buildGraphNoEdgeC(threadPool, buildFutures);
+        // end = chrono::steady_clock::now();
+        // cout << "Build Time: " << chrono::duration_cast<chrono::microseconds>(end - start).count() / 1000.0 << "ms" << endl;
+
+        minw.onWarm2SCC();
+        // 局部快速回滚
+        minw.fastRollback(block->getRBIndex(), rbList);
+        // 全局并发回滚
+        for (auto& scc : minw.m_sccs) {
+            reExecuteFutures.emplace_back(threadPool->enqueue([this, &scc, &minw] {
+                // 回滚事务
+                auto reExecuteInfo = minw.rollbackNoEdge(scc, true);
+                // 获得回滚事务并根据事务顺序排序
+                set<Vertex::Ptr, loom::customCompare> rollbackTxs(loom::customCompare(reExecuteInfo.m_serialOrder));            
+                rollbackTxs.insert(reExecuteInfo.m_rollbackTxs.begin(), reExecuteInfo.m_rollbackTxs.end());
+                // 更新m_orderedRollbackTxs
+                reExecuteInfo.m_orderedRollbackTxs = std::move(rollbackTxs);
+                return std::move(reExecuteInfo);
+            }));
+        }
+        // 收集回滚结果
+        for (auto& future : reExecuteFutures) {
+            auto res = future.get();
+            // 获得回滚事务顺序
+            serialOrders.push_back(std::move(res.m_serialOrder));
+            // 将排序后的交易插入rbList
+            rbList.insert(rbList.end(), std::make_move_iterator(res.m_orderedRollbackTxs.begin()), 
+                                                  std::make_move_iterator(res.m_orderedRollbackTxs.end()));
+        }
+        // end = chrono::steady_clock::now();
+        // cout << "Rollback Time: " << chrono::duration_cast<chrono::microseconds>(end - start).count() / 1000.0 << "ms" << endl;
+
+        // 3. 确定性重执行
+        DeterReExecute reExecute(rbList, serialOrders, block->getConflictIndex());
+        end = chrono::steady_clock::now();
+        cout << "step1: " << chrono::duration_cast<chrono::microseconds>(end - start).count() / 1000.0 << "ms" << endl;
+
+        reExecute.buildAndReSchedule(); // 1ms
+        end = chrono::steady_clock::now();
+        cout << "step2: " << chrono::duration_cast<chrono::microseconds>(end - start).count() / 1000.0 << "ms" << endl;
+
+        reExecute.reExcution(threadPool, reExecFutures);
+        
+        end = chrono::steady_clock::now();
+        cout << "Total Time: " << chrono::duration_cast<chrono::microseconds>(end - start).count() / 1000.0 << "ms" << endl;
+    }
+}

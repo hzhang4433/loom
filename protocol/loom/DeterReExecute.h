@@ -4,6 +4,7 @@
 #include <mutex>
 #include <tbb/concurrent_unordered_map.h>
 #include <loom/utils/ThreadPool/UThreadPool.h>
+#include <loom/thread/ThreadPool.h>
 #include <loom/protocol/loom/common.h>
 #include <tbb/tbb.h>
 
@@ -50,6 +51,7 @@ class DeterReExecute {
         static void setNormalList(const vector<Vertex::Ptr>& rbList, vector<Vertex::Ptr>& normalList);
         static void setNormalList(const vector<Vertex::Ptr>& rbList, vector<HyperVertex::Ptr>& normalList);
         void reExcution(Util::UThreadPoolPtr& Pool, std::vector<std::future<void>>& futures);
+        void reExcution(ThreadPool::Ptr& Pool, std::vector<std::future<void>>& futures);
         void executeTransaction(const Vertex::Ptr& tx);
 
 

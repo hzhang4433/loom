@@ -241,9 +241,9 @@ void MinWRollback::buildGraphNoEdgeC(ThreadPool::Ptr& Pool, std::vector<std::fut
     }
 
     size_t totalPairs = rwPairs.size();
-    size_t chunkSize = (totalPairs + UTIL_DEFAULT_THREAD_SIZE - 1) / (UTIL_DEFAULT_THREAD_SIZE * 1.5);
-    chunkSize = 20;
-    cout << "totalPairs: " << totalPairs << " chunkSize: " << chunkSize << endl;
+    size_t chunkSize = (totalPairs + UTIL_DEFAULT_THREAD_SIZE - 1) / (UTIL_DEFAULT_THREAD_SIZE * 1);
+    // chunkSize = 20;
+    // cout << "totalPairs: " << totalPairs << " chunkSize: " << chunkSize << endl;
 
     for (size_t i = 0; i < totalPairs; i += chunkSize) {
         futures.emplace_back(Pool->enqueue([this, &rwPairs, i, chunkSize, totalPairs] {

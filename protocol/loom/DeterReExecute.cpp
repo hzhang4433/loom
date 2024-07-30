@@ -831,6 +831,28 @@ void DeterReExecute::reExcution(UThreadPoolPtr& Pool, std::vector<std::future<vo
     }
 }
 
+void DeterReExecute::reExcution(ThreadPool::Ptr& Pool, std::vector<std::future<void>>& futures) {
+    
+    for (auto& tx : m_rbList) {
+        if (tx->m_should_wait) {
+            dependencyGraph[tx->m_should_wait].push_back(tx);
+        }
+    }
+
+    // 在依赖关系完整建立后，提交无依赖的任务
+    for (auto& tx : m_rbList) {
+        if (!tx->m_should_wait) {
+            futures.emplace_back(Pool->enqueue([this, tx] {
+                this->executeTransaction(tx);
+            }));
+        }
+    }
+
+    for (auto &future : futures) {
+        future.get();
+    }
+}
+
 void DeterReExecute::executeTransaction(const Vertex::Ptr& tx) {
     tx->Execute();  // 执行当前交易
     auto it = dependencyGraph.find(tx);

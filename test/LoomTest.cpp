@@ -532,6 +532,7 @@ TEST(LoomTest, TestPreExecute) {
     }
 }
 
+// better version
 TEST(LoomTest, TestOtherPool) {
     // 定义变量
     TxGenerator txGenerator(loom::BLOCK_SIZE);

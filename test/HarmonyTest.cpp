@@ -12,7 +12,7 @@ TEST(HarmonyTest, TestHarmony) {
     TxGenerator txGenerator(loom::BLOCK_SIZE);
     auto blocks = txGenerator.generateWorkload(false);
     // Create a Harmony instance
-    auto protocol = Harmony(blocks, 36, true, 36);
+    auto protocol = Harmony(blocks, 36, false, 36);
     // Start the protocol
     protocol.Start();
     // Wait for the protocol to finish

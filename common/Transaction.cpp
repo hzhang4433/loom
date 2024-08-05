@@ -26,7 +26,7 @@ void Transaction::InstallGetStorageHandler(GetStorage &&handler) {
 }
 
 void Transaction::Execute() {
-    DLOG(INFO) << "tx: " << m_tx << " execute transaction: " << m_tx->m_hyperId << std::endl;
+    DLOG(INFO) << "Execute transaction: " << m_tx << " txid: " << m_tx->m_hyperId << std::endl;
     if (getHandler) {
         getHandler(m_tx->m_rootVertex->allReadSet);
     }

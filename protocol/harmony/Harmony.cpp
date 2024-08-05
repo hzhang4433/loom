@@ -39,22 +39,19 @@ void Harmony::Start() {
         // calculate the number of transactions per thread
         auto tx_per_thread = (txs.size() + num_threads - 1) / num_threads;
         size_t index = 0;
+        size_t step = 10;
         vector<vector<T>> batch;
-        batch.reserve(num_threads);
+        size_t batch_id = i + 1;
+        batch.resize(num_threads);
         // get all batch of one block
-        for (size_t j = 0; j < num_threads; j++) {
-            size_t end = std::min(index + tx_per_thread, txs.size());
-            size_t batch_id = i + 1;
-            vector<T> subBatch;
-            // get one thread batch
-            for (; index < end; ++index) {
-                auto tx = txs[index];
+        for (size_t j = 0; j < txs.size(); j += step) {
+            size_t batch_idx = j % num_threads;
+            for (size_t k = 0; k < step && j + k < txs.size(); ++k) {
+                auto tx = txs[j + k];
                 size_t txid = tx->GetTx()->m_hyperId;
                 Transaction tx_inner = *tx;
-                subBatch.emplace_back(std::move(tx_inner), txid, batch_id);
+                batch[batch_idx].emplace_back(std::move(tx_inner), txid, batch_id);
             }
-            // store thread batch
-            batch.push_back(std::move(subBatch));
         }
         // store block batch
         batches.push_back(std::move(batch));
@@ -122,62 +119,13 @@ HarmonyTransaction::HarmonyTransaction(const HarmonyTransaction& other) :
     local_put(other.local_put)
 {}
 
-/// @brief reserved a get entry
-/// @param tx the transaction
-/// @param k the reserved key
-void HarmonyTable::ReserveGet(T* tx, const K& k) {
-    Table::Put(k, [&](HarmonyEntry& entry) {
-        DLOG(INFO) << tx->batch_id << ":" <<  tx->id << " reserve get " << k << ", current tx(" << entry.batch_id_get << ":" << entry.reserved_get_tx << ")" << std::endl;
-        if (entry.batch_id_get != tx->batch_id || entry.reserved_get_tx == nullptr || entry.reserved_get_tx->id > tx->id) {
-            entry.reserved_get_tx = tx;
-            entry.batch_id_get = tx->batch_id;
-            DLOG(INFO) << tx->batch_id << ":" << tx->id << " reserve get " << k << " ok" << std::endl;
-        }
-    });
-}
-
-/// @brief reserve a put entry
-/// @param tx the transaction
-/// @param k the reserved key
-void HarmonyTable::ReservePut(T* tx, const K& k) {
-    Table::Put(k, [&](HarmonyEntry& entry) {
-        DLOG(INFO) << tx->batch_id << ":" <<  tx->id << " reserve put " << k << ", current tx(" << entry.batch_id_put << ":" << entry.reserved_put_tx << ")" << std::endl;
-        if (entry.batch_id_put != tx->batch_id || entry.reserved_put_tx == nullptr || entry.reserved_put_tx->id > tx->id) {
-            entry.reserved_put_tx = tx;
-            entry.batch_id_put = tx->batch_id;
-            DLOG(INFO) << tx->batch_id << ":" << tx->id << " reserve put " << k << " ok" << std::endl;
-        }
-    });
-}
-
-/// @brief compare reserved get transaction
-/// @param tx the transaction
-/// @param k the key to compare
-/// @return if current transaction reserved this entry successfully
-bool HarmonyTable::CompareReservedGet(T* tx, const K& k) {
-    bool eq = true;
-    Table::Get(k, [&](auto entry) {
-        eq = entry.batch_id_get != tx->batch_id || (
-            entry.reserved_get_tx == nullptr || 
-            entry.reserved_get_tx->id == tx->id
-        );
-    });
-    return eq;
-}
-
-/// @brief compare reserved put transaction
-/// @param tx the transaction
-/// @param k the compared key
-/// @return if current transaction reserved this entry successfully
-bool HarmonyTable::CompareReservedPut(T* tx, const K& k) {
-    bool eq = true;
-    Table::Get(k, [&](auto entry) {
-        eq = entry.batch_id_put != tx->batch_id || (
-            entry.reserved_put_tx == nullptr || 
-            entry.reserved_put_tx->id == tx->id
-        );
-    });
-    return eq;
+/// @brief handle a r-w denpendency
+/// @param Ti the transaction write key
+/// @param Tj the transaction read key
+void HarmonyTable::on_seeing_rw_dependency(T* Ti, T* Tj) {
+    DLOG(INFO) << "handle r-w dependency: " << Tj->id << " -> " << Ti->id << std::endl;
+    Tj->min_out = std::min(Ti->id, Tj->min_out);
+    Ti->max_in = std::max(Tj->id, Ti->max_in);
 }
 
 /// @brief initialize an harmony lock table
@@ -214,10 +162,8 @@ void HarmonyExecutor::Run() {
         has_conflict.store(false);
         DLOG(INFO) << "worker " << worker_id << " executing" << std::endl;
         for (auto& tx : batch) {
-            // execute transaction
+            // execute transaction and handle r-w dependency
             this->Execute(&tx);
-            // reserve read/write set
-            this->Reserve(&tx);
         }
         // stage 2: verify + commit
         barrier.arrive_and_wait();
@@ -242,12 +188,17 @@ void HarmonyExecutor::Run() {
                 this->Fallback(&tx);
             }
         }
-        // stage 4: clean up
-        // don't wait and continue next batch
-        barrier.arrive_and_wait();
-        DLOG(INFO) << "worker " << worker_id << " cleaning up" << std::endl;
-        for (auto& tx : batch) {
-            this->CleanLockTable(&tx);
+        // stage 4: clean up or inter-block execute
+        if (enable_inter_block) {
+            // continue execute next batch
+
+        } else {
+            // wait and clean up
+            barrier.arrive_and_wait();
+            DLOG(INFO) << "worker " << worker_id << " cleaning up" << std::endl;
+            for (auto& tx : batch) {
+                this->CleanLockTable(&tx);
+            }
         }
         #undef LATENCY
     }
@@ -267,6 +218,11 @@ void HarmonyExecutor::Execute(T* tx) {
             string value;
             table.Put(key, [&](auto& entry){
                 value = entry.value;
+                // update put_txs' max_in and tx's min_out
+                for (T* _tx: entry.reserved_put_txs) {
+                    table.on_seeing_rw_dependency(_tx, tx);
+                }
+                entry.reserved_get_txs.push_back(tx);
             });
             tx->local_get[key] = value;
         }
@@ -281,6 +237,13 @@ void HarmonyExecutor::Execute(T* tx) {
         for (auto& key : writeSet) {
             keys += key + " ";
             tx->local_put[key] = value;
+            table.Put(key, [&](auto& entry){
+                // update get_txs' min_out and tx's max_in
+                for (T* _tx: entry.reserved_get_txs) {
+                    table.on_seeing_rw_dependency(tx, _tx);
+                }
+                entry.reserved_put_txs.push_back(tx);
+            });
         }
         DLOG(INFO) << "tx " << tx->id << " write: " << keys << std::endl;
     });
@@ -288,49 +251,21 @@ void HarmonyExecutor::Execute(T* tx) {
     tx->Execute();
 }
 
-/// @brief reserve the smallest transaction to table
-/// @param tx the transaction to be reserved
-/// @param table the table
-void HarmonyExecutor::Reserve(T* tx) {
-    // journal all entries to the reservation table
-    for (auto& tup: tx->local_get) {
-        table.ReserveGet(tx, std::get<0>(tup));
-    }
-    for (auto& tup: tx->local_put) {
-        table.ReservePut(tx, std::get<0>(tup));
-    }
-    DLOG(INFO) << "tx " << tx->id << " reserved" << std::endl;
-}
-
-/// @brief verify transaction by checking dependencies
+/// @brief verify transaction by checking min_out and max_in
 /// @param tx the transaction, flag_conflict will be altered
 void HarmonyExecutor::Verify(T* tx) {
-    // conceptually, we take a snapshot on the database before we execute a batch
-    //  , and all transactions are executed viewing the snapshot. 
-    // however, we want the global state transitioned 
-    // as if we executed some of these transactions sequentially. 
-    // therefore, we have to pick some transactions and arange them into a sequence. 
-    // this algorithm implicitly does it for us. 
-    bool war = false, waw = false, raw = false;
-    for (auto& tup : tx->local_get) {
-        // the value is updated, snapshot contains out-dated value
-        raw |= !table.CompareReservedPut(tx, std::get<0>(tup));
-    }
-    for (auto& tup : tx->local_put) {
-        // the value is read before, therefore we should not update it
-        war |= !table.CompareReservedGet(tx, std::get<0>(tup));
-    }
-    for (auto& tup : tx->local_put) {
-        // if some write happened after write
-        waw |= !table.CompareReservedPut(tx, std::get<0>(tup));
-    }
+    
     if (enable_inter_block) {
-        tx->flag_conflict = waw || (raw && war);
+        // when inter block in enabled
     } else {
-        tx->flag_conflict = waw || raw;
+        // when inter block in disabled, then
+        // if tx.min_out < tx.id and tx.min_out <= tx.max_in, then conflict
+        if (tx->min_out < tx->id && tx->min_out <= tx->max_in) {
+            tx->flag_conflict = true;
+        }
     }
     if (tx->flag_conflict) {
-        DLOG(INFO) << "abort " << tx->batch_id << ":" << tx->id << " raw: " << raw << " war: " << war << " waw: " << waw << std::endl;
+        DLOG(INFO) << "abort " << tx->batch_id << ":" << tx->id << std::endl;
     }
 }
 

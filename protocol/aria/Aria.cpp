@@ -39,22 +39,19 @@ void Aria::Start() {
         // calculate the number of transactions per thread
         auto tx_per_thread = (txs.size() + num_threads - 1) / num_threads;
         size_t index = 0;
+        size_t step = 15;
         vector<vector<T>> batch;
-        batch.reserve(num_threads);
+        size_t batch_id = i + 1;
+        batch.resize(num_threads);
         // get all batch of one block
-        for (size_t j = 0; j < num_threads; j++) {
-            size_t end = std::min(index + tx_per_thread, txs.size());
-            size_t batch_id = i + 1;
-            vector<T> subBatch;
-            // get one thread batch
-            for (; index < end; ++index) {
-                auto tx = txs[index];
+        for (size_t j = 0; j < txs.size(); j += step) {
+            size_t batch_idx = j % num_threads;
+            for (size_t k = 0; k < step && j + k < txs.size(); ++k) {
+                auto tx = txs[j + k];
                 size_t txid = tx->GetTx()->m_hyperId;
                 Transaction tx_inner = *tx;
-                subBatch.emplace_back(std::move(tx_inner), txid, batch_id);
+                batch[batch_idx].emplace_back(std::move(tx_inner), txid, batch_id);
             }
-            // store thread batch
-            batch.push_back(std::move(subBatch));
         }
         // store block batch
         batches.push_back(std::move(batch));

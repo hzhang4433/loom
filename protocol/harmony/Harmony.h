@@ -34,19 +34,14 @@ struct HarmonyTransaction: public Transaction {
 
 /// @brief harmony table entry for first round execution
 struct HarmonyEntry {
-    string  value           = "";
-    size_t  batch_id_get    = 0;
-    size_t  batch_id_put    = 0;
-    T*      reserved_get_tx = nullptr;
-    T*      reserved_put_tx = nullptr;
+    string value                = "";
+    vector<T*> reserved_get_txs = {};
+    vector<T*> reserved_put_txs = {};
 };
 
 /// @brief harmony table for first round execution
 struct HarmonyTable: public Table<K, HarmonyEntry, KeyHasher> {
-    void ReserveGet(T* tx, const K& k);
-    void ReservePut(T* tx, const K& k);
-    bool CompareReservedGet(T* tx, const K& k);
-    bool CompareReservedPut(T* tx, const K& k);
+    void on_seeing_rw_dependency(T* Ti, T* Tj);
 };
 
 /// @brief harmony table entry for fallback pessimistic execution

@@ -37,8 +37,8 @@ void Harmony::Start() {
         auto& block = blocks[i];
         auto& txs = block->getTxs();
         // calculate the number of transactions per thread
-        auto tx_per_thread = (txs.size() + num_threads - 1) / num_threads;
-        // auto tx_per_thread = 10;
+        // auto tx_per_thread = (txs.size() + num_threads - 1) / num_threads;
+        auto tx_per_thread = 10;
         size_t index = 0;
         vector<vector<T>> batch;
         size_t batch_id = i + 1;
@@ -250,6 +250,9 @@ void HarmonyExecutor::InterBlockExecute(vector<T> batch) {
     }
     // stage 3: fallback
     barrier.arrive_and_wait();
+    if (worker_id == 0) {
+        LOG(INFO) << "committed num " << counter.load() << endl;
+    }
     DLOG(INFO) << "worker " << worker_id << " fallbacking batch " << batchIdx << std::endl;
     for (auto& tx : batch) {
         if (tx.flag_conflict) {
@@ -353,6 +356,7 @@ void HarmonyExecutor::Commit(T* tx) {
             entry.value = std::get<1>(tup);
         });
     }
+    counter.fetch_add(1, std::memory_order_relaxed);
     DLOG(INFO) << "tx " << tx->id << " committed" << std::endl;
 }
 
@@ -422,6 +426,7 @@ void HarmonyExecutor::Fallback(T* tx) {
     while(should_wait && !should_wait->committed.load()) {}
     tx->Execute();
     tx->committed.store(true);
+    counter.fetch_add(1, std::memory_order_relaxed);
     DLOG(INFO) << "tx " << tx->id << " committed" << std::endl;
 }
 

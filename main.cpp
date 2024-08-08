@@ -37,8 +37,8 @@ int main(int argc, char** argv) {
     // ::testing::GTEST_FLAG(filter) = "CompareTest.TestRollback";
     // ::testing::GTEST_FLAG(filter) = "DeterReExecuteTest.TestTimeSpaceGraph";
     // ::testing::GTEST_FLAG(filter) = "LoomTest.TestOtherPool";
-    ::testing::GTEST_FLAG(filter) = "AriaTest.TestAria";
-    // ::testing::GTEST_FLAG(filter) = "HarmonyTest.TestHarmony";
+    // ::testing::GTEST_FLAG(filter) = "AriaTest.TestAria";
+    ::testing::GTEST_FLAG(filter) = "HarmonyTest.TestHarmony";
     
     int result = RUN_ALL_TESTS();
 

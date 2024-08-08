@@ -1,5 +1,4 @@
 #include "UTxGenerator.h"
-#include "workload/tpcc/Workload.hpp"
 
 
 // 构造函数
@@ -7,17 +6,22 @@ TxGenerator::TxGenerator(int txNum) : id_counter(0), m_txNum(txNum), m_blockSize
 
 // 生成事务
 std::vector<Block::Ptr> TxGenerator::generateWorkload(bool isNest) {
+    Workload workload;
+    // 140716047624829
+    workload.set_seed(uint64_t(140703587571293));
+    auto seed = workload.get_seed();
+    cout << "seed: " << seed << endl;
+    // generateBlock
     auto blockNum = m_txNum / m_blockSize;
     for (int i = 0; i < blockNum; i++) {
-        auto block = generateBlock(isNest);
+        auto block = generateBlock(isNest, workload);
         m_blocks.push_back(block);
     }
     return m_blocks;
 }
 
 // 生成区块
-Block::Ptr TxGenerator::generateBlock(bool isNest) {
-    Workload workload;
+Block::Ptr TxGenerator::generateBlock(bool isNest, Workload workload) {
     size_t totalCost = 0;
     vector<Vertex::Ptr> txLists;
     vector<Transaction::Ptr> txs;
@@ -27,10 +31,7 @@ Block::Ptr TxGenerator::generateBlock(bool isNest) {
     unordered_map<Vertex::Ptr, unordered_set<Vertex::Ptr, Vertex::VertexHash>, Vertex::VertexHash> conflictIndex;// 冲突索引
     unordered_map<string, set<Vertex::Ptr, Vertex::VertexCompare>> RBIndex;// 回滚索引
 
-    // 140716047624829
-    workload.set_seed(uint64_t(140703587571293));
-    auto seed = workload.get_seed();
-    cout << "seed: " << seed << endl;
+    
 
     // 生成事务
     // loom::Random random = workload.get_random();

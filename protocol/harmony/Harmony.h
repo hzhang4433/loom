@@ -27,6 +27,8 @@ struct HarmonyTransaction: public Transaction {
     std::unordered_map<string, string> local_put;
     size_t      min_out;
     size_t      max_in;
+    size_t      out_batch_id;
+    size_t      in_batch_id;
     HarmonyTransaction(Transaction&& inner, size_t id, size_t batch_id);
     HarmonyTransaction(HarmonyTransaction&& tx) noexcept; // move constructor
     HarmonyTransaction(const HarmonyTransaction& other); // copy constructor
@@ -73,7 +75,6 @@ private:
     std::atomic<bool>                       stop_flag{false};
     std::barrier<std::function<void()>>     barrier;
     std::atomic<size_t>                     counter{0};
-    std::atomic<bool>                       has_conflict{false};
     std::vector<std::thread>                workers;
     friend class HarmonyExecutor;
 };
@@ -84,6 +85,8 @@ class HarmonyExecutor {
 public:
     HarmonyExecutor(Harmony& harmony, size_t worker_id, vector<vector<T>> batchTxs);
     void Run();
+    vector<T> NextBatch();
+    void InterBlockExecute(vector<T> batch);
     void Execute(T* tx);
     void Reserve(T* tx);
     void Verify(T* tx);
@@ -102,8 +105,8 @@ private:
     std::atomic<bool>&                      stop_flag;
     std::barrier<std::function<void()>>&    barrier;
     std::atomic<size_t>&                    counter;
-    std::atomic<bool>&                      has_conflict;
     size_t                                  worker_id;
+    size_t                                  batchIdx;
 };
 
 #undef T

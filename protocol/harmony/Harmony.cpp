@@ -45,13 +45,14 @@ void Harmony::Start() {
         batch.resize(num_threads);
         // get all batch of one block
         for (size_t j = 0; j < txs.size(); j += tx_per_thread) {
-            size_t batch_idx = j % num_threads;
+            size_t batch_idx = index % num_threads;
             for (size_t k = 0; k < tx_per_thread && j + k < txs.size(); ++k) {
                 auto tx = txs[j + k];
                 size_t txid = tx->GetTx()->m_hyperId;
                 Transaction tx_inner = *tx;
                 batch[batch_idx].emplace_back(std::move(tx_inner), txid, batch_id);
             }
+            index++;
         }
         // store block batch
         batches.push_back(std::move(batch));
@@ -88,6 +89,8 @@ HarmonyTransaction::HarmonyTransaction(
     batch_id{batch_id},
     min_out{id + 1},
     max_in{std::numeric_limits<size_t>::min()},
+    out_batch_id{batch_id},
+    in_batch_id{batch_id},
     start_time{std::chrono::steady_clock::now()}
 {
     // initial readSet and writeSet empty
@@ -102,6 +105,8 @@ HarmonyTransaction::HarmonyTransaction(HarmonyTransaction&& tx) noexcept:
     start_time{tx.start_time},
     min_out{tx.min_out},
     max_in{tx.max_in},
+    out_batch_id(tx.out_batch_id),
+    in_batch_id(tx.in_batch_id),
     local_get{std::move(tx.local_get)},
     local_put{std::move(tx.local_put)}
 {}
@@ -115,6 +120,8 @@ HarmonyTransaction::HarmonyTransaction(const HarmonyTransaction& other) :
     start_time(other.start_time),
     min_out(other.min_out),
     max_in(other.max_in),
+    out_batch_id(other.out_batch_id),
+    in_batch_id(other.in_batch_id),
     local_get(other.local_get),
     local_put(other.local_put)
 {}
@@ -124,8 +131,14 @@ HarmonyTransaction::HarmonyTransaction(const HarmonyTransaction& other) :
 /// @param Tj the transaction read key
 void HarmonyTable::on_seeing_rw_dependency(T* Ti, T* Tj) {
     DLOG(INFO) << "handle r-w dependency: " << Tj->id << " -> " << Ti->id << std::endl;
-    Tj->min_out = std::min(Ti->id, Tj->min_out);
-    Ti->max_in = std::max(Tj->id, Ti->max_in);
+    if (Ti->id < Tj->min_out) {
+        Tj->min_out = Ti->id;
+        Tj->out_batch_id = Ti->batch_id;
+    }
+    if (Tj->id > Ti->max_in) {
+        Ti->max_in = Tj->id;
+        Ti->in_batch_id = Tj->batch_id;
+    }
 }
 
 /// @brief initialize an harmony lock table
@@ -144,63 +157,117 @@ HarmonyExecutor::HarmonyExecutor(Harmony& harmony, size_t worker_id, vector<vect
     stop_flag{harmony.stop_flag},
     barrier{harmony.barrier},
     counter{harmony.counter},
-    has_conflict{harmony.has_conflict},
     num_threads{harmony.num_threads},
     confirm_exit{harmony.confirm_exit},
-    worker_id{worker_id}
+    worker_id{worker_id},
+    batchIdx{0}
 {}
 
 /// @brief run transactions
 void HarmonyExecutor::Run() {
-    for (auto& batch : batchTxs) {
-        #define LATENCY duration_cast<microseconds>(steady_clock::now() - tx.start_time).count()
-        // stage 1: execute
-        auto _stop = confirm_exit.load() == num_threads;
-        barrier.arrive_and_wait();
-        if (_stop) {return;}
-        if (stop_flag.load()) { confirm_exit.compare_exchange_weak(worker_id, worker_id + 1);}
-        has_conflict.store(false);
-        DLOG(INFO) << "worker " << worker_id << " executing" << std::endl;
-        for (auto& tx : batch) {
-            // execute transaction and handle r-w dependency
-            this->Execute(&tx);
-        }
-        // stage 2: verify + commit
-        barrier.arrive_and_wait();
-        DLOG(INFO) << "worker " << worker_id << " verifying" << std::endl;
-        for (auto& tx : batch) {
-            this->Verify(&tx);
-            if (tx.flag_conflict) {
-                has_conflict.store(true);
-                this->PrepareLockTable(&tx);
-            } else {
-                this->Commit(&tx);
-            }
-        }
-        // stage 3: fallback
-        barrier.arrive_and_wait();
-        DLOG(INFO) << "worker " << worker_id << " fallbacking" << std::endl;
-        if (!has_conflict.load()) {
-            continue;
-        }
-        for (auto& tx : batch) {
-            if (tx.flag_conflict) {
-                this->Fallback(&tx);
-            }
-        }
-        // stage 4: clean up or inter-block execute
-        if (enable_inter_block) {
-            // continue execute next batch
+    #define LATENCY duration_cast<microseconds>(steady_clock::now() - tx.start_time).count()
 
-        } else {
-            // wait and clean up
+    if (enable_inter_block) {
+        DLOG(INFO) << "worker " << worker_id << " size of batchTxs " << batchTxs.size() << std::endl;
+        // Processing Block Streamly
+        barrier.arrive_and_wait();
+        InterBlockExecute(NextBatch());
+    } else {
+        // Processing Block One by One
+        for (auto& batch : batchTxs) {
+            // stage 1: execute
+            auto _stop = confirm_exit.load() == num_threads;
+            barrier.arrive_and_wait();
+            if (_stop) {return;}
+            if (stop_flag.load()) { confirm_exit.compare_exchange_weak(worker_id, worker_id + 1);}
+            DLOG(INFO) << "worker " << worker_id << " executing" << std::endl;
+            for (auto& tx : batch) {
+                // execute transaction and handle r-w dependency
+                this->Execute(&tx);
+            }
+            // stage 2: verify + commit
+            barrier.arrive_and_wait();
+            DLOG(INFO) << "worker " << worker_id << " verifying" << std::endl;
+            for (auto& tx : batch) {
+                this->Verify(&tx);
+                if (tx.flag_conflict) {
+                    this->PrepareLockTable(&tx);
+                } else {
+                    this->Commit(&tx);
+                }
+            }
+            // stage 3: fallback
+            barrier.arrive_and_wait();
+            DLOG(INFO) << "worker " << worker_id << " fallbacking" << std::endl;
+            for (auto& tx : batch) {
+                if (tx.flag_conflict) {
+                    this->Fallback(&tx);
+                }
+            }
+            // stage 4: clean up
             barrier.arrive_and_wait();
             DLOG(INFO) << "worker " << worker_id << " cleaning up" << std::endl;
             for (auto& tx : batch) {
                 this->CleanLockTable(&tx);
             }
         }
-        #undef LATENCY
+    }
+
+    #undef LATENCY
+}
+
+/// @brief get next batch txs of executor
+vector<T> HarmonyExecutor::NextBatch() {
+    if (batchIdx >= batchTxs.size()) {
+        DLOG(INFO) << "worker " << worker_id << " no more batch" << std::endl;
+        return {};
+    }
+    return batchTxs[batchIdx++];
+}
+
+/// @brief execute transactions in inter-block mode
+/// @param batch the batch of transactions
+void HarmonyExecutor::InterBlockExecute(vector<T> batch) {
+    // stage 1: execute
+    auto _stop = confirm_exit.load() == num_threads;
+    if (_stop) {return;}
+    if (stop_flag.load()) { confirm_exit.compare_exchange_weak(worker_id, worker_id + 1);}
+    DLOG(INFO) << "worker " << worker_id << " executing batch " << batchIdx << " size " << batch.size() << std::endl;
+    for (auto& tx : batch) {
+        // execute transaction and handle r-w dependency
+        this->Execute(&tx);
+    }
+    // stage 2: verify + commit
+    barrier.arrive_and_wait();
+    DLOG(INFO) << "worker " << worker_id << " verifying batch " << batchIdx << std::endl;
+    for (auto& tx : batch) {
+        this->Verify(&tx);
+        if (tx.flag_conflict) {
+            this->PrepareLockTable(&tx);
+        } else {
+            this->Commit(&tx);
+        }
+    }
+    // stage 3: fallback
+    barrier.arrive_and_wait();
+    DLOG(INFO) << "worker " << worker_id << " fallbacking batch " << batchIdx << std::endl;
+    for (auto& tx : batch) {
+        if (tx.flag_conflict) {
+            this->Fallback(&tx);
+        }
+    }
+    // stage 4: streamly execute next block
+    auto batch_next = NextBatch();
+    if (batch_next.size() > 0) {
+        DLOG(INFO) << "worker " << worker_id << " streamly next block" << std::endl;
+        InterBlockExecute(batch_next);
+    } else {
+    // stage 5: clean up
+        barrier.arrive_and_wait();
+        DLOG(INFO) << "worker " << worker_id << " cleaning up batch " << batchIdx << std::endl;
+        for (auto& tx : batch) {
+            this->CleanLockTable(&tx);
+        }
     }
 }
 
@@ -220,6 +287,7 @@ void HarmonyExecutor::Execute(T* tx) {
                 value = entry.value;
                 // update put_txs' max_in and tx's min_out
                 for (T* _tx: entry.reserved_put_txs) {
+                    if (_tx == tx) { continue;}
                     table.on_seeing_rw_dependency(_tx, tx);
                 }
                 entry.reserved_get_txs.push_back(tx);
@@ -240,6 +308,7 @@ void HarmonyExecutor::Execute(T* tx) {
             table.Put(key, [&](auto& entry){
                 // update get_txs' min_out and tx's max_in
                 for (T* _tx: entry.reserved_get_txs) {
+                    if (_tx == tx) { continue;}
                     table.on_seeing_rw_dependency(tx, _tx);
                 }
                 entry.reserved_put_txs.push_back(tx);
@@ -254,9 +323,16 @@ void HarmonyExecutor::Execute(T* tx) {
 /// @brief verify transaction by checking min_out and max_in
 /// @param tx the transaction, flag_conflict will be altered
 void HarmonyExecutor::Verify(T* tx) {
-    
     if (enable_inter_block) {
-        // when inter block in enabled
+        // when inter block in enabled, then 
+        // if tx.min_out < tx.id and tx.min_out <= tx.max_in, then conflict
+        //   if tx.batch_id = tx.in_batch_id, then abort
+        // meanwhile, if tx.min_out < tx.id and tx.out_batch_id < tx.batch_id, then abort
+        if (tx->min_out < tx->id && tx->min_out <= tx->max_in && tx->batch_id == tx->in_batch_id) {
+            tx->flag_conflict = true;
+        } else if (tx->min_out < tx->id && tx->out_batch_id < tx->batch_id) {
+            tx->flag_conflict = true;
+        }
     } else {
         // when inter block in disabled, then
         // if tx.min_out < tx.id and tx.min_out <= tx.max_in, then conflict

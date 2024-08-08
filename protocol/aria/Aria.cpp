@@ -45,13 +45,14 @@ void Aria::Start() {
         batch.resize(num_threads);
         // get all batch of one block
         for (size_t j = 0; j < txs.size(); j += tx_per_thread) {
-            size_t batch_idx = j % num_threads;
+            size_t batch_idx = index % num_threads;
             for (size_t k = 0; k < tx_per_thread && j + k < txs.size(); ++k) {
                 auto tx = txs[j + k];
                 size_t txid = tx->GetTx()->m_hyperId;
                 Transaction tx_inner = *tx;
                 batch[batch_idx].emplace_back(std::move(tx_inner), txid, batch_id);
             }
+            index++;
         }
         // store block batch
         batches.push_back(std::move(batch));

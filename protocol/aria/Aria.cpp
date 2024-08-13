@@ -9,9 +9,9 @@
 #define K std::string
 
 /// @brief initialize aria protocol
-/// @param workload an evm transaction workload
-/// @param batch_size batch size
+/// @param blocks the blocks to be executed
 /// @param num_threads the number of threads in thread pool
+/// @param enable_reordering the flag of reordering
 /// @param table_partitions the number of partitions in table
 Aria::Aria(
     vector<Block::Ptr> blocks, size_t num_threads, 
@@ -71,7 +71,6 @@ void Aria::Start() {
 }
 
 /// @brief stop aria protocol and return statistics
-/// @return statistics of current execution
 void Aria::Stop() {
     stop_flag.store(true);
     for (size_t i = 0; i < num_threads; ++i) {
@@ -94,7 +93,10 @@ AriaTransaction::AriaTransaction(
     local_put = std::unordered_map<string, string>();
 }
 
-AriaTransaction::AriaTransaction(AriaTransaction&& tx) noexcept:
+/// @brief move constructor for AriaTransaction
+AriaTransaction::AriaTransaction(
+    AriaTransaction&& tx
+) noexcept:
     Transaction{std::move(tx)},
     id{tx.id},
     batch_id{tx.batch_id},
@@ -103,7 +105,10 @@ AriaTransaction::AriaTransaction(AriaTransaction&& tx) noexcept:
     local_put{std::move(tx.local_put)}
 {}
 
-AriaTransaction::AriaTransaction(const AriaTransaction& other) : 
+/// @brief copy constructor for AriaTransaction
+AriaTransaction::AriaTransaction(
+    const AriaTransaction& other
+): 
     Transaction(other), // 调用基类拷贝构造函数
     id(other.id),
     batch_id(other.batch_id),

@@ -86,23 +86,13 @@ ThreadPool::ThreadPool(size_t threadNum) : stop(false), threadDurations(threadNu
             }
         );
         // 绑定线程到核心
-        PinRoundRobin(workers.back(), i);
+        PinRoundRobin(workers[i], i);
     }
 }
 
 // 析构函数，停止所有线程并等待它们完成任务
 ThreadPool::~ThreadPool() {
-    {
-        // 锁住任务队列
-        std::unique_lock<std::mutex> lock(queue_mutex);
-        // 发出停止信号
-        stop = true;
-    }
-    // 唤醒所有等待的线程
-    condition.notify_all();
-    // 等待线程完成
-    for(std::thread &worker: workers)
-        worker.join();
+    shutdown();
 }
 
 // 添加任务到任务队列
@@ -122,6 +112,18 @@ std::future<void> ThreadPool::enqueue(std::function<void()> task) {
     // 唤醒一个等待的线程
     condition.notify_one();
     return future;
+}
+
+/// @brief shutdown the thread pool
+void ThreadPool::shutdown() {
+    {
+        std::unique_lock<std::mutex> lock(queue_mutex);
+        stop = true;
+    }
+    condition.notify_all();
+    for(std::thread &worker: workers) {
+        if(worker.joinable()) { worker.join(); }
+    }
 }
 
 const std::vector<std::chrono::microseconds>& ThreadPool::getThreadDurations() const {

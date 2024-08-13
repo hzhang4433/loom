@@ -57,6 +57,9 @@ std::string Statistics::Print() {
         [](auto& x) { return x.load(); }
     );
     std::sort(sample_latency_.begin(), sample_latency_.end());
+    auto now = std::chrono::system_clock::to_time_t(std::chrono::system_clock::now());
+    char time_buffer[100];
+    std::strftime(time_buffer, sizeof(time_buffer), "%F %T", std::localtime(&now));
     return std::string(fmt::format(
         "{}\n"
         "commit             {}\n"
@@ -71,7 +74,8 @@ std::string Statistics::Print() {
         "latency(75%)       {}us\n"
         "latency(95%)       {}us\n"
         "latency(99%)       {}us\n",
-        std::chrono::system_clock::now(),
+        // std::chrono::system_clock::now(),
+        time_buffer,
         count_commit.load(),
         count_memory.load(),
         count_execution.load(),
@@ -99,6 +103,9 @@ std::string Statistics::PrintWithDuration(std::chrono::milliseconds duration) {
         [](auto& x) { return x.load(); }
     );
     std::sort(sample_latency_.begin(), sample_latency_.end());
+    auto now = std::chrono::system_clock::to_time_t(std::chrono::system_clock::now());
+    char time_buffer[100];
+    std::strftime(time_buffer, sizeof(time_buffer), "%F %T", std::localtime(&now));
     return std::string(fmt::format(
         "{}\n"
         "duration      {}\n"
@@ -114,7 +121,8 @@ std::string Statistics::PrintWithDuration(std::chrono::milliseconds duration) {
         "latency(75%)  {}us\n"
         "latency(95%)  {}us\n"
         "latency(99%)  {}us\n",
-        std::chrono::system_clock::now(),
+        // std::chrono::system_clock::now(),
+        time_buffer,
         duration,
         AVG(count_commit),
         AVG(count_memory),

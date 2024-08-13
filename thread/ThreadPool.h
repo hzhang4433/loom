@@ -51,6 +51,8 @@ class ThreadPool : public std::enable_shared_from_this<ThreadPool>
 
         const int getThreadNum() const;
 
+        void shutdown();
+
         std::vector<std::future<void>> BG_futures; // 并发构建时空图的future
 
         static void PinRoundRobin(std::thread& thread, unsigned rotate_id);

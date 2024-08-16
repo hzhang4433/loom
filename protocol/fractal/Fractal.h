@@ -16,15 +16,17 @@ using namespace std;
 namespace loom {
 
 #define K std::string
+#define V FractalEntry
 #define T FractalTransaction
 
 /// @brief fractal transaction with local read and write set.
 struct FractalTransaction: public Transaction {
-    size_t      id;
-    bool        flag_conflict{false};
+    size_t id;
+    atomic<bool> flag_conflict{false};
     std::chrono::time_point<std::chrono::steady_clock> start_time;
     std::unordered_map<K, std::string> local_get;
     std::unordered_map<K, std::string> local_put;
+    void Execute() override;
     FractalTransaction(Transaction&& inner, size_t id);
     FractalTransaction(FractalTransaction&& tx) noexcept; // move constructor
     FractalTransaction(const FractalTransaction& other); // copy constructor
@@ -32,19 +34,19 @@ struct FractalTransaction: public Transaction {
 
 /// @brief fractal table entry for execution
 struct FractalEntry {
-    std::string value;
-    size_t version;
-    std::unordered_set<T*> readers;
+    string value;
+    T* writer = nullptr;
+    unordered_set<T*> readers;
 };
 
 /// @brief fractal table for execution
 struct FractalTable: private Table<K, FractalEntry, KeyHasher> {
     FractalTable(size_t partitions);
-    void Get(T* tx, const K& k, std::string& v, size_t& version);
+    void Get(T* tx, const K& k, std::string& v);
     void Put(T* tx, const K& k, const std::string& v);
     void RegretGet(T* tx, const K& k, size_t version);
     void RegretPut(T* tx, const K& k);
-    void ClearGet(T* tx, const K& k, size_t version);
+    void ClearGet(T* tx, const K& k);
     void ClearPut(T* tx, const K& k);
 };
 
@@ -63,7 +65,6 @@ private:
     vector<Block::Ptr>                      blocks;
     size_t                                  num_threads;
     FractalTable                            table;
-    std::atomic<size_t>                     last_executed{1};
     std::atomic<size_t>                     last_finalized{0};
     std::shared_ptr<ThreadPool>             pool;
 };

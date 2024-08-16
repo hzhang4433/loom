@@ -3,7 +3,10 @@
 #include <glog/logging.h>
 
 
+using namespace std::chrono;
+
 #define K std::string
+#define V FractalEntry
 #define T FractalTransaction
 
 
@@ -48,21 +51,96 @@ void Fractal::Start() {
         for (size_t j = 0; j < m_txs.size(); j++) {
             auto tx = m_txs[j];
             futures.push_back(pool->enqueue([this, &tx] {
-                DLOG(INFO) << "enqueue tx " << tx.id << std::endl;
-                tx.Execute();
+                DLOG(INFO) << "enqueue tx " << tx.id << endl;
+                // execute the transaction
+                Execute(&tx);
+                while (true) {
+                    if (tx.flag_conflict.load()) {
+                        // if there are war, re-execute entire transaction
+                        ReExecute(&tx);
+                    } else if (last_finalized.load() + 1 == tx.id && !tx.flag_conflict.load()) {
+                        // if last transaction has finalized, and currently i don't have to re-execute, 
+                        // then i can final commit and do another transaction. 
+                        Finalize(&tx);
+                        break;
+                    }
+                }
             }));
         }
         // wait for all transactions in the block to complete
         for (auto& future : futures) {
             future.get();
         }
+        LOG(INFO) << "block " << i << " done, tx " << last_finalized.load() << " committed" << endl;
     }
 }
 
 /// @brief stop the protocol
 void Fractal::Stop() {
     pool->shutdown();
-    LOG(INFO) << "aria stop";
+    LOG(INFO) << "fractal stop";
+}
+
+/// @brief execute the transaction
+/// @param tx the transaction to be executed
+void Fractal::Execute(T* tx) {
+    // execute the transaction
+    tx->start_time = steady_clock::now();
+    tx->InstallGetStorageHandler([&](
+        const std::unordered_set<string>& readSet
+    ) {
+        string keys;
+        // no multi-version
+        for (auto& key : readSet) {
+            keys += key + "";
+            string value;
+            table.Get(tx, key, value);
+            tx->local_get[key] = value;
+            if (tx->flag_conflict.load()) { return; }
+        }
+        DLOG(INFO) << "tx " << tx->id << " read: " << keys << std::endl;
+    });
+
+    tx->InstallSetStorageHandler([&](
+        const std::unordered_set<string>& writeSet,
+        const std::string& value
+    ) {
+        string keys;
+        for (auto& key : writeSet) {
+            keys += key + "";
+            table.Put(tx, key, value);
+            tx->local_put[key] = value;
+            if (tx->flag_conflict.load()) { return; }
+        }
+        DLOG(INFO) << "tx " << tx->id << " write: " << keys << std::endl;
+    });
+    // execute the transaction
+    tx->Execute();
+    DLOG(INFO) << "fractal executed " << tx->id;
+}
+
+/// @brief re-execute the transaction
+/// @param tx the transaction to be re-executed
+void Fractal::ReExecute(T* tx) {
+    DLOG(INFO) << "fractal re-execute " << tx->id;
+    tx->flag_conflict.store(false);
+    // re-execute the transaction
+    tx->Execute();
+}
+
+/// @brief finalize the transaction
+/// @param tx the transaction to be finalized
+void Fractal::Finalize(T* tx) {
+    // finalize the transaction
+    DLOG(INFO) << "fractal finalize " << tx->id;
+    for (auto entry: tx->local_get) {
+        table.ClearGet(tx, std::get<0>(entry));
+    }
+    for (auto entry: tx->local_put) {
+        table.ClearPut(tx, std::get<0>(entry));
+    }
+    last_finalized.fetch_add(1, std::memory_order_seq_cst);
+    auto latency = duration_cast<microseconds>(steady_clock::now() - tx->start_time).count();
 }
 
 /// @brief construct an empty FractalTransaction
@@ -70,8 +148,7 @@ FractalTransaction::FractalTransaction(
     Transaction&& inner, size_t id
 ): 
     Transaction(std::move(inner)), 
-    id(id),
-    start_time(std::chrono::steady_clock::now())
+    id(id)
 {
     // initial readSet and writeSet empty
     local_get = std::unordered_map<string, string>();
@@ -84,7 +161,7 @@ FractalTransaction::FractalTransaction(
 ) noexcept: 
     Transaction(std::move(tx)), 
     id(tx.id),
-    flag_conflict(tx.flag_conflict),
+    flag_conflict(tx.flag_conflict.load()),
     start_time(tx.start_time),
     local_get{std::move(tx.local_get)},
     local_put{std::move(tx.local_put)}
@@ -96,11 +173,23 @@ FractalTransaction::FractalTransaction(
 ): 
     Transaction(other), 
     id(other.id),
-    flag_conflict(other.flag_conflict),
+    flag_conflict(other.flag_conflict.load()),
     start_time(other.start_time),
     local_get(other.local_get),
     local_put(other.local_put)
 {}
+
+void FractalTransaction::Execute() {
+    DLOG(INFO) << "Execute transaction: " << m_tx << " txid: " << m_tx->m_hyperId << std::endl;
+    if (getHandler) {
+        getHandler(m_tx->m_rootVertex->allReadSet);
+    }
+    if (setHandler) {
+        setHandler(m_tx->m_rootVertex->allWriteSet, "value");
+    }
+    auto& tx = m_tx->m_rootVertex->m_cost;
+    loom::Exec(tx);
+}
 
 /// @brief initialize the fractal table
 /// @param partitions the number of partitions
@@ -110,3 +199,75 @@ FractalTable::FractalTable(
     Table::Table(partitions)
 {}
 
+/// @brief get a value
+/// @param tx the transaction that reads the value
+/// @param k the key of the read entry
+/// @param v the value of read entry
+void FractalTable::Get(T* tx, const K& k, std::string& v) {
+    Table::Put(k, [&](V& _v) {
+        // see a war
+        if (_v.writer != nullptr && _v.writer->id < tx->id) {
+            tx->flag_conflict.store(true);
+            return;
+        }
+        v = _v.value;
+        _v.readers.insert(tx);
+    });
+}
+
+/// @brief put a value
+/// @param tx the transaction that writes the value
+/// @param k the key of the written entry
+/// @param v the value to write
+void FractalTable::Put(T* tx, const K& k, const string& v) {
+    CHECK(tx->id > 0) << "we reserve version(0) for default value";
+    DLOG(INFO) << tx->id << "(" << tx << ")" << " write " << KeyHasher()(k) % 1000 << std::endl;
+    Table::Put(k, [&](V& _v) {
+        
+        // abort transactions that read outdated keys
+        for (auto _tx: _v.readers) {
+            if (_tx->id > tx->id) {
+                DLOG(INFO) << tx->id << " abort " << _tx->id << std::endl;
+                _tx->flag_conflict.store(true);
+            }
+        }
+
+        // handle duplicated write on the same key
+        if (_v.writer != nullptr) {
+            if (_v.writer->id == tx->id) {
+                _v.value = v;
+            } else if (_v.writer->id > tx->id) {
+                _v.writer->flag_conflict.store(true);
+                _v.writer = tx;
+            } else if (_v.writer->id < tx->id) {
+                tx->flag_conflict.store(true);
+            }
+        } else {
+            _v.writer = tx;
+        }
+    });
+}
+
+/// @brief remove a read dependency from this entry
+/// @param tx the transaction that previously read this entry
+/// @param k the key of read entry
+void FractalTable::ClearGet(T* tx, const K& k) {
+    DLOG(INFO) << "remove read record from " << tx->id << endl;
+    Table::Put(k, [&](V& _v) {
+        _v.readers.erase(tx);
+    });
+}
+
+/// @brief remove versions preceeding current transaction
+/// @param tx the transaction the previously wrote this entry
+/// @param k the key of written entry
+void FractalTable::ClearPut(T* tx, const K& k) {
+    DLOG(INFO) << "remove write record from " << tx->id << endl;
+    Table::Put(k, [&](V& _v) {
+        if (_v.writer == tx) {
+            _v.writer = nullptr;
+        } else {
+            DLOG(INFO) << "something must be wrong in " << tx->id << endl;
+        }
+    });
+}

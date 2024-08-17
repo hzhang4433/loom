@@ -1,4 +1,4 @@
-#include <loom/protocol/fractal/Fractal.h>
+#include <loom/protocol/moss/Moss.h>
 #include <fmt/core.h>
 #include <glog/logging.h>
 
@@ -6,15 +6,15 @@
 using namespace std::chrono;
 
 #define K std::string
-#define V FractalEntry
-#define T FractalTransaction
+#define V MossEntry
+#define T MossTransaction
 
 
 /// @brief initialize aria protocol
 /// @param blocks the blocks to be executed
 /// @param num_threads the number of threads
 /// @param table_partitions the number of partitions for the table
-Fractal::Fractal(
+Moss::Moss(
     vector<Block::Ptr> blocks, 
     size_t num_threads, 
     size_t table_partitions
@@ -24,12 +24,12 @@ Fractal::Fractal(
     table(table_partitions),
     pool(std::make_shared<ThreadPool>(num_threads))
 {
-    LOG(INFO) << fmt::format("Fractal(num_threads={}, table_partitions={})", num_threads, table_partitions) << std::endl;
+    LOG(INFO) << fmt::format("Moss(num_threads={}, table_partitions={})", num_threads, table_partitions) << std::endl;
 }
 
 /// @brief start the protocol
-void Fractal::Start() {
-    // transform Transaction to FractalTransaction
+void Moss::Start() {
+    // transform Transaction to MossTransaction
     vector<vector<T>> m_blocks;
     for (size_t i = 0; i < blocks.size(); i++) {
         auto txs = blocks[i]->getTxs();
@@ -76,14 +76,14 @@ void Fractal::Start() {
 }
 
 /// @brief stop the protocol
-void Fractal::Stop() {
+void Moss::Stop() {
     pool->shutdown();
-    LOG(INFO) << "fractal stop";
+    LOG(INFO) << "moss stop";
 }
 
 /// @brief execute the transaction
 /// @param tx the transaction to be executed
-void Fractal::Execute(T* tx) {
+void Moss::Execute(T* tx) {
     // execute the transaction
     tx->start_time = steady_clock::now();
     tx->InstallGetStorageHandler([this, tx](
@@ -118,13 +118,13 @@ void Fractal::Execute(T* tx) {
     });
     // execute the transaction
     tx->Execute();
-    DLOG(INFO) << "fractal executed " << tx->id;
+    DLOG(INFO) << "moss executed " << tx->id;
 }
 
 /// @brief re-execute the transaction
 /// @param tx the transaction to be re-executed
-void Fractal::ReExecute(T* tx) {
-    DLOG(INFO) << "fractal re-execute " << tx->id;
+void Moss::ReExecute(T* tx) {
+    DLOG(INFO) << "moss re-execute " << tx->id;
     tx->flag_conflict.store(false);
     tx->local_get.clear();
     tx->local_put.clear();
@@ -134,9 +134,9 @@ void Fractal::ReExecute(T* tx) {
 
 /// @brief finalize the transaction
 /// @param tx the transaction to be finalized
-void Fractal::Finalize(T* tx) {
+void Moss::Finalize(T* tx) {
     // finalize the transaction
-    DLOG(INFO) << "fractal finalize " << tx->id << endl;
+    DLOG(INFO) << "moss finalize " << tx->id << endl;
     for (auto entry: tx->local_get) {
         table.ClearGet(tx, std::get<0>(entry));
     }
@@ -147,8 +147,8 @@ void Fractal::Finalize(T* tx) {
     // auto latency = duration_cast<microseconds>(steady_clock::now() - tx->start_time).count();
 }
 
-/// @brief construct an empty FractalTransaction
-FractalTransaction::FractalTransaction(
+/// @brief construct an empty MossTransaction
+MossTransaction::MossTransaction(
     Transaction&& inner, size_t id
 ): 
     Transaction(std::move(inner)), 
@@ -160,9 +160,9 @@ FractalTransaction::FractalTransaction(
     local_put = std::unordered_map<string, string>();
 }
 
-/// @brief move constructor for FractalTransaction
-FractalTransaction::FractalTransaction(
-    FractalTransaction&& tx
+/// @brief move constructor for MossTransaction
+MossTransaction::MossTransaction(
+    MossTransaction&& tx
 ) noexcept: 
     Transaction(std::move(tx)), 
     id(tx.id),
@@ -172,9 +172,9 @@ FractalTransaction::FractalTransaction(
     local_put{std::move(tx.local_put)}
 {}
 
-/// @brief copy constructor for FractalTransaction
-FractalTransaction::FractalTransaction(
-    const FractalTransaction& other
+/// @brief copy constructor for MossTransaction
+MossTransaction::MossTransaction(
+    const MossTransaction& other
 ): 
     Transaction(other), 
     id(other.id),
@@ -184,7 +184,7 @@ FractalTransaction::FractalTransaction(
     local_put(other.local_put)
 {}
 
-void FractalTransaction::Execute() {
+void MossTransaction::Execute() {
     DLOG(INFO) << "Execute transaction: " << m_tx << " txid: " << m_tx->m_hyperId << std::endl;
     if (getHandler) {
         getHandler(m_tx->m_rootVertex->allReadSet);
@@ -196,9 +196,9 @@ void FractalTransaction::Execute() {
     loom::Exec(tx);
 }
 
-/// @brief initialize the fractal table
+/// @brief initialize the moss table
 /// @param partitions the number of partitions
-FractalTable::FractalTable(
+MossTable::MossTable(
     size_t partitions
 ): 
     Table::Table(partitions)
@@ -208,7 +208,7 @@ FractalTable::FractalTable(
 /// @param tx the transaction that reads the value
 /// @param k the key of the read entry
 /// @param v the value of read entry
-void FractalTable::Get(T* tx, const K& k, std::string& v) {
+void MossTable::Get(T* tx, const K& k, std::string& v) {
     DLOG(INFO) << tx->id << "(" << tx << ")" << " read " << endl;
     Table::Put(k, [&](V& _v) {
         // see a war
@@ -233,7 +233,7 @@ void FractalTable::Get(T* tx, const K& k, std::string& v) {
 /// @param tx the transaction that writes the value
 /// @param k the key of the written entry
 /// @param v the value to write
-void FractalTable::Put(T* tx, const K& k, const string& v) {
+void MossTable::Put(T* tx, const K& k, const string& v) {
     DLOG(INFO) << tx->id << "(" << tx << ")" << " write " << endl;
     Table::Put(k, [&](V& _v) {
         
@@ -270,7 +270,7 @@ void FractalTable::Put(T* tx, const K& k, const string& v) {
 /// @brief remove a read dependency from this entry
 /// @param tx the transaction that previously read this entry
 /// @param k the key of read entry
-void FractalTable::ClearGet(T* tx, const K& k) {
+void MossTable::ClearGet(T* tx, const K& k) {
     DLOG(INFO) << "remove read record from " << tx->id << endl;
     Table::Put(k, [&](V& _v) {
         auto guard = Guard{_v.r_mu};
@@ -281,7 +281,7 @@ void FractalTable::ClearGet(T* tx, const K& k) {
 /// @brief remove versions preceeding current transaction
 /// @param tx the transaction the previously wrote this entry
 /// @param k the key of written entry
-void FractalTable::ClearPut(T* tx, const K& k) {
+void MossTable::ClearPut(T* tx, const K& k) {
     DLOG(INFO) << "remove write record from " << tx->id << endl;
     Table::Put(k, [&](V& _v) {
         auto guard = Guard{_v.w_mu};

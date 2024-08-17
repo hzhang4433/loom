@@ -10,6 +10,7 @@
 #include <loom/test/AriaTest.cpp>
 #include <loom/test/HarmonyTest.cpp>
 #include <loom/test/FractalTest.cpp>
+#include <loom/test/MossTest.cpp>
 
 
 using namespace std;
@@ -40,7 +41,8 @@ int main(int argc, char** argv) {
     // ::testing::GTEST_FLAG(filter) = "LoomTest.TestOtherPool";
     // ::testing::GTEST_FLAG(filter) = "AriaTest.TestAria";
     // ::testing::GTEST_FLAG(filter) = "HarmonyTest.TestHarmony";
-    ::testing::GTEST_FLAG(filter) = "FractalTest.TestFractal";
+    // ::testing::GTEST_FLAG(filter) = "FractalTest.TestFractal";
+    ::testing::GTEST_FLAG(filter) = "MossTest.TestMoss";
     
     
     int result = RUN_ALL_TESTS();

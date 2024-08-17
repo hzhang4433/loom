@@ -37,6 +37,8 @@ struct FractalEntry {
     string value;
     T* writer = nullptr;
     unordered_set<T*> readers;
+    SpinLock r_mu;
+    SpinLock w_mu;
 };
 
 /// @brief fractal table for execution

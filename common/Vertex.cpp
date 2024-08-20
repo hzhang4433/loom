@@ -94,7 +94,7 @@ void Vertex::Execute() {
     if (setHandler) {
         setHandler(writeSet, "value");
     }
-    auto& tx = m_cost;
+    auto& tx = m_self_cost;
     loom::Exec(tx);
 }
 

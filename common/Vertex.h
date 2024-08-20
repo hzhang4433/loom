@@ -1,7 +1,6 @@
 #pragma once
 
 #include <memory>
-#include <atomic>
 #include <string>
 #include <map>
 #include <set>

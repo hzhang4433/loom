@@ -79,7 +79,7 @@ void Moss::Start() {
             futures.push_back(pool->enqueue([this, tx]() mutable {
                 DLOG(INFO) << "enqueue tx " << tx->id << endl;
                 // execute the transaction
-                Execute(tx);
+                Execute(tx->root_tx);
                 while (true) {
                     if (tx->HasWAR()) {
                         // if there are war, re-execute entire transaction
@@ -107,127 +107,89 @@ void Moss::Stop() {
     LOG(INFO) << "moss stop";
 }
 
-/// @brief execute the transaction
-/// @param tx the transaction to be executed
-void Moss::Execute(T tx) {
-    // // execute the transaction
-    // tx->start_time = steady_clock::now();
-    
-    // if (tx->m_tx->m_isNested) {
-    //     Execute(tx, tx->m_tx->m_rootVertex);
-    // } else {
-    //     tx->InstallGetStorageHandler([this, tx](
-    //         const std::unordered_set<string>& readSet
-    //     ) {
-    //         string keys;
-    //         // no multi-version
-    //         for (auto& key : readSet) {
-    //             DLOG(INFO) << "tx " << tx->id << " read " << key << std::endl;
-    //             keys += key + " ";
-    //             string value;
-    //             table.Get(tx, key, value);
-    //             if (tx->HasWAR()) { return; }
-    //             tx->local_get[key] = value;
-    //         }
-    //         DLOG(INFO) << "tx " << tx->id << " all reads: " << keys << std::endl;
-    //     });
-
-    //     tx->InstallSetStorageHandler([this, tx](
-    //         const std::unordered_set<string>& writeSet,
-    //         const std::string& value
-    //     ) {
-    //         string keys;
-    //         for (auto& key : writeSet) {
-    //             DLOG(INFO) << "tx " << tx->id << " write " << key << std::endl;
-    //             keys += key + " ";
-    //             table.Put(tx, key, value);
-    //             if (tx->HasWAR()) { return; }
-    //             tx->local_put[key] = value;
-    //         }
-    //         DLOG(INFO) << "tx " << tx->id << " all writes: " << keys << std::endl;
-    //     });
-
-    //     tx->Execute();
-    // }
-    // DLOG(INFO) << "moss executed " << tx->id;
-}
 
 /// @brief execute the sub-transaction
 /// @param tx the transaction to be executed
-void Moss::Execute(T tx, ST stx) {
-    // // set the handlers
-    // stx->InstallGetStorageHandler([this, tx, stx](
-    //     const std::unordered_set<string>& readSet
-    // ) {
-    //     string keys;
-    //     // no multi-version
-    //     for (auto& key : readSet) {
-    //         DLOG(INFO) << "stx " << stx->m_id << " read " << key << std::endl;
-    //         keys += key + " ";
-    //         string value;
-    //         table.Get(tx, stx, key, value);
-    //         if (tx->HasWAR(stx)) { return; }
-    //         tx->local_get[key] = value;
-    //     }
-    //     DLOG(INFO) << "stx " << stx->m_id << " all reads: " << keys << std::endl;
-    // });
+void Moss::Execute(ST stx) {
+    // set the handlers
+    stx->InstallGetStorageHandler([this, stx](
+        const std::unordered_set<string>& readSet
+    ) {
+        string keys;
+        // no multi-version
+        for (auto& key : readSet) {
+            DLOG(INFO) << "stx " << stx->m_id << " read " << key << std::endl;
+            if (stx->ftx->HasWAR(stx)) { return; }
+            keys += key + " ";
+            string value;
+            table.Get(stx, key, value);
+            stx->local_get[key] = value;
+        }
+        DLOG(INFO) << "stx " << stx->m_id << " all reads: " << keys << std::endl;
+    });
 
-    // stx->InstallSetStorageHandler([this, tx, stx](
-    //     const std::unordered_set<string>& writeSet,
-    //     const std::string& value
-    // ) {
-    //     string keys;
-    //     for (auto& key : writeSet) {
-    //         DLOG(INFO) << "tx " << tx->id << " write " << key << std::endl;
-    //         keys += key + " ";
-    //         table.Put(tx, stx, key, value);
-    //         if (tx->HasWAR(stx)) { return; }
-    //         tx->local_put[key] = value;
-    //     }
-    //     DLOG(INFO) << "tx " << tx->id << " all writes: " << keys << std::endl;
-    // });
-    // // execute sub-transactions
-    // auto children = stx->m_children;
-    // for (auto& child : children) {
-    //     Execute(tx, child.vertex);
-    // }
-    // // execute the current transaction
-    // stx->Execute();
+    stx->InstallSetStorageHandler([this, stx](
+        const std::unordered_set<string>& writeSet,
+        const std::string& value
+    ) {
+        string keys;
+        for (auto& key : writeSet) {
+            DLOG(INFO) << "stx " << stx->m_id << " write " << key << std::endl;
+            if (stx->ftx->HasWAR(stx)) { return; }
+            keys += key + " ";
+            table.Put(stx, key, value);
+            stx->local_put[key] = value;
+        }
+        DLOG(INFO) << "tx " << stx->m_id << " all writes: " << keys << std::endl;
+    });
+
+    // execute sub-transactions
+    auto children = stx->children_txs;
+    for (auto& child : children) {
+        Execute(child);
+    }
+    // execute the current transaction
+    stx->Execute();
 }
 
 /// @brief re-execute the transaction
 /// @param tx the transaction to be re-executed
 void Moss::ReExecute(T tx) {
-    // DLOG(INFO) << "moss re-execute " << tx->id;
-    // // clear the rerun_txs
-    
-
-
-
-
-
-    // // clear the local read and write set
-    // tx->local_get.clear();
-    // tx->local_put.clear();
-    // // re-execute the transaction
-    // tx->Execute();
+    DLOG(INFO) << "moss re-execute " << tx->id;
+    // get current rerun keys
+    std::unordered_set<ST> rerun_txs{};
+    {
+        auto guard = Guard{tx->rerun_txs_mu}; 
+        std::swap(tx->rerun_txs, rerun_txs);
+    }
+    // rollback the rerun_txs
+    for (auto& rerun_tx: rerun_txs) {
+        // clear the local read and write set
+        rerun_tx->local_get.clear();
+        rerun_tx->local_put.clear();
+        // re-execute the transaction
+        Execute(rerun_tx);
+    }
 }
 
 /// @brief finalize the transaction
 /// @param tx the transaction to be finalized
 void Moss::Finalize(T tx) {
-    // // finalize the transaction
-    // DLOG(INFO) << "moss finalize " << tx->id << endl;
-    // for (auto entry: tx->local_get) {
-    //     table.ClearGet(tx, std::get<0>(entry));
-    // }
-    // for (auto entry: tx->local_put) {
-    //     table.ClearPut(tx, std::get<0>(entry));
-    // }
-    // last_finalized.fetch_add(1, std::memory_order_seq_cst);
-    // // auto latency = duration_cast<microseconds>(steady_clock::now() - tx->start_time).count();
+    // finalize the transaction
+    DLOG(INFO) << "moss finalize " << tx->id << endl;
+    
+    last_finalized.fetch_add(1, std::memory_order_seq_cst);
+    // auto latency = duration_cast<microseconds>(steady_clock::now() - tx->start_time).count();
 }
 
+void Moss::ClearTable(ST stx) {
+    for (auto entry: stx->local_get) {
+        table.ClearGet(stx, std::get<0>(entry));
+    }
+    for (auto entry: stx->local_put) {
+        table.ClearPut(stx, std::get<0>(entry));
+    }
+}
 
 /// @brief construct an empty MossTransaction
 MossTransaction::MossTransaction(
@@ -245,9 +207,7 @@ MossTransaction::MossTransaction(
     Transaction(std::move(tx)), 
     id(tx.id),
     start_time(tx.start_time),
-    rerun_txs(tx.rerun_txs),
-    local_get{std::move(tx.local_get)},
-    local_put{std::move(tx.local_put)}
+    rerun_txs(tx.rerun_txs)
 {}
 
 /// @brief copy constructor for MossTransaction
@@ -257,9 +217,7 @@ MossTransaction::MossTransaction(
     Transaction(other), 
     id(other.id),
     start_time(other.start_time),
-    rerun_txs(other.rerun_txs),
-    local_get(other.local_get),
-    local_put(other.local_put)
+    rerun_txs(other.rerun_txs)
 {}
 
 /// @brief check if there is a write-after-read conflict
@@ -271,20 +229,39 @@ bool MossTransaction::HasWAR() {
 /// @brief check if there is a write-after-read conflict
 bool MossTransaction::HasWAR(const ST stx) {
     auto guard = Guard{rerun_txs_mu};
+    // if rerun_txs if empty return false
+    if (rerun_txs.empty()) return false;
     // check if the rerun_txs contains ancestors of stx
+    for (auto& rerun_tx: rerun_txs) {
+        // if the m_id of rerun_tx is the prefix of m_id of the stx
+        // then rerun_tx is the ancestor of stx, return true
+        if (stx->m_id.find(rerun_tx->m_id) == 0) {
+            return true;
+        }
+    }
+    return false;
 }
 
 /// @brief set a write-after-read conflict
 /// @param stx the transaction that causes the conflict
 void MossTransaction::SetWAR(const ST stx) {
+    vector<ST> wait_to_remove;
     auto guard = Guard{rerun_txs_mu};
     // set and combine same ancestors of rerun_txs
-}
-
-/// @brief set a write-after-read conflict
-/// @param tx the transaction that causes the conflict
-void MossTransaction::SetWAR(const T tx) {
-    auto guard = Guard{rerun_txs_mu};
+    for (auto& rerun_tx: rerun_txs) {
+        // if rerun_tx is the ancestor of stx, return
+        if (stx->m_id.find(rerun_tx->m_id) == 0) {
+            return;
+        } else if (rerun_tx->m_id.find(stx->m_id) == 0) {
+            // if stx is the ancestor of rerun_tx, remove the rerun_tx
+            wait_to_remove.push_back(rerun_tx);
+        }
+    }
+    // remove the rerun_txs that are descendant of stx
+    for (auto& rerun_tx: wait_to_remove) {
+        rerun_txs.erase(rerun_tx);
+    }
+    rerun_txs.insert(stx);
 }
 
 /// @brief execute the transaction
@@ -299,7 +276,6 @@ void MossTransaction::Execute() {
     auto& tx = m_tx->m_rootVertex->m_cost;
     loom::Exec(tx);
 }
-
 
 /// @brief construct an empty MossSubTransaction
 MossSubTransaction::MossSubTransaction(
@@ -337,24 +313,24 @@ MossTable::MossTable(
 /// @param k the key of the read entry
 /// @param v the value of read entry
 void MossTable::Get(ST stx, const K& k, std::string& v) {
-    // DLOG(INFO) << tx->id << "(" << tx << ")" << " read " << endl;
-    // Table::Put(k, [&](V& _v) {
-    //     // see a war
-    //     {
-    //         auto guard = Guard{_v.w_mu};
-    //         if (_v.writer != nullptr && _v.writer->id < tx->id) {
-    //             DLOG(INFO) << tx->id << " see a war by " << _v.writer->id << " aborted." << endl;
-    //             tx->SetWAR();
-    //             return;
-    //         }
-    //     }
-    //     v = _v.value;
-    //     {
-    //         auto guard = Guard{_v.r_mu};
-    //         DLOG(INFO) << tx->id << " add read record" << endl;
-    //         _v.readers.insert(tx);
-    //     } 
-    // });
+    DLOG(INFO) << stx->m_id << "(" << stx << ")" << " read " << endl;
+    Table::Put(k, [&](V& _v) {
+        // see a war
+        {
+            auto guard = Guard{_v.w_mu};
+            if (_v.writer != nullptr && _v.writer->ftx->id < stx->ftx->id) {
+                DLOG(INFO) << stx->m_id << " see a war by " << _v.writer->m_id << " aborted." << endl;
+                stx->ftx->SetWAR(_v.writer);
+                return;
+            }
+        }
+        v = _v.value;
+        {
+            auto guard = Guard{_v.r_mu};
+            DLOG(INFO) << stx->m_id << " add read record" << endl;
+            _v.readers.insert(stx);
+        } 
+    });
 }
 
 /// @brief put a value
@@ -362,64 +338,72 @@ void MossTable::Get(ST stx, const K& k, std::string& v) {
 /// @param k the key of the written entry
 /// @param v the value to write
 void MossTable::Put(ST stx, const K& k, const string& v) {
-    // DLOG(INFO) << tx->id << "(" << tx << ")" << " write " << endl;
-    // Table::Put(k, [&](V& _v) {
+    DLOG(INFO) << stx->m_id << "(" << stx << ")" << " write " << endl;
+    Table::Put(k, [&](V& _v) {
         
-    //     // abort transactions that read outdated keys
-    //     {
-    //         auto guard = Guard{_v.r_mu};
-    //         for (auto _tx: _v.readers) {
-    //             if (_tx->id > tx->id) {
-    //                 DLOG(INFO) << tx->id << " abort war on" << _tx->id << endl;
-    //                 _tx->SetWAR();
-    //             }
-    //         }
-    //     }
+        // abort transactions that read outdated keys
+        {
+            auto guard = Guard{_v.r_mu};
+            for (auto _tx: _v.readers) {
+                if (_tx->ftx->id > stx->ftx->id || (_tx->ftx->id == stx->ftx->id && _tx->m_id > stx->m_id)) {
+                    DLOG(INFO) << stx->m_id << " abort war on" << _tx->m_id << endl;
+                    _tx->ftx->SetWAR(stx);
+                }
+            }
+        }
         
-    //     // handle duplicated write on the same key
-    //     {
-    //         auto guard = Guard{_v.w_mu};
-    //         if (_v.writer != nullptr) {
-    //             if (_v.writer->id == tx->id) {
-    //                 _v.value = v;
-    //             } else if (_v.writer->id > tx->id) {
-    //                 _v.writer->SetWAR();
-    //                 _v.writer = tx;
-    //             } else if (_v.writer->id < tx->id) {
-    //                 tx->SetWAR();
-    //             }
-    //         } else {
-    //             _v.writer = tx;
-    //         }
-    //     }
-    // });
+        // handle duplicated write on the same key
+        {
+            auto guard = Guard{_v.w_mu};
+            if (_v.writer != nullptr) {
+                if (_v.writer->m_id == stx->m_id) {
+                    // same transaction write the same key
+                    _v.value = v;
+                } else if (_v.writer->ftx->id == stx->ftx->id && _v.writer->m_id < stx->m_id) {
+                    // same transaction but different sub-transaction write the same key
+                    stx->ftx->SetWAR(_v.writer);
+                } else if (_v.writer->ftx->id == stx->ftx->id && _v.writer->m_id > stx->m_id) {
+                    // same transaction but different sub-transaction write the same key
+                    _v.writer->ftx->SetWAR(stx);
+                    _v.writer = stx;
+                } else if (_v.writer->ftx->id > stx->ftx->id) {
+                    _v.writer->ftx->SetWAR(stx);
+                    _v.writer = stx;
+                } else if (_v.writer->ftx->id < stx->ftx->id) {
+                    stx->ftx->SetWAR(_v.writer);
+                }
+            } else {
+                _v.writer = stx;
+            }
+        }
+    });
 }
 
 
 /// @brief remove a read dependency from this entry
 /// @param tx the transaction that previously read this entry
 /// @param k the key of read entry
-void MossTable::ClearGet(T tx, const K& k) {
-    // DLOG(INFO) << "remove read record from " << tx->id << endl;
-    // Table::Put(k, [&](V& _v) {
-    //     auto guard = Guard{_v.r_mu};
-    //     _v.readers.erase(tx);
-    // });
+void MossTable::ClearGet(ST stx, const K& k) {
+    DLOG(INFO) << "remove read record from " << stx->m_id << endl;
+    Table::Put(k, [&](V& _v) {
+        auto guard = Guard{_v.r_mu};
+        _v.readers.erase(stx);
+    });
 }
 
 /// @brief remove versions preceeding current transaction
 /// @param tx the transaction the previously wrote this entry
 /// @param k the key of written entry
-void MossTable::ClearPut(T tx, const K& k) {
-    // DLOG(INFO) << "remove write record from " << tx->id << endl;
-    // Table::Put(k, [&](V& _v) {
-    //     auto guard = Guard{_v.w_mu};
-    //     if (_v.writer == tx) {
-    //         _v.writer = nullptr;
-    //     } else {
-    //         DLOG(INFO) << "something must be wrong in " << tx->id << endl;
-    //     }
-    // });
+void MossTable::ClearPut(ST stx, const K& k) {
+    DLOG(INFO) << "remove write record from " << stx->m_id << endl;
+    Table::Put(k, [&](V& _v) {
+        auto guard = Guard{_v.w_mu};
+        if (_v.writer == stx) {
+            _v.writer = nullptr;
+        } else {
+            DLOG(INFO) << "something must be wrong in " << stx->m_id << endl;
+        }
+    });
 }
 
 #undef T

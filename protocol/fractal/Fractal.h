@@ -94,5 +94,6 @@ private:
 
 #undef T
 #undef K
+#undef V
 
 }

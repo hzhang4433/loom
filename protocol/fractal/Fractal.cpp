@@ -292,3 +292,7 @@ void FractalTable::ClearPut(T* tx, const K& k) {
         }
     });
 }
+
+#undef T
+#undef K
+#undef V

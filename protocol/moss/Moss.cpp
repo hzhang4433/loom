@@ -69,7 +69,7 @@ void Moss::Start() {
     Preparation(m_blocks);
     
     // execute all transactions in the blocks
-    LOG(INFO) << "start" << std::endl;
+    LOG(INFO) << "Start" << endl;
     for (size_t i = 0; i < m_blocks.size(); i++) {
         auto m_txs = m_blocks[i];
         // execute all transactions in the block
@@ -104,7 +104,7 @@ void Moss::Start() {
 /// @brief stop the protocol
 void Moss::Stop() {
     pool->shutdown();
-    LOG(INFO) << "moss stop";
+    LOG(INFO) << "Moss stop";
 }
 
 
@@ -183,11 +183,18 @@ void Moss::Finalize(T tx) {
 }
 
 void Moss::ClearTable(ST stx) {
+    // clear the local read and write set
     for (auto entry: stx->local_get) {
         table.ClearGet(stx, std::get<0>(entry));
     }
     for (auto entry: stx->local_put) {
         table.ClearPut(stx, std::get<0>(entry));
+    }
+    // clear the children
+    if (!stx->children_txs.empty()) {
+        for (auto& child: stx->children_txs) {
+            ClearTable(child);
+        }
     }
 }
 
@@ -291,7 +298,7 @@ MossSubTransaction::MossSubTransaction(
 
 /// @brief execute the transaction
 void MossSubTransaction::Execute() {
-    DLOG(INFO) << "Execute transaction: " << m_tx << " txid: " << m_id << std::endl;
+    DLOG(INFO) << "Execute sub-transaction: " << m_tx << " txid: " << m_id << std::endl;
     if (getHandler) {
         getHandler(readSet);
     }
@@ -316,7 +323,7 @@ MossTable::MossTable(
 /// @param k the key of the read entry
 /// @param v the value of read entry
 void MossTable::Get(ST stx, const K& k, std::string& v) {
-    DLOG(INFO) << stx->m_id << "is reading..." << endl;
+    DLOG(INFO) << stx->m_id << " is reading..." << endl;
     Table::Put(k, [&](V& _v) {
         // see a war
         {
@@ -341,7 +348,7 @@ void MossTable::Get(ST stx, const K& k, std::string& v) {
 /// @param k the key of the written entry
 /// @param v the value to write
 void MossTable::Put(ST stx, const K& k, const string& v) {
-    DLOG(INFO) << stx->m_id << "is writing..." << endl;
+    DLOG(INFO) << stx->m_id << " is writing..." << endl;
     Table::Put(k, [&](V& _v) {
         
         // abort transactions that read outdated keys

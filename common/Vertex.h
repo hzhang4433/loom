@@ -124,7 +124,7 @@ class Vertex : public std::enable_shared_from_this<Vertex>, public Transaction
 
     // 公共变量
         int m_hyperId;                                                           // 记录节点对应的超节点id
-        // shared_ptr<HyperVertex> m_hyperVertex;                                // 记录节点对应的超节点
+        shared_ptr<HyperVertex> m_hyperVertex;                                   // 记录节点对应的超节点
         string m_id;                                                             // 记录节点自身的id
         int m_layer;                                                             // 记录节点所在层
         int m_cost;                                                              // 记录节点的执行代价 => 由执行时间正则化得到

@@ -14,7 +14,7 @@ using namespace std;
 
 namespace loom {
 
-#define K std::string
+#define K string
 #define V MossEntry
 #define T shared_ptr<MossTransaction>
 #define ST shared_ptr<MossSubTransaction>
@@ -56,7 +56,7 @@ struct MossEntry {
 };
 
 /// @brief moss table for execution
-struct MossTable: private Table<K, MossEntry, KeyHasher> {
+struct MossTable: public Table<K, MossEntry, KeyHasher> {
     MossTable(size_t partitions);
     void Get(ST stx, const K& k, std::string& v);
     void Put(ST stx, const K& k, const std::string& v);

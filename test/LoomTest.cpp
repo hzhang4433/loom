@@ -4,6 +4,7 @@
 #include "utils/Generator/UTxGenerator.h"
 #include "protocol/loom/MinWRollback.h"
 #include "protocol/loom/DeterReExecute.h"
+#include "protocol/loom/Loom.h"
 
 using namespace std;
 
@@ -563,44 +564,77 @@ TEST(LoomTest, TestOtherPool) {
         // 1. 并发执行所有交易
         auto txs = block->getTxs();
         size_t txSize = txs.size();
-        size_t chunkSize = (txSize + UTIL_DEFAULT_THREAD_SIZE - 1) / (UTIL_DEFAULT_THREAD_SIZE * 1);
+        // size_t chunkSize = (txSize + UTIL_DEFAULT_THREAD_SIZE - 1) / (UTIL_DEFAULT_THREAD_SIZE * 1);
+        size_t chunkSize = 1;
         
         start = chrono::steady_clock::now();
-        for (size_t i = 0; i < txSize; i += chunkSize) {
+        // for (size_t i = 0; i < txSize; i += chunkSize) {
+        //     // 放入线程池并行执行所有交易
+        //     preExecFutures.emplace_back(threadPool->enqueue([this, txs, i, chunkSize, txSize] {
+        //         size_t end = std::min(i + chunkSize, txSize);
+        //         for (size_t j = i; j < end; j++) {
+        //             auto& tx = txs[j];
+        //             // read locally from local storage
+        //             tx->InstallGetStorageHandler([&](
+        //                 const std::unordered_set<string>& readSet
+        //             ) {
+        //                 string keys;
+        //                 std::unordered_map<string, string> local_get;
+        //                 for (auto& key : readSet) {
+        //                     keys += key + " ";
+        //                     string value;
+        //                     local_get[key] = value;
+        //                 }
+        //             });
+        //             // write locally to local storage
+        //             tx->InstallSetStorageHandler([&](
+        //                 const std::unordered_set<string>& writeSet,
+        //                 const std::string& value
+        //             ) {
+        //                 string keys;
+        //                 std::unordered_map<string, string> local_put;
+        //                 for (auto& key : writeSet) {
+        //                     keys += key + " ";
+        //                     local_put[key] = value;
+        //                 }
+        //             });
+        //             tx->Execute();
+        //         }
+        //     }));
+        // }
+        
+        for (size_t i = 0; i < txSize; i++) {
             // 放入线程池并行执行所有交易
-            preExecFutures.emplace_back(threadPool->enqueue([this, txs, i, chunkSize, txSize] {
-                size_t end = std::min(i + chunkSize, txSize);
-                for (size_t j = i; j < end; j++) {
-                    auto& tx = txs[j];
-                    // read locally from local storage
-                    tx->InstallGetStorageHandler([&](
-                        const std::unordered_set<string>& readSet
-                    ) {
-                        string keys;
-                        std::unordered_map<string, string> local_get;
-                        for (auto& key : readSet) {
-                            keys += key + " ";
-                            string value;
-                            local_get[key] = value;
-                        }
-                    });
-                    // write locally to local storage
-                    tx->InstallSetStorageHandler([&](
-                        const std::unordered_set<string>& writeSet,
-                        const std::string& value
-                    ) {
-                        string keys;
-                        std::unordered_map<string, string> local_put;
-                        for (auto& key : writeSet) {
-                            keys += key + " ";
-                            local_put[key] = value;
-                        }
-                    });
-                    tx->Execute();
-                }
+            auto tx = txs[i];
+            preExecFutures.emplace_back(threadPool->enqueue([this, tx] {
+                // read locally from local storage
+                tx->InstallGetStorageHandler([&](
+                    const std::unordered_set<string>& readSet
+                ) {
+                    string keys;
+                    std::unordered_map<string, string> local_get;
+                    for (auto& key : readSet) {
+                        keys += key + " ";
+                        string value;
+                        local_get[key] = value;
+                    }
+                });
+                // write locally to local storage
+                tx->InstallSetStorageHandler([&](
+                    const std::unordered_set<string>& writeSet,
+                    const std::string& value
+                ) {
+                    string keys;
+                    std::unordered_map<string, string> local_put;
+                    for (auto& key : writeSet) {
+                        keys += key + " ";
+                        local_put[key] = value;
+                    }
+                });
+                tx->Execute();
             }));
         }
-        
+
         // 等待所有交易执行完成
         for (auto& future : preExecFutures) {
             future.get();
@@ -610,11 +644,18 @@ TEST(LoomTest, TestOtherPool) {
 
         // 2. 确定性回滚
         MinWRollback minw(block->getTxList(), block->getRWIndex());
+        end = chrono::steady_clock::now();
+        cout << "Pass Time: " << chrono::duration_cast<chrono::microseconds>(end - start).count() / 1000.0 << "ms" << endl;
+
+        // 2.1 构图
         minw.buildGraphNoEdgeC(threadPool, buildFutures);
         // end = chrono::steady_clock::now();
         // cout << "Build Time: " << chrono::duration_cast<chrono::microseconds>(end - start).count() / 1000.0 << "ms" << endl;
 
+        // 2.2 识别scc
         minw.onWarm2SCC();
+
+        // 2.3 回滚事务
         // 局部快速回滚
         minw.fastRollback(block->getRBIndex(), rbList);
         // 全局并发回滚
@@ -656,4 +697,18 @@ TEST(LoomTest, TestOtherPool) {
         end = chrono::steady_clock::now();
         cout << "Total Time: " << chrono::duration_cast<chrono::microseconds>(end - start).count() / 1000.0 << "ms" << endl;
     }
+}
+
+TEST(LoomTest, TestProtocol) {
+    // Generate a workload
+    TxGenerator txGenerator(loom::BLOCK_SIZE);
+    auto blocks = txGenerator.generateWorkload(true);
+    // Create a moss instance
+    auto protocol = Loom(blocks, 36, false, 36);
+    // Start the protocol
+    protocol.Start();
+    // Wait for the protocol to finish
+    std::this_thread::sleep_for(std::chrono::seconds(2));
+    // Stop the protocol
+    protocol.Stop();
 }

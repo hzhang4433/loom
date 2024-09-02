@@ -11,6 +11,7 @@ HyperVertex::HyperVertex(int id, bool isNested): m_hyperId(id), m_isNested(isNes
     m_cost = 0;
     m_in_cost = 0;
     m_out_cost = 0;
+    m_aborted = false;
 
     m_out_edges.resize(loom::BLOCK_SIZE + 1);
     m_in_edges.resize(loom::BLOCK_SIZE + 1);

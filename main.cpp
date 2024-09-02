@@ -42,7 +42,8 @@ int main(int argc, char** argv) {
     // ::testing::GTEST_FLAG(filter) = "AriaTest.TestAria";
     // ::testing::GTEST_FLAG(filter) = "HarmonyTest.TestHarmony";
     // ::testing::GTEST_FLAG(filter) = "FractalTest.TestFractal";
-    ::testing::GTEST_FLAG(filter) = "MossTest.TestMoss";
+    // ::testing::GTEST_FLAG(filter) = "MossTest.TestMoss";
+    ::testing::GTEST_FLAG(filter) = "LoomTest.TestProtocol";
     
     
     int result = RUN_ALL_TESTS();

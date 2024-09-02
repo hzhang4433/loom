@@ -14,16 +14,19 @@ class Block {
         typedef std::shared_ptr<Block> Ptr;
         
         // 构造函数
-        Block(vector<Transaction::Ptr> txs, vector<HyperVertex::Ptr> txInfos,
+        Block(size_t blockId, vector<Transaction::Ptr> txs, vector<HyperVertex::Ptr> txInfos,
         unordered_map<string, loom::RWSets<Vertex::Ptr>> invertedIndex, 
         unordered_map<Vertex::Ptr, unordered_set<Vertex::Ptr, Vertex::VertexHash>, Vertex::VertexHash> RWIndex, 
         unordered_map<Vertex::Ptr, unordered_set<Vertex::Ptr, Vertex::VertexHash>, Vertex::VertexHash> conflictIndex,
         unordered_map<string, set<Vertex::Ptr, Vertex::VertexCompare>> RBIndex, size_t totalCost)
-         : m_txs(txs), m_txInfo(txInfos), m_invertedIndex(invertedIndex), m_RWIndex(RWIndex),
+         : m_blockId(blockId), m_txs(txs), m_txInfo(txInfos), m_invertedIndex(invertedIndex), m_RWIndex(RWIndex),
            m_conflictIndex(conflictIndex), m_RBIndex(RBIndex), m_totalCost(totalCost) {}
          
 
         ~Block() = default; // 析构函数
+
+        // 获取区块ID
+        const size_t getBlockId() const {return m_blockId;}
 
         // 设置区块内事务
         void setTxs(const std::vector<Transaction::Ptr>& txs) {m_txs = txs;}

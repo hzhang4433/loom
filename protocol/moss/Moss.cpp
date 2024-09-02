@@ -11,7 +11,7 @@ using namespace std::chrono;
 #define ST shared_ptr<MossSubTransaction>
 
 
-/// @brief initialize aria protocol
+/// @brief initialize moss protocol
 /// @param blocks the blocks to be executed
 /// @param num_threads the number of threads
 /// @param table_partitions the number of partitions for the table
@@ -106,7 +106,6 @@ void Moss::Stop() {
     pool->shutdown();
     LOG(INFO) << "Moss stop";
 }
-
 
 /// @brief execute the sub-transaction
 /// @param tx the transaction to be executed

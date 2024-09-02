@@ -227,7 +227,7 @@ void MinWRollback::buildGraphNoEdgeC(UThreadPoolPtr& Pool, std::vector<std::futu
 }
 
 void MinWRollback::buildGraphNoEdgeC(ThreadPool::Ptr& Pool, std::vector<std::future<void>>& futures) {
-    edgeCounter = 0;
+    // edgeCounter = 0;
     
     // 将多个onRW的处理作为一个任务
     std::vector<std::pair<Vertex::Ptr, Vertex::Ptr>> rwPairs;
@@ -1672,6 +1672,7 @@ void MinWRollback::GreedySelectVertexNoEdge(unordered_set<HyperVertex::Ptr, Hype
     }
 
     // 从scc中删除rb
+    // rb->m_aborted = true;
     scc.erase(rb);
     pq.erase(rb);
 
@@ -2416,6 +2417,12 @@ void MinWRollback::updateSCCandDependencyFastMode(unordered_set<HyperVertex::Ptr
 
 void MinWRollback::updateSCCandDependencyFastMode(unordered_set<HyperVertex::Ptr, HyperVertex::HyperVertexHash>& scc, const HyperVertex::Ptr& rb, set<HyperVertex::Ptr, loom::cmp>& pq, vector<int>& queueOrder, stack<int>& stackOrder) {
     auto rbIdx = rb->m_hyperId;
+    // auto flag = false;
+    // // rb is evicted by abort but rollback type is in
+    // if (rb->m_aborted && rb->m_rollback_type == loom::EdgeType::IN){
+    //     rb->m_aborted = false;
+    //     flag = true;
+    // }
     // 递归删除出边超节点
     for (auto& out_vertex : rb->m_out_hv) {
         // 超节点在scc中
@@ -2442,6 +2449,7 @@ void MinWRollback::updateSCCandDependencyFastMode(unordered_set<HyperVertex::Ptr
     }
     // 递归删除入边超节点
     for (auto& in_vertex : rb->m_in_hv) {
+        // if (flag) in_vertex->m_aborted = true;
         // 超节点在scc中
         if (scc.find(in_vertex) != scc.end()) {
             // 更新事务回滚事务集

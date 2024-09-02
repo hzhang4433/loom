@@ -6,7 +6,7 @@
 namespace loom {
 
 Vertex::Vertex(shared_ptr<HyperVertex> hyperVertex, int hyperId, string id, int layer, bool isNested) 
-: Transaction(hyperVertex), m_hyperId(hyperId), m_id(id), m_layer(layer), isNested(isNested) {
+: Transaction(hyperVertex), m_hyperVertex(hyperVertex), m_hyperId(hyperId), m_id(id), m_layer(layer), isNested(isNested) {
     m_degree = 0;
     m_cost = 0;
     m_self_cost = 0;
@@ -87,7 +87,7 @@ string Vertex::DependencyTypeToString(loom::DependencyType type) {
 }
 
 void Vertex::Execute() {
-    DLOG(INFO) << "subtx: " << this << " execute transaction: " << m_id << std::endl;
+    DLOG(INFO) << "Re-Execute subtransaction: " << this << "txid: " << m_id;
     if (getHandler) {
         getHandler(readSet);
     }

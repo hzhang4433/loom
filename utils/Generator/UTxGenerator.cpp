@@ -14,14 +14,14 @@ std::vector<Block::Ptr> TxGenerator::generateWorkload(bool isNest) {
     // generateBlock
     auto blockNum = m_txNum / m_blockSize;
     for (int i = 0; i < blockNum; i++) {
-        auto block = generateBlock(isNest, workload);
+        auto block = generateBlock(isNest, workload, i + 1);
         m_blocks.push_back(block);
     }
     return m_blocks;
 }
 
 // 生成区块
-Block::Ptr TxGenerator::generateBlock(bool isNest, Workload workload) {
+Block::Ptr TxGenerator::generateBlock(bool isNest, Workload workload, size_t blockId) {
     size_t totalCost = 0;
     vector<Vertex::Ptr> txLists;
     vector<Transaction::Ptr> txs;
@@ -68,7 +68,7 @@ Block::Ptr TxGenerator::generateBlock(bool isNest, Workload workload) {
     generateIndex(txLists, invertedIndex, RWIndex, conflictIndex, RBIndex);
     
     // 生成并返回区块
-    return make_shared<Block>(txs, txInfos, invertedIndex, RWIndex, conflictIndex, RBIndex, totalCost);
+    return make_shared<Block>(blockId, txs, txInfos, invertedIndex, RWIndex, conflictIndex, RBIndex, totalCost);
 }
 
 // 生成事务

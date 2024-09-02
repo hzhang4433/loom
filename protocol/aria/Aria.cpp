@@ -70,7 +70,7 @@ void Aria::Start() {
     }
 }
 
-/// @brief stop aria protocol and return statistics
+/// @brief stop aria protocol
 void Aria::Stop() {
     stop_flag.store(true);
     for (size_t i = 0; i < num_threads; ++i) {

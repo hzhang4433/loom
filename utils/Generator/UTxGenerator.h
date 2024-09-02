@@ -24,7 +24,7 @@ class TxGenerator {
 
         std::vector<Block::Ptr> generateWorkload(bool isNest); // 生成负载
         
-        Block::Ptr generateBlock(bool isNest, Workload workload); // 生成区块
+        Block::Ptr generateBlock(bool isNest, Workload workload, size_t blockId); // 生成区块
         
         HyperVertex::Ptr generateTransaction(const TPCCTransaction::Ptr& tx, bool isNest, unordered_map<string, loom::RWSets<Vertex::Ptr>>& invertedIndex); // 生成事务
         

@@ -50,18 +50,29 @@ public:
     Loom(vector<Block::Ptr> blocks, size_t num_threads, bool enable_inter_block, size_t table_partitions = 1);
     void Start() override;
     void Stop() override;
-    void PreExecute(vector<T>& batch, size_t block_id);
-    void PreExecuteInterBlock(vector<T>& batch, size_t block_id);
+    void NormalMode(Block::Ptr block, vector<T>& batch);
+    void InterBlockMode(Block::Ptr block, vector<T> batch);
+    void PostExecuteBlock(Block::Ptr block, vector<T> batch);
+    void PreExecute(vector<T>& batch, const size_t& block_id);
+    void PreExecuteInterBlock(vector<T>& batch, const size_t& block_id);
     void MinWRollBack(vector<T>& batch, Block::Ptr block, vector<Vertex::Ptr>& rbList, vector<vector<int>>& serialOrders);
     void ReExecute(Block::Ptr block, vector<Vertex::Ptr>& rbList, vector<vector<int>>& serialOrders);
     void Finalize(T tx);
+    void notifyRetry();
+    void resetRetry();
 
 private:
     vector<Block::Ptr>              blocks;
+    vector<vector<T>>               batches;
     size_t                          num_threads;
     LoomTable                       table;
+    std::atomic<size_t>             committed_block;
     bool                            enable_inter_block;
     std::shared_ptr<ThreadPool>     pool;
+    size_t                          block_idx;
+    std::mutex                      mtx;
+    std::condition_variable         cv;
+    std::atomic<bool>               canRetry;
 };
 
 #undef T

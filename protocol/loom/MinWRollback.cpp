@@ -4,6 +4,7 @@
 #include <iostream>
 #include <chrono>
 #include <future>
+#include <glog/logging.h>
 #include "protocol/common.h"
 
 
@@ -255,8 +256,18 @@ void MinWRollback::buildGraphNoEdgeC(ThreadPool::Ptr& Pool, std::vector<std::fut
     }
 
     // 等待所有任务完成
-    for (auto &future : futures) {
-        future.get();
+    // for (auto &future : futures) {
+    //     future.get();
+    // }
+
+    LOG(INFO) << "Graph futures size: " << futures.size();
+    try {
+        for (auto& future : futures) {
+            future.get();
+            LOG(INFO) << "Graph future completed.";
+        }
+    } catch (const std::exception& e) {
+        LOG(ERROR) << "Exception occurred in graph futures: " << e.what();
     }
 }
 

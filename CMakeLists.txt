@@ -60,7 +60,7 @@ target_link_libraries(
 # Manage Compile Options
 if(ENABLE_NDEBUG)
     target_compile_options(loom PRIVATE
-        -O3 -funroll-loops -march=native
+        -O3 -funroll-loops -march=native -g
         -DNDEBUG=1
     )
 else()

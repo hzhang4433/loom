@@ -701,10 +701,10 @@ TEST(LoomTest, TestOtherPool) {
 
 TEST(LoomTest, TestProtocol) {
     // Generate a workload
-    TxGenerator txGenerator(loom::BLOCK_SIZE);
+    TxGenerator txGenerator(loom::BLOCK_SIZE * 2);
     auto blocks = txGenerator.generateWorkload(true);
-    // Create a moss instance
-    auto protocol = Loom(blocks, 36, false, 36);
+    // Create a loom instance
+    auto protocol = Loom(blocks, 36, true, 36);
     // Start the protocol
     protocol.Start();
     // Wait for the protocol to finish

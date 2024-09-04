@@ -73,7 +73,8 @@ Block::Ptr TxGenerator::generateBlock(bool isNest, Workload workload, size_t blo
 
 // 生成事务
 HyperVertex::Ptr TxGenerator::generateTransaction(const TPCCTransaction::Ptr& tx, bool isNest, unordered_map<string, loom::RWSets<Vertex::Ptr>>& invertedIndex) {
-    int txid = getId();
+    // range of txid: [1, BLOCK_SIZE] => (x - 1) % BLOCK_SIZE + 1
+    int txid = (getId() - 1) % BLOCK_SIZE + 1;
     HyperVertex::Ptr hyperVertex = make_shared<HyperVertex>(txid, isNest);
     Vertex::Ptr rootVertex = make_shared<Vertex>(hyperVertex, txid, to_string(txid), 0, isNest);
     // 根据事务结构构建超节点

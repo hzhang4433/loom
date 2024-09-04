@@ -21,10 +21,14 @@ Loom::Loom(
     size_t table_partitions
 ):
     blocks(std::move(blocks)),
+    batches(), // empty
     enable_inter_block(enable_inter_block),
     table(table_partitions),
     num_threads(num_threads),
-    pool(make_shared<ThreadPool>(num_threads))
+    pool(make_shared<ThreadPool>(num_threads)),
+    block_idx(0),
+    committed_block(0),
+    canRetry(false)
 {
     LOG(INFO) << fmt::format("Loom(num_threads={}, table_partitions={}, enable_inter_block={})", num_threads, table_partitions, enable_inter_block) << endl;
 }
@@ -34,7 +38,6 @@ void Loom::Start() {
     LOG(INFO) << "Loom started";
     
     // split blocks into batches
-    vector<vector<T>> batches;
     for (size_t i = 0; i < blocks.size(); ++i) {
         auto& block = blocks[i];
         auto& txs = block->getTxs();
@@ -51,36 +54,18 @@ void Loom::Start() {
     }
 
     // execute each batch
-    int idx = 0;
-    vector<future<void>> finalFutures;
-    for (auto block : blocks) {
-        vector<Vertex::Ptr> rbList;
-        vector<vector<int>> serialOrders;
-        // pre-execute
-        PreExecute(batches[idx], block->getBlockId());
-
-        // minW-rollback
-        MinWRollBack(batches[idx], block, rbList, serialOrders);
-
-        // re-execute
-        ReExecute(block, rbList, serialOrders);
-
-        // finalize all
-        for (auto tx : batches[idx]) {
-            if (!tx->committed.load()) {
-                finalFutures.push_back(pool->enqueue([this, tx] {
-                    Finalize(tx);
-                }));
-            }
+    if (enable_inter_block) {
+        InterBlockMode(blocks[block_idx], std::move(batches[block_idx]));
+    } else {
+        for (auto& block : blocks) {
+            NormalMode(block, batches[block_idx++]);
         }
-        for (auto& future : finalFutures) {
-            future.get();
-        }
-
-        LOG(INFO) << "Block " << block->getBlockId() << " done";
-        
-        idx++;
     }
+
+    // // wait for all blocks to be committed
+    // while (committed_block.load() < blocks.size()) {
+    //     this_thread::sleep_for(chrono::milliseconds(100));
+    // }
 }
 
 /// @brief stop loom protocol
@@ -89,9 +74,92 @@ void Loom::Stop() {
     LOG(INFO) << "Loom stopped";
 }
 
+/// @brief execute transactions in normal mode
+/// @param block the block to be executed
+/// @param batch the transactions to be executed
+void Loom::NormalMode(Block::Ptr block, vector<T>& batch) {
+    vector<Vertex::Ptr> rbList;
+    vector<vector<int>> serialOrders;
+    vector<future<void>> finalFutures;
+    // pre-execute
+    PreExecute(batch, block->getBlockId());
+
+    // minW-rollback
+    MinWRollBack(batch, block, rbList, serialOrders);
+
+    // re-execute
+    ReExecute(block, rbList, serialOrders);
+
+    // finalize
+    for (auto tx : batch) {
+        if (!tx->committed.load()) {
+            finalFutures.push_back(pool->enqueue([this, tx] {
+                Finalize(tx);
+            }));
+        }
+    }
+    for (auto& future : finalFutures) {
+        future.get();
+    }
+
+    // mark block as committed
+    committed_block.fetch_add(1, memory_order_relaxed);
+    LOG(INFO) << "Block " << block->getBlockId() << " done";
+}
+
+/// @brief execute transactions in inter-block mode
+/// @param block the block to be executed
+/// @param batch the transactions to be executed
+void Loom::InterBlockMode(Block::Ptr block, vector<T> batch) {
+    LOG(INFO) << "InterBlockMode block " << block->getBlockId();
+    // pre-execute
+    PreExecuteInterBlock(batch, block->getBlockId());
+
+    // Start post-execution in a separate thread
+    thread postExecThread(&Loom::PostExecuteBlock, this, block, std::move(batch));
+    // Allow post-execution to run independently
+    postExecThread.detach();
+    
+    // concurrent next block
+    if (++block_idx < blocks.size()) {
+        InterBlockMode(blocks[block_idx], std::move(batches[block_idx]));
+    }
+}
+
+/// @brief run rest phrase of loom protocol
+/// @param block the block to be executed
+/// @param batch the transactions to be executed
+void Loom::PostExecuteBlock(Block::Ptr block, vector<T> batch) {
+    LOG(INFO) << "PostExecute block " << block->getBlockId();
+    vector<future<void>> finalFutures;
+    vector<Vertex::Ptr> rbList;
+    vector<vector<int>> serialOrders;
+
+    // minW-rollback
+    MinWRollBack(batch, block, rbList, serialOrders);
+    // re-execute
+    ReExecute(block, rbList, serialOrders);
+    // finalize
+    for (auto tx : batch) {
+        if (!tx->committed.load()) {
+            finalFutures.push_back(pool->enqueue([this, tx] {
+                Finalize(tx);
+            }));
+        }
+    }
+    for (auto& future : finalFutures) {
+        future.get();
+    }
+    // notify retry
+    notifyRetry();
+    // mark block as committed
+    committed_block.fetch_add(1, memory_order_relaxed);
+    LOG(INFO) << "InterBlockMode block finalize" << block->getBlockId() << " done";
+}
+
 /// @brief pre-execute transactions
 /// @param batch the transactions to be executed
-void Loom::PreExecute(vector<T>& batch, size_t block_id) {
+void Loom::PreExecute(vector<T>& batch, const size_t& block_id) {
     LOG(INFO) << "PreExecute block " << block_id;
     vector<future<void>> preExecFutures;
     for (T tx : batch) {
@@ -137,9 +205,10 @@ void Loom::PreExecute(vector<T>& batch, size_t block_id) {
 
 /// @brief pre-execute transactions in inter-block mode
 /// @param batch the transactions to be executed
-void Loom::PreExecuteInterBlock(vector<T>& batch, size_t block_id) {
+void Loom::PreExecuteInterBlock(vector<T>& batch, const size_t& block_id) {
     LOG(INFO) << "PreExecute inter block " << block_id;
-    vector<future<void>> preExecFutures, retryFutures;
+    vector<future<void>> preExecFutures;
+    tbb::concurrent_vector<T> retryTxs;
     // Lambda for executing a single transaction
     std::function<void(T)> executeTx = [&](T tx) {
         // Reset aborted state before each execution
@@ -153,10 +222,7 @@ void Loom::PreExecuteInterBlock(vector<T>& batch, size_t block_id) {
                 keys += key + " ";
                 string value = "";
                 table.ReserveGet(tx, key);
-                if (tx->aborted.load()) {
-                    LOG(INFO) << tx->id << " aborted";
-                    return;
-                }
+                if (tx->aborted.load()) return;
                 tx->local_get[key] = value;
             }
         });
@@ -177,9 +243,9 @@ void Loom::PreExecuteInterBlock(vector<T>& batch, size_t block_id) {
         tx->Execute();
         // Check if transaction was aborted
         if (tx->aborted.load()) {
-            LOG(WARNING) << "Transaction aborted, queuing for retry...";
+            LOG(WARNING) << "Transaction " << tx->id << " aborted, queuing for retry...";
             // enqueue the task for retry and exit to avoid continuing the loop
-            retryFutures.push_back(pool->enqueue(executeTx, tx));
+            retryTxs.push_back(tx);
         }
     };
 
@@ -189,20 +255,39 @@ void Loom::PreExecuteInterBlock(vector<T>& batch, size_t block_id) {
             executeTx(tx);
         }));
     }
-
     // wait for all futures to finish
     for (auto& future : preExecFutures) {
         future.get();
     }
 
     // Continue processing retry transactions until all are complete
-    while (!retryFutures.empty()) {
-        // Swap retryFutures with currentRetry
-        vector<future<void>> currentRetryFutures = std::move(retryFutures);
-        // Clear retryFutures for next iteration
-        retryFutures.clear();
+    while (!retryTxs.empty()) {
+        LOG(INFO) << "Wait to retry...";
+        // wait retry signal to be true
+        std::unique_lock<std::mutex> lk(mtx);
+        while (!canRetry.load()) {
+            cv.wait(lk);
+        }
+        // cv.wait(lk, [this] { return canRetry.load(); });
+        // set retry signal to false
+        resetRetry();
+        // unlock mutex
+        lk.unlock();
+
+        LOG(INFO) << "Begin to retry transactions...";
+        // Swap retryTxs with currentTxs
+        tbb::concurrent_vector<T> currentRetryTxs = std::move(retryTxs);
+        // Clear retryTxs
+        retryTxs.clear();
+        // retry transactions
+        vector<future<void>> retryFutures;
+        for (T tx : currentRetryTxs) {
+            retryFutures.push_back(pool->enqueue([this, executeTx, tx] { 
+                executeTx(tx);
+            }));
+        }
         // Wait for all retry transactions to finish
-        for (auto& future : currentRetryFutures) {
+        for (auto& future : retryFutures) {
             future.get();
         }
     }
@@ -211,6 +296,10 @@ void Loom::PreExecuteInterBlock(vector<T>& batch, size_t block_id) {
 }
 
 /// @brief minW-rollback
+/// @param batch the transactions to be executed
+/// @param block the block to be executed
+/// @param rbList the list of transactions to be rolled back
+/// @param serialOrders the serial order of transactions to be rolled back
 void Loom::MinWRollBack(vector<T>& batch, Block::Ptr block, vector<Vertex::Ptr>& rbList, vector<vector<int>>& serialOrders) {
     LOG(INFO) << "MinWRollBack block " << block->getBlockId();
     vector<future<void>> graphFutures, finalFutures;
@@ -218,7 +307,7 @@ void Loom::MinWRollBack(vector<T>& batch, Block::Ptr block, vector<Vertex::Ptr>&
     MinWRollback minw(block->getTxList(), block->getRWIndex());
     // build graph
     minw.buildGraphNoEdgeC(pool, graphFutures);
-    LOG(INFO) << "build block " << block->getBlockId() << " graph done";
+    DLOG(INFO) << "build block " << block->getBlockId() << " graph done";
     // recognize scc
     minw.onWarm2SCC();
     // rollback transactions
@@ -262,12 +351,15 @@ void Loom::MinWRollBack(vector<T>& batch, Block::Ptr block, vector<Vertex::Ptr>&
         future.get();
     }
 
+    // notify retry
+    notifyRetry();
+
     LOG(INFO) << "MinWRollBack block " << block->getBlockId() << " done";
 }
 
 /// @brief re-execute transactions
 void Loom::ReExecute(Block::Ptr block, vector<Vertex::Ptr>& rbList, vector<vector<int>>& serialOrders) {
-    DLOG(INFO) << "ReExecute block " << block->getBlockId();
+    LOG(INFO) << "ReExecute block " << block->getBlockId();
     std::vector<std::future<void>> reExecuteFutures;
     DeterReExecute reExecute(rbList, serialOrders, block->getConflictIndex());
     reExecute.buildAndReSchedule();
@@ -280,6 +372,7 @@ void Loom::ReExecute(Block::Ptr block, vector<Vertex::Ptr>& rbList, vector<vecto
 void Loom::Finalize(T tx) {
     DLOG(INFO) << "Finalize tx " << tx->id;
     tx->committed.store(true);
+    // release reserved get
     for (auto& kv : tx->local_get) {
         table.Put(std::get<0>(kv), [&](LoomEntry& entry) {
             if (entry.block_id_get == tx->block_id) {
@@ -290,6 +383,7 @@ void Loom::Finalize(T tx) {
             }
         });
     }
+    // release reserved put
     for (auto& kv : tx->local_put) {
         table.Put(std::get<0>(kv), [&](LoomEntry& entry) {
             if (entry.block_id_put == tx->block_id) {
@@ -304,10 +398,27 @@ void Loom::Finalize(T tx) {
                     } else {
                         entry.block_id_put = 0;
                     }
+                } else if (entry.reserved_put_num < 0) {
+                    LOG(ERROR) << kv.first << " reserved put num = " << entry.reserved_put_num;
                 }
             }
         });
     }
+}
+
+/// @brief notify retry
+void Loom::notifyRetry() {
+    DLOG(INFO) << "notifyRetry";
+    // if (canRetry.load()) return;
+    std::lock_guard<std::mutex> lk(mtx);
+    canRetry.store(true);
+    cv.notify_all();
+}
+
+/// @brief reset retry
+void Loom::resetRetry() {
+    DLOG(INFO) << "resetRetry";
+    canRetry.store(false);
 }
 
 /// @brief construct an empty LoomTransaction

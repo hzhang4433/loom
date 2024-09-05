@@ -242,33 +242,49 @@ void MinWRollback::buildGraphNoEdgeC(ThreadPool::Ptr& Pool, std::vector<std::fut
     }
 
     size_t totalPairs = rwPairs.size();
-    size_t chunkSize = (totalPairs + UTIL_DEFAULT_THREAD_SIZE - 1) / (UTIL_DEFAULT_THREAD_SIZE * 1);
-    // chunkSize = 20;
+    // size_t chunkSize = (totalPairs + UTIL_DEFAULT_THREAD_SIZE - 1) / (UTIL_DEFAULT_THREAD_SIZE * 1);
+    // // chunkSize = 20;
+    // // cout << "totalPairs: " << totalPairs << " chunkSize: " << chunkSize << endl;
+
+    // for (size_t i = 0; i < totalPairs; i += chunkSize) {
+    //     futures.emplace_back(Pool->enqueue([this, &rwPairs, i, chunkSize, totalPairs] {
+    //         size_t end = std::min(i + chunkSize, totalPairs);
+    //         for (size_t j = i; j < end; ++j) {
+    //             onRWCNoEdge(rwPairs[j].first, rwPairs[j].second);
+    //         }
+    //     }));
+    // }
+
+    size_t chunkSize = totalPairs / UTIL_DEFAULT_THREAD_SIZE;
+    size_t remainder = totalPairs % UTIL_DEFAULT_THREAD_SIZE;
     // cout << "totalPairs: " << totalPairs << " chunkSize: " << chunkSize << endl;
 
-    for (size_t i = 0; i < totalPairs; i += chunkSize) {
-        futures.emplace_back(Pool->enqueue([this, &rwPairs, i, chunkSize, totalPairs] {
-            size_t end = std::min(i + chunkSize, totalPairs);
-            for (size_t j = i; j < end; ++j) {
+    for (size_t i = 0; i < UTIL_DEFAULT_THREAD_SIZE; ++i) {
+        size_t startIdx = i * chunkSize + std::min(i, remainder);
+        size_t endIdx = startIdx + chunkSize + (i < remainder ? 1 : 0);
+        endIdx = std::min(endIdx, totalPairs);
+        // enqueue the threadpool
+        futures.emplace_back(Pool->enqueue([this, &rwPairs, startIdx, endIdx] {
+            for (size_t j = startIdx; j < endIdx; ++j) {
                 onRWCNoEdge(rwPairs[j].first, rwPairs[j].second);
             }
         }));
     }
 
     // 等待所有任务完成
-    // for (auto &future : futures) {
-    //     future.get();
-    // }
-
-    LOG(INFO) << "Graph futures size: " << futures.size();
-    try {
-        for (auto& future : futures) {
-            future.get();
-            LOG(INFO) << "Graph future completed.";
-        }
-    } catch (const std::exception& e) {
-        LOG(ERROR) << "Exception occurred in graph futures: " << e.what();
+    for (auto &future : futures) {
+        future.get();
     }
+
+    // LOG(INFO) << "Graph futures size: " << futures.size();
+    // try {
+    //     for (auto& future : futures) {
+    //         future.get();
+    //         DLOG(INFO) << "Graph future completed.";
+    //     }
+    // } catch (const std::exception& e) {
+    //     LOG(ERROR) << "Exception occurred in graph futures: " << e.what();
+    // }
 }
 
 void MinWRollback::buildGraphNoEdgeC(threadpool::Ptr& Pool, std::vector<std::future<void>>& futures) {

@@ -18,11 +18,13 @@ Loom::Loom(
     vector<Block::Ptr> blocks, 
     size_t num_threads, 
     bool enable_inter_block,
+    bool enable_nested_reExec,
     size_t table_partitions
 ):
     blocks(std::move(blocks)),
     batches(), // empty
     enable_inter_block(enable_inter_block),
+    enable_nested_reExec(enable_nested_reExec),
     table(table_partitions),
     num_threads(num_threads),
     pool(make_shared<ThreadPool>(num_threads)),
@@ -104,14 +106,14 @@ void Loom::NormalMode(Block::Ptr block, vector<T>& batch) {
 
     // mark block as committed
     committed_block.fetch_add(1, memory_order_relaxed);
-    LOG(INFO) << "Block " << block->getBlockId() << " done";
+    LOG(INFO) << "Block " << block->getBlockId() << " finalize done";
 }
 
 /// @brief execute transactions in inter-block mode
 /// @param block the block to be executed
 /// @param batch the transactions to be executed
 void Loom::InterBlockMode(Block::Ptr block, vector<T> batch) {
-    LOG(INFO) << "InterBlockMode block " << block->getBlockId();
+    DLOG(INFO) << "InterBlockMode block " << block->getBlockId();
     // pre-execute
     PreExecuteInterBlock(batch, block->getBlockId());
 
@@ -130,7 +132,7 @@ void Loom::InterBlockMode(Block::Ptr block, vector<T> batch) {
 /// @param block the block to be executed
 /// @param batch the transactions to be executed
 void Loom::PostExecuteBlock(Block::Ptr block, vector<T> batch) {
-    LOG(INFO) << "PostExecute block " << block->getBlockId();
+    DLOG(INFO) << "PostExecute block " << block->getBlockId();
     vector<future<void>> finalFutures;
     vector<Vertex::Ptr> rbList;
     vector<vector<int>> serialOrders;
@@ -154,7 +156,7 @@ void Loom::PostExecuteBlock(Block::Ptr block, vector<T> batch) {
     notifyRetry();
     // mark block as committed
     committed_block.fetch_add(1, memory_order_relaxed);
-    LOG(INFO) << "InterBlockMode block finalize" << block->getBlockId() << " done";
+    LOG(INFO) << "InterBlockMode block " << block->getBlockId() << " finalize done";
 }
 
 /// @brief pre-execute transactions
@@ -243,7 +245,7 @@ void Loom::PreExecuteInterBlock(vector<T>& batch, const size_t& block_id) {
         tx->Execute();
         // Check if transaction was aborted
         if (tx->aborted.load()) {
-            LOG(WARNING) << "Transaction " << tx->id << " aborted, queuing for retry...";
+            DLOG(WARNING) << "Transaction " << tx->id << " aborted, queuing for retry...";
             // enqueue the task for retry and exit to avoid continuing the loop
             retryTxs.push_back(tx);
         }
@@ -262,7 +264,7 @@ void Loom::PreExecuteInterBlock(vector<T>& batch, const size_t& block_id) {
 
     // Continue processing retry transactions until all are complete
     while (!retryTxs.empty()) {
-        LOG(INFO) << "Wait to retry...";
+        LOG(INFO) << "Block " << block_id << " wait to retry...";
         // wait retry signal to be true
         std::unique_lock<std::mutex> lk(mtx);
         while (!canRetry.load()) {
@@ -274,7 +276,7 @@ void Loom::PreExecuteInterBlock(vector<T>& batch, const size_t& block_id) {
         // unlock mutex
         lk.unlock();
 
-        LOG(INFO) << "Begin to retry transactions...";
+        LOG(INFO) << "Block " << block_id << " begin to retry...";
         // Swap retryTxs with currentTxs
         tbb::concurrent_vector<T> currentRetryTxs = std::move(retryTxs);
         // Clear retryTxs
@@ -361,9 +363,21 @@ void Loom::MinWRollBack(vector<T>& batch, Block::Ptr block, vector<Vertex::Ptr>&
 void Loom::ReExecute(Block::Ptr block, vector<Vertex::Ptr>& rbList, vector<vector<int>>& serialOrders) {
     LOG(INFO) << "ReExecute block " << block->getBlockId();
     std::vector<std::future<void>> reExecuteFutures;
-    DeterReExecute reExecute(rbList, serialOrders, block->getConflictIndex());
-    reExecute.buildAndReSchedule();
-    reExecute.reExcution(pool, reExecuteFutures);
+
+    if (enable_nested_reExec) {
+        // re-execute using nested structure
+        DeterReExecute reExecute(rbList, serialOrders, block->getConflictIndex());
+        reExecute.buildAndReSchedule();
+        reExecute.reExcution(pool, reExecuteFutures);
+    } else {
+        // re-execute using flat structure
+        vector<Vertex::Ptr> normalList;
+        DeterReExecute::setNormalList(rbList, normalList);
+        DeterReExecute reExecute(normalList, serialOrders, block->getConflictIndex());
+        reExecute.buildAndReScheduleFlat();
+        reExecute.reExcution(pool, reExecuteFutures);
+    }
+    
     LOG(INFO) << "ReExecute block " << block->getBlockId() << " done";
 }
 

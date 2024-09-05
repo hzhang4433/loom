@@ -244,7 +244,7 @@ TEST(LoomTest, TestConcurrentRollback) {
         // 遍历构图
         start = chrono::high_resolution_clock::now();
         // normalReExecute.buildGraphOrigin();
-        normalReExecute.buildByWRSet();
+        normalReExecute.buildAndReScheduleFlat();
         end = chrono::high_resolution_clock::now();
         cout << "txList size: " << normalList.size() << ", Normal Build Time: " << chrono::duration_cast<chrono::microseconds>(end - start).count() / 1000.0 << "ms" << endl;
         int normalBuildTime = normalReExecute.calculateTotalNormalExecutionTime();
@@ -300,7 +300,7 @@ TEST(LoomTest, TestLooptime) {
     cout << "Loop Time: " << duration.count() << "us" << endl;
 }
 
-TEST(LoomTest, TestLoom) {
+TEST(LoomTest, TestProtocol) {
     // 定义变量
     TxGenerator txGenerator(loom::BLOCK_SIZE);
     // 生成交易
@@ -699,12 +699,12 @@ TEST(LoomTest, TestOtherPool) {
     }
 }
 
-TEST(LoomTest, TestProtocol) {
+TEST(LoomTest, TestLoom) {
     // Generate a workload
-    TxGenerator txGenerator(loom::BLOCK_SIZE * 2);
+    TxGenerator txGenerator(loom::BLOCK_SIZE * 1);
     auto blocks = txGenerator.generateWorkload(true);
     // Create a loom instance
-    auto protocol = Loom(blocks, 36, true, 36);
+    auto protocol = Loom(blocks, 36, false, false, 36);
     // Start the protocol
     protocol.Start();
     // Wait for the protocol to finish

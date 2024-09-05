@@ -334,7 +334,7 @@ void DeterReExecute::buildGraphConcurrent(UThreadPoolPtr& Pool, std::vector<std:
 }
 
 /* 根据读写集构建时空图 */
-void DeterReExecute::buildByWRSet() {
+void DeterReExecute::buildAndReScheduleFlat() {
     // int counter = 0;
     // 按队列顺序，依次遍历事务
     for (auto& Ti : m_rbList) {

@@ -66,7 +66,7 @@ if(ENABLE_NDEBUG)
 else()
     target_compile_options(loom PRIVATE
         -O0 -ggdb
-        -DNDEBUG=1
+        -DNDEBUG=0
     )
 endif()
 

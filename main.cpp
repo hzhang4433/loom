@@ -7,6 +7,7 @@
 #include <loom/test/CompareTest.cpp>
 #include <loom/test/DeterReExecuteTest.cpp>
 #include <loom/test/LoomTest.cpp>
+#include <loom/test/SerialTest.cpp>
 #include <loom/test/AriaTest.cpp>
 #include <loom/test/HarmonyTest.cpp>
 #include <loom/test/FractalTest.cpp>
@@ -39,11 +40,13 @@ int main(int argc, char** argv) {
     // ::testing::GTEST_FLAG(filter) = "CompareTest.TestRollback";
     // ::testing::GTEST_FLAG(filter) = "DeterReExecuteTest.TestTimeSpaceGraph";
     // ::testing::GTEST_FLAG(filter) = "LoomTest.TestOtherPool";
+    // ::testing::GTEST_FLAG(filter) = "LoomTest.TestLooptime";
+    ::testing::GTEST_FLAG(filter) = "SerialTest.TestSerial";
     // ::testing::GTEST_FLAG(filter) = "AriaTest.TestAria";
     // ::testing::GTEST_FLAG(filter) = "HarmonyTest.TestHarmony";
     // ::testing::GTEST_FLAG(filter) = "FractalTest.TestFractal";
     // ::testing::GTEST_FLAG(filter) = "MossTest.TestMoss";
-    ::testing::GTEST_FLAG(filter) = "LoomTest.TestLoom";
+    // ::testing::GTEST_FLAG(filter) = "LoomTest.TestLoom";
     
     
     int result = RUN_ALL_TESTS();

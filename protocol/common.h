@@ -3,6 +3,7 @@
 #include <tbb/tbb.h>
 #include <atomic>
 #include <unordered_set>
+#include <chrono>
 
 namespace loom {
     class Protocol {
@@ -200,10 +201,16 @@ namespace loom {
         std::unordered_set<T> writeSet;
     };
 
+    // static void Exec(size_t tx) {
+    //     size_t TENMILL = 1100;
+    //     size_t loopTime = TENMILL * tx / 10;
+    //     volatile int dummy = 0;
+    //     for (int i = 0; i < loopTime; i++) {dummy++;}
+    // }
+
     static void Exec(size_t tx) {
-        size_t TENMILL = 1000;
-        size_t loopTime = TENMILL * tx / 10;
+        auto start = std::chrono::high_resolution_clock::now();
         volatile int dummy = 0;
-        for (int i = 0; i < loopTime; i++) {dummy++;}
+        while(std::chrono::high_resolution_clock::now() - start < std::chrono::microseconds(tx)) {dummy++;}
     }
 }

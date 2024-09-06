@@ -294,7 +294,8 @@ TEST(LoomTest, TestLooptime) {
     size_t loopTime = 1100;
     volatile int dummy = 0; // 使用volatile防止编译器优化
     auto start = chrono::high_resolution_clock::now();
-    for (int i = 0; i < loopTime; i++) {dummy++;}
+    // for (int i = 0; i < loopTime; i++) {dummy++;}
+    loom::Exec(500);
     auto end = chrono::high_resolution_clock::now();
     auto duration = chrono::duration_cast<chrono::microseconds>(end - start);
     cout << "Loop Time: " << duration.count() << "us" << endl;

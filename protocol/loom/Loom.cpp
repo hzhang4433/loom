@@ -340,7 +340,7 @@ void Loom::MinWRollBack(vector<T>& batch, Block::Ptr block, vector<Vertex::Ptr>&
         tx->m_hyperVertex->m_aborted = true;
     }
 
-    // finalize all txs
+    // finalize all txs (maybe async latter)
     for (auto tx : batch) {
         if (!tx->GetTx()->m_aborted) {
             // Finalize(tx);

@@ -21,4 +21,6 @@ TEST(SerialTest, TestSerial) {
     std::this_thread::sleep_for(std::chrono::seconds(2));
     // Stop the protocol
     protocol.Stop();
+    // Print the statistics
+    statistics.Print();
 }

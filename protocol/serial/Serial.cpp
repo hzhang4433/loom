@@ -35,11 +35,10 @@ void Serial::Start() {
 
     thread = new std::thread([this, txs = std::move(workloads)]() {
         size_t idx = 0;
-        auto totalcost = 0;
-        LOG(INFO) << "Execution Start, tx num: " << txs.size();
+        LOG(INFO) << "Execution Start";
         while (!stop_flag.load() && idx < txs.size()) {
             auto tx = std::move(txs[idx]);
-            tx.start_time = std::chrono::steady_clock::now();
+            auto start_time = std::chrono::steady_clock::now();
             tx.InstallGetStorageHandler([&](
                 const std::unordered_set<string>& readSet
             ) {
@@ -67,10 +66,13 @@ void Serial::Start() {
             });
             // execute transaction
             tx.Execute();
-            totalcost += tx.m_tx->m_rootVertex->m_cost;
+            // record statistics
+            statistics.JournalExecute();
+            statistics.JournalCommit(chrono::duration_cast<chrono::microseconds>(chrono::steady_clock::now() - start_time).count());
+            statistics.JournalOverheads(tx.m_tx->m_rootVertex->m_cost);
             idx++;
         }
-        LOG(INFO) << "Execution Finish, total cost: " << totalcost;
+        LOG(INFO) << "Execution Finish";
     });
 }
 

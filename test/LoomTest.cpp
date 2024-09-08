@@ -1,10 +1,12 @@
-#include <gtest/gtest.h>
 #include <chrono>
+#include <gtest/gtest.h>
+#include <glog/logging.h>
+#include <loom/utils/Generator/UTxGenerator.h>
+#include <loom/protocol/loom/MinWRollback.h>
+#include <loom/protocol/loom/DeterReExecute.h>
+#include <loom/protocol/loom/Loom.h>
+#include <loom/utils/Statistic/Statistics.h>
 
-#include "utils/Generator/UTxGenerator.h"
-#include "protocol/loom/MinWRollback.h"
-#include "protocol/loom/DeterReExecute.h"
-#include "protocol/loom/Loom.h"
 
 using namespace std;
 
@@ -317,6 +319,9 @@ TEST(LoomTest, TestProtocol) {
     // 定义计时变量
     chrono::steady_clock::time_point start, end;
 
+    // 定义统计变量
+    auto statistics = Statistics();
+
     // 休眠2s
     std::this_thread::sleep_for(std::chrono::seconds(2));
 
@@ -446,7 +451,7 @@ TEST(LoomTest, TestProtocol) {
         // end = chrono::steady_clock::now();
         // cout << "step2: " << chrono::duration_cast<chrono::microseconds>(end - start).count() / 1000.0 << "ms" << endl;
 
-        reExecute.reExcution(threadPool, reExecFutures);
+        reExecute.reExcution(threadPool, reExecFutures, statistics);
         
         end = chrono::steady_clock::now();
         cout << "Total Time: " << chrono::duration_cast<chrono::microseconds>(end - start).count() / 1000.0 << "ms" << endl;
@@ -551,6 +556,9 @@ TEST(LoomTest, TestOtherPool) {
 
     // 定义计时变量
     chrono::steady_clock::time_point start, end;
+
+    // 定义统计变量
+    auto statistics = Statistics();
 
     // 休眠2s
     std::this_thread::sleep_for(std::chrono::seconds(2));
@@ -693,7 +701,7 @@ TEST(LoomTest, TestOtherPool) {
         end = chrono::steady_clock::now();
         cout << "step2: " << chrono::duration_cast<chrono::microseconds>(end - start).count() / 1000.0 << "ms" << endl;
 
-        reExecute.reExcution(threadPool, reExecFutures);
+        reExecute.reExcution(threadPool, reExecFutures, statistics);
         
         end = chrono::steady_clock::now();
         cout << "Total Time: " << chrono::duration_cast<chrono::microseconds>(end - start).count() / 1000.0 << "ms" << endl;
@@ -704,12 +712,17 @@ TEST(LoomTest, TestLoom) {
     // Generate a workload
     TxGenerator txGenerator(loom::BLOCK_SIZE * 1);
     auto blocks = txGenerator.generateWorkload(true);
+    // Create a Statistics instance
+    auto statistics = Statistics();
     // Create a loom instance
-    auto protocol = Loom(blocks, 36, false, false, 36);
+    auto protocol = Loom(blocks, statistics, 36, false, false, 36);
     // Start the protocol
     protocol.Start();
     // Wait for the protocol to finish
     std::this_thread::sleep_for(std::chrono::seconds(2));
     // Stop the protocol
     protocol.Stop();
+    // Print the statistics
+    LOG(INFO) << statistics.Print();
+    cout << statistics.Print() << endl;
 }

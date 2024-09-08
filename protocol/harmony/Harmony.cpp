@@ -8,16 +8,19 @@
 #define T loom::HarmonyTransaction
 #define K std::string
 
+using namespace std::chrono;
+
 /// @brief initialize harmony protocol
 /// @param workload an evm transaction workload
 /// @param batch_size batch size
 /// @param num_threads the number of threads in thread pool
 /// @param table_partitions the number of partitions in table
 Harmony::Harmony(
-    vector<Block::Ptr> blocks, size_t num_threads, 
-    bool enable_inter_block, size_t table_partitions
+    vector<Block::Ptr> blocks, Statistics& statistics,
+    size_t num_threads, bool enable_inter_block, size_t table_partitions
 ):
     blocks(blocks),
+    statistics(statistics),
     barrier(num_threads, []{ LOG(INFO) << "batch complete" << std::endl; }),
     table{table_partitions},
     lock_table{table_partitions},
@@ -38,7 +41,7 @@ void Harmony::Start() {
         auto& txs = block->getTxs();
         // calculate the number of transactions per thread
         // auto tx_per_thread = (txs.size() + num_threads - 1) / num_threads;
-        auto tx_per_thread = 10;
+        auto tx_per_thread = 1;
         size_t index = 0;
         vector<vector<T>> batch;
         size_t batch_id = i + 1;
@@ -90,8 +93,7 @@ HarmonyTransaction::HarmonyTransaction(
     min_out{id + 1},
     max_in{std::numeric_limits<size_t>::min()},
     out_batch_id{batch_id},
-    in_batch_id{batch_id},
-    start_time{std::chrono::steady_clock::now()}
+    in_batch_id{batch_id}
 {
     // initial readSet and writeSet empty
     local_get = std::unordered_map<string, string>();
@@ -151,6 +153,7 @@ HarmonyLockTable::HarmonyLockTable(size_t partitions):
 /// @param harmony the harmony configuration object
 HarmonyExecutor::HarmonyExecutor(Harmony& harmony, size_t worker_id, vector<vector<T>> batchTxs):
     batchTxs(std::move(batchTxs)),
+    statistics(harmony.statistics),
     table{harmony.table},
     lock_table{harmony.lock_table},
     enable_inter_block{harmony.enable_inter_block},
@@ -165,7 +168,6 @@ HarmonyExecutor::HarmonyExecutor(Harmony& harmony, size_t worker_id, vector<vect
 
 /// @brief run transactions
 void HarmonyExecutor::Run() {
-    #define LATENCY duration_cast<microseconds>(steady_clock::now() - tx.start_time).count()
 
     if (enable_inter_block) {
         DLOG(INFO) << "worker " << worker_id << " size of batchTxs " << batchTxs.size() << std::endl;
@@ -175,6 +177,7 @@ void HarmonyExecutor::Run() {
     } else {
         // Processing Block One by One
         for (auto& batch : batchTxs) {
+            #define LATENCY duration_cast<microseconds>(steady_clock::now() - tx.start_time).count()
             // stage 1: execute
             auto _stop = confirm_exit.load() == num_threads;
             barrier.arrive_and_wait();
@@ -182,8 +185,12 @@ void HarmonyExecutor::Run() {
             if (stop_flag.load()) { confirm_exit.compare_exchange_weak(worker_id, worker_id + 1);}
             DLOG(INFO) << "worker " << worker_id << " executing" << std::endl;
             for (auto& tx : batch) {
+                // record start time
+                tx.start_time = steady_clock::now();
                 // execute transaction and handle r-w dependency
                 this->Execute(&tx);
+                statistics.JournalExecute();
+                statistics.JournalOverheads(tx.CountOverheads());
             }
             // stage 2: verify + commit
             barrier.arrive_and_wait();
@@ -194,6 +201,7 @@ void HarmonyExecutor::Run() {
                     this->PrepareLockTable(&tx);
                 } else {
                     this->Commit(&tx);
+                    statistics.JournalCommit(LATENCY);
                 }
             }
             // stage 3: fallback
@@ -202,6 +210,9 @@ void HarmonyExecutor::Run() {
             for (auto& tx : batch) {
                 if (tx.flag_conflict) {
                     this->Fallback(&tx);
+                    statistics.JournalExecute();
+                    statistics.JournalCommit(LATENCY);
+                    statistics.JournalOverheads(tx.CountOverheads());
                 }
             }
             // stage 4: clean up
@@ -210,10 +221,9 @@ void HarmonyExecutor::Run() {
             for (auto& tx : batch) {
                 this->CleanLockTable(&tx);
             }
+            #undef LATENCY
         }
     }
-
-    #undef LATENCY
 }
 
 /// @brief get next batch txs of executor
@@ -228,6 +238,7 @@ vector<T> HarmonyExecutor::NextBatch() {
 /// @brief execute transactions in inter-block mode
 /// @param batch the batch of transactions
 void HarmonyExecutor::InterBlockExecute(vector<T> batch) {
+    #define LATENCY duration_cast<microseconds>(steady_clock::now() - tx.start_time).count()
     // stage 1: execute
     auto _stop = confirm_exit.load() == num_threads;
     if (_stop) {return;}
@@ -235,7 +246,10 @@ void HarmonyExecutor::InterBlockExecute(vector<T> batch) {
     DLOG(INFO) << "worker " << worker_id << " executing batch " << batchIdx << " size " << batch.size() << std::endl;
     for (auto& tx : batch) {
         // execute transaction and handle r-w dependency
+        tx.start_time = steady_clock::now();
         this->Execute(&tx);
+        statistics.JournalExecute();
+        statistics.JournalOverheads(tx.CountOverheads());
     }
     // stage 2: verify + commit
     barrier.arrive_and_wait();
@@ -246,6 +260,7 @@ void HarmonyExecutor::InterBlockExecute(vector<T> batch) {
             this->PrepareLockTable(&tx);
         } else {
             this->Commit(&tx);
+            statistics.JournalCommit(LATENCY);
         }
     }
     // stage 3: fallback
@@ -257,6 +272,9 @@ void HarmonyExecutor::InterBlockExecute(vector<T> batch) {
     for (auto& tx : batch) {
         if (tx.flag_conflict) {
             this->Fallback(&tx);
+            statistics.JournalExecute();
+            statistics.JournalCommit(LATENCY);
+            statistics.JournalOverheads(tx.CountOverheads());
         }
     }
     // stage 4: streamly execute next block
@@ -272,11 +290,11 @@ void HarmonyExecutor::InterBlockExecute(vector<T> batch) {
             this->CleanLockTable(&tx);
         }
     }
+    #undef LATENCY
 }
 
 /// @brief execute a transaction and journal write operations locally
 /// @param tx the transaction
-/// @param table the table
 void HarmonyExecutor::Execute(T* tx) {
     // read from the public table
     tx->InstallGetStorageHandler([&](

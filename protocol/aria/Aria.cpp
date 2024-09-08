@@ -8,16 +8,19 @@
 #define T loom::AriaTransaction
 #define K std::string
 
+using namespace std::chrono;
+
 /// @brief initialize aria protocol
 /// @param blocks the blocks to be executed
 /// @param num_threads the number of threads in thread pool
 /// @param enable_reordering the flag of reordering
 /// @param table_partitions the number of partitions in table
 Aria::Aria(
-    vector<Block::Ptr> blocks, size_t num_threads, 
-    bool enable_reordering, size_t table_partitions
+    vector<Block::Ptr> blocks, Statistics& statistics, 
+    size_t num_threads, bool enable_reordering, size_t table_partitions
 ):
     blocks(blocks),
+    statistics(statistics),
     barrier(num_threads, []{ LOG(INFO) << "batch complete" << std::endl; }),
     table{table_partitions},
     lock_table{table_partitions},
@@ -37,8 +40,8 @@ void Aria::Start() {
         auto& block = blocks[i];
         auto& txs = block->getTxs();
         // calculate the number of transactions per thread
-        auto tx_per_thread = (txs.size() + num_threads - 1) / num_threads;
-        // auto tx_per_thread = 15;
+        // auto tx_per_thread = (txs.size() + num_threads - 1) / num_threads;
+        auto tx_per_thread = 1;
         size_t index = 0;
         vector<vector<T>> batch;
         size_t batch_id = i + 1;
@@ -85,8 +88,7 @@ AriaTransaction::AriaTransaction(
 ):
     Transaction{std::move(inner)},
     id{id},
-    batch_id{batch_id},
-    start_time{std::chrono::steady_clock::now()}
+    batch_id{batch_id}
 {
     // initial readSet and writeSet empty
     local_get = std::unordered_map<string, string>();
@@ -187,6 +189,7 @@ AriaLockTable::AriaLockTable(size_t partitions):
 /// @param aria the aria configuration object
 AriaExecutor::AriaExecutor(Aria& aria, size_t worker_id, vector<vector<T>> batchTxs):
     batchTxs(std::move(batchTxs)),
+    statistics{aria.statistics},
     table{aria.table},
     lock_table{aria.lock_table},
     enable_reordering{aria.enable_reordering},
@@ -211,10 +214,14 @@ void AriaExecutor::Run() {
         has_conflict.store(false);
         DLOG(INFO) << "worker " << worker_id << " executing" << std::endl;
         for (auto& tx : batch) {
+            // record start time
+            tx.start_time = steady_clock::now();
             // execute transaction
             this->Execute(&tx);
             // reserve read/write set
             this->Reserve(&tx);
+            statistics.JournalExecute();
+            statistics.JournalOverheads(tx.CountOverheads());
         }
         // stage 2: verify + commit
         barrier.arrive_and_wait();
@@ -226,6 +233,7 @@ void AriaExecutor::Run() {
                 this->PrepareLockTable(&tx);
             } else {
                 this->Commit(&tx);
+                statistics.JournalCommit(LATENCY);
             }
         }
         // stage 3: fallback
@@ -237,6 +245,9 @@ void AriaExecutor::Run() {
         for (auto& tx : batch) {
             if (tx.flag_conflict) {
                 this->Fallback(&tx);
+                statistics.JournalExecute();
+                statistics.JournalCommit(LATENCY);
+                statistics.JournalOverheads(tx.CountOverheads());
             }
         }
         // stage 4: clean up

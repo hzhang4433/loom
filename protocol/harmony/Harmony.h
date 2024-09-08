@@ -8,6 +8,7 @@
 #include <loom/protocol/common.h>
 #include <loom/common/Block.h>
 #include <loom/common/Transaction.h>
+#include <loom/utils/Statistic/Statistics.h>
 
 using namespace std;
 
@@ -61,11 +62,12 @@ struct HarmonyLockTable: public Table<K, HarmonyLockEntry, KeyHasher> {
 class Harmony: public Protocol {
 
 public:
-    Harmony(vector<Block::Ptr> blocks, size_t num_threads, bool enable_inter_block, size_t table_partitions = 1);
+    Harmony(vector<Block::Ptr> blocks, Statistics& statistics, size_t num_threads, bool enable_inter_block, size_t table_partitions = 1);
     void Start() override;
     void Stop() override;
 
 private:
+    Statistics&                             statistics;
     vector<Block::Ptr>                      blocks;
     HarmonyTable                            table;
     HarmonyLockTable                        lock_table;
@@ -96,6 +98,7 @@ public:
     void CleanLockTable(T* tx);
 
 private:
+    Statistics&                             statistics;
     vector<vector<T>>                       batchTxs;
     HarmonyTable&                           table;
     HarmonyLockTable&                       lock_table;

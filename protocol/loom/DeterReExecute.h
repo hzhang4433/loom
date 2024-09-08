@@ -7,6 +7,7 @@
 #include <loom/thread/ThreadPool.h>
 #include <loom/protocol/loom/common.h>
 #include <tbb/tbb.h>
+#include <loom/utils/Statistic/Statistics.h>
 
 using namespace loom;
 
@@ -50,9 +51,9 @@ class DeterReExecute {
         bool canReorder(const Vertex::Ptr& Tx1, const Vertex::Ptr& Tx2); // 判断两个事务是否可调序
         static void setNormalList(const vector<Vertex::Ptr>& rbList, vector<Vertex::Ptr>& normalList);
         static void setNormalList(const vector<Vertex::Ptr>& rbList, vector<HyperVertex::Ptr>& normalList);
-        void reExcution(Util::UThreadPoolPtr& Pool, std::vector<std::future<void>>& futures);
-        void reExcution(ThreadPool::Ptr& Pool, std::vector<std::future<void>>& futures);
-        void executeTransaction(const Vertex::Ptr& tx);
+        void reExcution(Util::UThreadPoolPtr& Pool, std::vector<std::future<void>>& futures, Statistics& statistics);
+        void reExcution(ThreadPool::Ptr& Pool, std::vector<std::future<void>>& futures, Statistics& statistics);
+        void executeTransaction(const Vertex::Ptr& tx, Statistics& statistics);
 
 
     // 定义私有变量

@@ -8,6 +8,7 @@
 #include <loom/common/Transaction.h>
 #include <unordered_set>
 #include <loom/thread/ThreadPool.h>
+#include <loom/utils/Statistic/Statistics.h>
 
 
 using namespace std;
@@ -68,7 +69,7 @@ struct MossTable: public Table<K, MossEntry, KeyHasher> {
 class Moss: public Protocol {
 
 public:
-    Moss(vector<Block::Ptr> blocks, size_t num_threads, size_t table_partitions = 1);
+    Moss(vector<Block::Ptr> blocks, Statistics& statistics, size_t num_threads, size_t table_partitions = 1);
     void Start() override;
     void Stop() override;
     void Preparation(vector<vector<T>>& m_blocks);
@@ -80,6 +81,7 @@ public:
     void ClearTable(ST tx);
 
 private:
+    Statistics&                             statistics;
     vector<Block::Ptr>                      blocks;
     size_t                                  num_threads;
     MossTable                               table;

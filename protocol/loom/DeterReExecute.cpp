@@ -809,7 +809,7 @@ void DeterReExecute::updateDependenciesAndScheduleTime(Vertex::Ptr& Tj, const Ve
 }
 
 /* 确定性重执行模块 */
-void DeterReExecute::reExcution(UThreadPoolPtr& Pool, std::vector<std::future<void>>& futures) {
+void DeterReExecute::reExcution(UThreadPoolPtr& Pool, std::vector<std::future<void>>& futures, Statistics& statistics) {
     
     for (auto& tx : m_rbList) {
         if (tx->m_should_wait) {
@@ -820,8 +820,8 @@ void DeterReExecute::reExcution(UThreadPoolPtr& Pool, std::vector<std::future<vo
     // 在依赖关系完整建立后，提交无依赖的任务
     for (auto& tx : m_rbList) {
         if (!tx->m_should_wait) {
-            futures.emplace_back(Pool->commit([this, tx] {
-                this->executeTransaction(tx);
+            futures.emplace_back(Pool->commit([this, tx, &statistics] {
+                this->executeTransaction(tx, statistics);
             }));
         }
     }
@@ -831,7 +831,7 @@ void DeterReExecute::reExcution(UThreadPoolPtr& Pool, std::vector<std::future<vo
     }
 }
 
-void DeterReExecute::reExcution(ThreadPool::Ptr& Pool, std::vector<std::future<void>>& futures) {
+void DeterReExecute::reExcution(ThreadPool::Ptr& Pool, std::vector<std::future<void>>& futures, Statistics& statistics) {
     
     for (auto& tx : m_rbList) {
         if (tx->m_should_wait) {
@@ -842,8 +842,8 @@ void DeterReExecute::reExcution(ThreadPool::Ptr& Pool, std::vector<std::future<v
     // 在依赖关系完整建立后，提交无依赖的任务
     for (auto& tx : m_rbList) {
         if (!tx->m_should_wait) {
-            futures.emplace_back(Pool->enqueue([this, tx] {
-                this->executeTransaction(tx);
+            futures.emplace_back(Pool->enqueue([this, tx, &statistics] {
+                this->executeTransaction(tx, statistics);
             }));
         }
     }
@@ -853,14 +853,15 @@ void DeterReExecute::reExcution(ThreadPool::Ptr& Pool, std::vector<std::future<v
     }
 }
 
-void DeterReExecute::executeTransaction(const Vertex::Ptr& tx) {
+void DeterReExecute::executeTransaction(const Vertex::Ptr& tx, Statistics& statistics) {
     tx->Execute();  // 执行当前交易
+    statistics.JournalOverheads(tx->CountOverheads());
     auto it = dependencyGraph.find(tx);
     if (it != dependencyGraph.end()) {
         auto& dependents = it->second;
         // 递归地执行所有依赖此交易的后续交易
         for (auto& dependent : dependents) {
-            executeTransaction(dependent);
+            executeTransaction(dependent, statistics);
         }
     }
 }

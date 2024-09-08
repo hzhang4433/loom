@@ -23,6 +23,7 @@ class Transaction : public std::enable_shared_from_this<Transaction>
         void InstallSetStorageHandler(SetStorage &&handler);
         void InstallGetStorageHandler(GetStorage &&handler);
         virtual void Execute();
+        virtual size_t CountOverheads() const;
         const std::shared_ptr<HyperVertex> GetTx() const {return m_tx;}
         std::shared_ptr<HyperVertex> m_tx;
 

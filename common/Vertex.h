@@ -122,6 +122,8 @@ class Vertex : public std::enable_shared_from_this<Vertex>, public Transaction
 
         void Execute() override;
 
+        std::size_t CountOverheads() const override;
+
     // 公共变量
         int m_hyperId;                                                           // 记录节点对应的超节点id
         shared_ptr<HyperVertex> m_hyperVertex;                                   // 记录节点对应的超节点

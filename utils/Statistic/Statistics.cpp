@@ -6,6 +6,7 @@
 #include <iostream>
 #include <glog/logging.h>
 #include <cstdlib>
+#include <iomanip>
 
 namespace loom {
 
@@ -17,7 +18,7 @@ void Statistics::JournalCommit(size_t latency) {
     }
     count_commit.fetch_add(1, std::memory_order_relaxed);
     count_latency.fetch_add(latency, std::memory_order_relaxed);
-    DLOG(INFO) << "latency: " << latency << std::endl;
+    DLOG(INFO) << "latency: " << latency << "us";
 }
 
 void Statistics::JournalExecute() {
@@ -30,11 +31,11 @@ void Statistics::JournalOverheads(size_t count) {
 
 std::string Statistics::Print() {
     // calculate the statistics duration
-    auto duration = std::chrono::duration_cast<std::chrono::milliseconds>(end_time - begin_time).count();
-    LOG(INFO) << "duration: " << duration << " ms";
+    auto duration = std::chrono::duration_cast<std::chrono::microseconds>(end_time - begin_time).count();
+    DLOG(INFO) << std::fixed << std::setprecision(3) << "duration: " << duration / (double)(1000) << "ms";
 
     #define LATENCY(X, Y) ((double)(X.load()) / (double)(Y.load()) / (double)(1000))
-    #define TPS(X) ((double)(X.load()) / (double)(duration) * (double)(1000))
+    #define TPS(X) ((double)(X.load()) / (double)(duration) * (double)(1000000))
 
     
     auto now = std::chrono::system_clock::to_time_t(std::chrono::system_clock::now());
@@ -46,9 +47,8 @@ std::string Statistics::Print() {
         "commit             {}\n"
         "execution          {}\n"
         "overhead           {}\n"
-        "latency            {:.4f} ms\n"
-        "tps                {:.4f} tx/s\n",
-        // std::chrono::system_clock::now(),
+        "latency            {:.3f} ms\n"
+        "tps                {:.3f} tx/s",
         time_buffer,
         count_commit.load(),
         count_execution.load(),

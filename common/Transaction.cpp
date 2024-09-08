@@ -37,4 +37,8 @@ void Transaction::Execute() {
     loom::Exec(tx);
 }
 
+size_t Transaction::CountOverheads() const {
+    return m_tx->m_rootVertex->m_cost;
+}
+
 }

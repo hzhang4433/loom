@@ -10,21 +10,25 @@ using namespace loom;
 #define T shared_ptr<LoomTransaction>
 #define K string
 
+using namespace std::chrono;
+
 /// @brief initialize loom protocol
 /// @param blocks the blocks to be executed
 /// @param num_threads the number of threads
 /// @param table_partitions the number of partitions for the table
 Loom::Loom(
-    vector<Block::Ptr> blocks, 
+    vector<Block::Ptr> blocks,
+    Statistics& statistics,
     size_t num_threads, 
     bool enable_inter_block,
-    bool enable_nested_reExec,
+    bool enable_nested_reExecution,
     size_t table_partitions
 ):
     blocks(std::move(blocks)),
+    statistics(statistics),
     batches(), // empty
     enable_inter_block(enable_inter_block),
-    enable_nested_reExec(enable_nested_reExec),
+    enable_nested_reExecution(enable_nested_reExecution),
     table(table_partitions),
     num_threads(num_threads),
     pool(make_shared<ThreadPool>(num_threads)),
@@ -195,7 +199,10 @@ void Loom::PreExecute(vector<T>& batch, const size_t& block_id) {
                     tx->local_put[key] = value;
                 }
             });
+            tx->start_time = chrono::steady_clock::now();
             tx->Execute();
+            statistics.JournalExecute();
+            statistics.JournalOverheads(tx->CountOverheads());
         }));
     }
     // wait for all futures to finish
@@ -243,6 +250,8 @@ void Loom::PreExecuteInterBlock(vector<T>& batch, const size_t& block_id) {
         });
         // Execute transaction
         tx->Execute();
+        statistics.JournalExecute();
+        statistics.JournalOverheads(tx->CountOverheads());
         // Check if transaction was aborted
         if (tx->aborted.load()) {
             DLOG(WARNING) << "Transaction " << tx->id << " aborted, queuing for retry...";
@@ -303,6 +312,8 @@ void Loom::PreExecuteInterBlock(vector<T>& batch, const size_t& block_id) {
 /// @param rbList the list of transactions to be rolled back
 /// @param serialOrders the serial order of transactions to be rolled back
 void Loom::MinWRollBack(vector<T>& batch, Block::Ptr block, vector<Vertex::Ptr>& rbList, vector<vector<int>>& serialOrders) {
+    #define LATENCY duration_cast<microseconds>(steady_clock::now() - tx->start_time).count()
+
     LOG(INFO) << "MinWRollBack block " << block->getBlockId();
     vector<future<void>> graphFutures, finalFutures;
     std::vector<std::future<loom::ReExecuteInfo>> rollbackFutures;
@@ -343,7 +354,7 @@ void Loom::MinWRollBack(vector<T>& batch, Block::Ptr block, vector<Vertex::Ptr>&
     // finalize all txs (maybe async latter)
     for (auto tx : batch) {
         if (!tx->GetTx()->m_aborted) {
-            // Finalize(tx);
+            statistics.JournalCommit(LATENCY);
             finalFutures.push_back(pool->enqueue([this, tx] {
                 Finalize(tx);
             }));
@@ -357,6 +368,7 @@ void Loom::MinWRollBack(vector<T>& batch, Block::Ptr block, vector<Vertex::Ptr>&
     notifyRetry();
 
     LOG(INFO) << "MinWRollBack block " << block->getBlockId() << " done";
+    #undef LATENCY
 }
 
 /// @brief re-execute transactions
@@ -364,18 +376,18 @@ void Loom::ReExecute(Block::Ptr block, vector<Vertex::Ptr>& rbList, vector<vecto
     LOG(INFO) << "ReExecute block " << block->getBlockId();
     std::vector<std::future<void>> reExecuteFutures;
 
-    if (enable_nested_reExec) {
+    if (enable_nested_reExecution) {
         // re-execute using nested structure
         DeterReExecute reExecute(rbList, serialOrders, block->getConflictIndex());
         reExecute.buildAndReSchedule();
-        reExecute.reExcution(pool, reExecuteFutures);
+        reExecute.reExcution(pool, reExecuteFutures, statistics);
     } else {
         // re-execute using flat structure
         vector<Vertex::Ptr> normalList;
         DeterReExecute::setNormalList(rbList, normalList);
         DeterReExecute reExecute(normalList, serialOrders, block->getConflictIndex());
         reExecute.buildAndReScheduleFlat();
-        reExecute.reExcution(pool, reExecuteFutures);
+        reExecute.reExcution(pool, reExecuteFutures, statistics);
     }
     
     LOG(INFO) << "ReExecute block " << block->getBlockId() << " done";

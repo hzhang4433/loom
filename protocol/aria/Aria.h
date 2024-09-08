@@ -8,6 +8,7 @@
 #include <loom/protocol/common.h>
 #include <loom/common/Block.h>
 #include <loom/common/Transaction.h>
+#include <loom/utils/Statistic/Statistics.h>
 
 using namespace std;
 
@@ -62,11 +63,12 @@ struct AriaLockTable: public Table<K, AriaLockEntry, KeyHasher> {
 class Aria: public Protocol {
 
 public:
-    Aria(vector<Block::Ptr> blocks, size_t num_threads, bool enable_reordering, size_t table_partitions = 1);
+    Aria(vector<Block::Ptr> blocks, Statistics& statistics, size_t num_threads, bool enable_reordering, size_t table_partitions = 1);
     void Start() override;
     void Stop() override;
 
 private:
+    Statistics&                             statistics;
     vector<Block::Ptr>                      blocks;
     AriaTable                               table;
     AriaLockTable                           lock_table;
@@ -96,6 +98,7 @@ public:
     void CleanLockTable(T* tx);
 
 private:
+    Statistics&                             statistics;
     vector<vector<T>>                       batchTxs;
     AriaTable&                              table;
     AriaLockTable&                          lock_table;

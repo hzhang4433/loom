@@ -16,11 +16,13 @@ using namespace std::chrono;
 /// @param num_threads the number of threads
 /// @param table_partitions the number of partitions for the table
 Moss::Moss(
-    vector<Block::Ptr> blocks, 
+    vector<Block::Ptr> blocks,
+    Statistics& statistics,
     size_t num_threads, 
     size_t table_partitions
 ): 
-    blocks(std::move(blocks)), 
+    blocks(std::move(blocks)),
+    statistics(statistics),
     num_threads(num_threads),
     table(table_partitions),
     pool(std::make_shared<ThreadPool>(num_threads))
@@ -79,7 +81,9 @@ void Moss::Start() {
             futures.push_back(pool->enqueue([this, tx]() mutable {
                 DLOG(INFO) << "enqueue tx " << tx->id << endl;
                 // execute the transaction
+                tx->start_time = steady_clock::now();
                 Execute(tx->root_tx);
+                statistics.JournalExecute();
                 while (true) {
                     if (tx->HasWAR()) {
                         // if there are war, re-execute entire transaction
@@ -142,13 +146,16 @@ void Moss::Execute(ST stx) {
         DLOG(INFO) << "stx " << stx->m_id << " all writes: " << keys << std::endl;
     });
 
+    // execute the current transaction
+    stx->Execute();
+    statistics.JournalOverheads(stx->CountOverheads());
+    if (stx->ftx->HasWAR(stx)) { return; }
+
     // execute sub-transactions
     auto children = stx->children_txs;
     for (auto& child : children) {
         Execute(child);
     }
-    // execute the current transaction
-    stx->Execute();
 }
 
 /// @brief re-execute the transaction
@@ -174,11 +181,13 @@ void Moss::ReExecute(T tx) {
 /// @brief finalize the transaction
 /// @param tx the transaction to be finalized
 void Moss::Finalize(T tx) {
+    #define LATENCY duration_cast<microseconds>(steady_clock::now() - tx->start_time).count()
     // finalize the transaction
     DLOG(INFO) << "moss finalize " << tx->id << endl;
+    statistics.JournalCommit(LATENCY);
     ClearTable(tx->root_tx);
     last_finalized.fetch_add(1, std::memory_order_seq_cst);
-    // auto latency = duration_cast<microseconds>(steady_clock::now() - tx->start_time).count();
+    #undef LATENCY
 }
 
 void Moss::ClearTable(ST stx) {

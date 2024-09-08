@@ -98,4 +98,8 @@ void Vertex::Execute() {
     loom::Exec(tx);
 }
 
+std::size_t Vertex::CountOverheads() const {
+    return m_self_cost;
+}
+
 }

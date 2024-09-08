@@ -14,7 +14,7 @@ set(CMAKE_CXX_COMPILER "/usr/bin/g++-11")
 set(CMAKE_CXX_STANDARD 20)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 
-option(ENABLE_NDEBUG "Enable NDEBUG" ON)
+option(ENABLE_NDEBUG "Enable NDEBUG" OFF)
 
 # find gtest
 find_package(GTest REQUIRED)
@@ -59,14 +59,17 @@ target_link_libraries(
 
 # Manage Compile Options
 if(ENABLE_NDEBUG)
+    message(STATUS "NDEBUG is enabled")
+    target_compile_definitions(loom PRIVATE -DNDEBUG=1)
     target_compile_options(loom PRIVATE
-        -O3 -funroll-loops -march=native -g
-        -DNDEBUG=1
+        -O3 -funroll-loops -march=native
     )
 else()
+    message(STATUS "NDEBUG is disabled")
+    # target_compile_definitions(loom PRIVATE -DNDEBUG=0)
+    target_compile_definitions(loom PRIVATE UNDEBUG)
     target_compile_options(loom PRIVATE
         -O0 -ggdb
-        -DNDEBUG=0
     )
 endif()
 

@@ -4,6 +4,7 @@
 #include <loom/protocol/moss/Moss.h>
 #include <loom/utils/Generator/UTxGenerator.h>
 #include <loom/utils/UGlogPrefix.hpp>
+#include <loom/utils/Statistic/Statistics.h>
 
 using namespace std;
 
@@ -11,12 +12,17 @@ TEST(MossTest, TestMoss) {
     // Generate a workload
     TxGenerator txGenerator(loom::BLOCK_SIZE);
     auto blocks = txGenerator.generateWorkload(true);
+    // Create a Statistics instance
+    auto statistics = Statistics();
     // Create a moss instance
-    auto protocol = Moss(blocks, 36, 36);
+    auto protocol = Moss(blocks, statistics, 36, 36);
     // Start the protocol
     protocol.Start();
     // Wait for the protocol to finish
     std::this_thread::sleep_for(std::chrono::seconds(2));
     // Stop the protocol
     protocol.Stop();
+    // Print the statistics
+    LOG(INFO) << statistics.Print();
+    cout << statistics.Print() << endl;
 }

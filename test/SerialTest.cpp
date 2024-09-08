@@ -12,6 +12,7 @@ TEST(SerialTest, TestSerial) {
     // Generate a workload
     TxGenerator txGenerator(loom::BLOCK_SIZE);
     auto blocks = txGenerator.generateWorkload(false);
+    // Create a Statistics instance
     auto statistics = Statistics();
     // Create a Serial instance
     auto protocol = Serial(blocks, statistics, 36);
@@ -22,5 +23,6 @@ TEST(SerialTest, TestSerial) {
     // Stop the protocol
     protocol.Stop();
     // Print the statistics
-    statistics.Print();
+    LOG(INFO) << statistics.Print();
+    cout << statistics.Print() << endl;
 }

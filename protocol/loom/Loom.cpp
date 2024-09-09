@@ -36,7 +36,7 @@ Loom::Loom(
     committed_block(0),
     canRetry(false)
 {
-    LOG(INFO) << fmt::format("Loom(num_threads={}, table_partitions={}, enable_inter_block={})", num_threads, table_partitions, enable_inter_block) << endl;
+    LOG(INFO) << fmt::format("Loom(num_threads={}, table_partitions={}, enable_inter_block={}, enable_nested_reExecution={})", num_threads, table_partitions, enable_inter_block, enable_nested_reExecution) << endl;
 }
 
 /// @brief start loom protocol
@@ -84,6 +84,9 @@ void Loom::Stop() {
 /// @param block the block to be executed
 /// @param batch the transactions to be executed
 void Loom::NormalMode(Block::Ptr block, vector<T>& batch) {
+    #define LATENCY duration_cast<microseconds>(tx->GetTx()->m_commit_time - tx->start_time).count()
+    #define COMMIT_TIME tx->GetTx()->m_commit_time
+
     vector<Vertex::Ptr> rbList;
     vector<vector<int>> serialOrders;
     vector<future<void>> finalFutures;
@@ -99,8 +102,9 @@ void Loom::NormalMode(Block::Ptr block, vector<T>& batch) {
     // finalize
     for (auto tx : batch) {
         if (!tx->committed.load()) {
+            statistics.JournalCommit(LATENCY, COMMIT_TIME);
             finalFutures.push_back(pool->enqueue([this, tx] {
-                Finalize(tx);
+                ClearTable(tx);
             }));
         }
     }
@@ -110,7 +114,10 @@ void Loom::NormalMode(Block::Ptr block, vector<T>& batch) {
 
     // mark block as committed
     committed_block.fetch_add(1, memory_order_relaxed);
+    statistics.JournalBlock();
     LOG(INFO) << "Block " << block->getBlockId() << " finalize done";
+    #undef LATENCY
+    #undef COMMIT_TIME
 }
 
 /// @brief execute transactions in inter-block mode
@@ -136,6 +143,9 @@ void Loom::InterBlockMode(Block::Ptr block, vector<T> batch) {
 /// @param block the block to be executed
 /// @param batch the transactions to be executed
 void Loom::PostExecuteBlock(Block::Ptr block, vector<T> batch) {
+    #define LATENCY duration_cast<microseconds>(tx->GetTx()->m_commit_time - tx->start_time).count()
+    #define COMMIT_TIME tx->GetTx()->m_commit_time
+
     DLOG(INFO) << "PostExecute block " << block->getBlockId();
     vector<future<void>> finalFutures;
     vector<Vertex::Ptr> rbList;
@@ -148,8 +158,9 @@ void Loom::PostExecuteBlock(Block::Ptr block, vector<T> batch) {
     // finalize
     for (auto tx : batch) {
         if (!tx->committed.load()) {
+            statistics.JournalCommit(LATENCY, COMMIT_TIME);
             finalFutures.push_back(pool->enqueue([this, tx] {
-                Finalize(tx);
+                ClearTable(tx);
             }));
         }
     }
@@ -160,11 +171,15 @@ void Loom::PostExecuteBlock(Block::Ptr block, vector<T> batch) {
     notifyRetry();
     // mark block as committed
     committed_block.fetch_add(1, memory_order_relaxed);
+    statistics.JournalBlock();
     LOG(INFO) << "InterBlockMode block " << block->getBlockId() << " finalize done";
+    #undef LATENCY
+    #undef COMMIT_TIME
 }
 
 /// @brief pre-execute transactions
 /// @param batch the transactions to be executed
+/// @param block_id the block id
 void Loom::PreExecute(vector<T>& batch, const size_t& block_id) {
     LOG(INFO) << "PreExecute block " << block_id;
     vector<future<void>> preExecFutures;
@@ -179,10 +194,7 @@ void Loom::PreExecute(vector<T>& batch, const size_t& block_id) {
                     keys += key + " ";
                     string value = "";
                     table.ReserveGet(tx, key);
-                    if (tx->aborted.load()) {
-                        LOG(INFO) << tx->id << " aborted";
-                        return;
-                    }
+                    if (tx->aborted.load()) return;
                     tx->local_get[key] = value;
                 }
             });
@@ -191,11 +203,11 @@ void Loom::PreExecute(vector<T>& batch, const size_t& block_id) {
                 const unordered_set<string>& writeSet,
                 const string& value
             ) {
+                if (tx->aborted.load()) return;
                 string keys;
                 for (auto& key : writeSet) {
                     keys += key + " ";
                     table.ReservePut(tx, key);
-                    if (tx->aborted.load()) return;
                     tx->local_put[key] = value;
                 }
             });
@@ -214,6 +226,7 @@ void Loom::PreExecute(vector<T>& batch, const size_t& block_id) {
 
 /// @brief pre-execute transactions in inter-block mode
 /// @param batch the transactions to be executed
+/// @param block_id the block id
 void Loom::PreExecuteInterBlock(vector<T>& batch, const size_t& block_id) {
     LOG(INFO) << "PreExecute inter block " << block_id;
     vector<future<void>> preExecFutures;
@@ -240,15 +253,16 @@ void Loom::PreExecuteInterBlock(vector<T>& batch, const size_t& block_id) {
             const unordered_set<string>& writeSet,
             const string& value
         ) {
+            if (tx->aborted.load()) return;
             string keys;
             for (auto& key : writeSet) {
                 keys += key + " ";
                 table.ReservePut(tx, key);
-                if (tx->aborted.load()) return;
                 tx->local_put[key] = value;
             }
         });
         // Execute transaction
+        tx->start_time = chrono::steady_clock::now();
         tx->Execute();
         statistics.JournalExecute();
         statistics.JournalOverheads(tx->CountOverheads());
@@ -312,7 +326,8 @@ void Loom::PreExecuteInterBlock(vector<T>& batch, const size_t& block_id) {
 /// @param rbList the list of transactions to be rolled back
 /// @param serialOrders the serial order of transactions to be rolled back
 void Loom::MinWRollBack(vector<T>& batch, Block::Ptr block, vector<Vertex::Ptr>& rbList, vector<vector<int>>& serialOrders) {
-    #define LATENCY duration_cast<microseconds>(steady_clock::now() - tx->start_time).count()
+    #define LATENCY duration_cast<microseconds>(tx->GetTx()->m_commit_time - tx->start_time).count()
+    #define COMMIT_TIME tx->GetTx()->m_commit_time
 
     LOG(INFO) << "MinWRollBack block " << block->getBlockId();
     vector<future<void>> graphFutures, finalFutures;
@@ -354,7 +369,7 @@ void Loom::MinWRollBack(vector<T>& batch, Block::Ptr block, vector<Vertex::Ptr>&
     // finalize all txs (maybe async latter)
     for (auto tx : batch) {
         if (!tx->GetTx()->m_aborted) {
-            statistics.JournalCommit(LATENCY);
+            statistics.JournalCommit(LATENCY, COMMIT_TIME);
             finalFutures.push_back(pool->enqueue([this, tx] {
                 Finalize(tx);
             }));
@@ -369,6 +384,7 @@ void Loom::MinWRollBack(vector<T>& batch, Block::Ptr block, vector<Vertex::Ptr>&
 
     LOG(INFO) << "MinWRollBack block " << block->getBlockId() << " done";
     #undef LATENCY
+    #undef COMMIT_TIME
 }
 
 /// @brief re-execute transactions
@@ -393,6 +409,58 @@ void Loom::ReExecute(Block::Ptr block, vector<Vertex::Ptr>& rbList, vector<vecto
     LOG(INFO) << "ReExecute block " << block->getBlockId() << " done";
 }
 
+/// @brief finalize a transaction
+/// @param tx the transaction to be finalized
+void Loom::Finalize(T tx) {
+    DLOG(INFO) << "Finalize tx " << tx->id;
+    tx->committed.store(true);
+    // release reserved put
+    for (auto& kv : tx->local_put) {
+        table.Put(std::get<0>(kv), [&](LoomEntry& entry) {
+            if (entry.block_id_put == tx->block_id) {
+                // update reserved put number
+                entry.reserved_put_num--;
+                if (entry.reserved_put_num == 0) {
+                    // update block id put
+                    if (entry.next_reserved_put > 0) {
+                        entry.block_id_put++;
+                        entry.reserved_put_num = entry.next_reserved_put;
+                        entry.next_reserved_put = 0;
+                    } else {
+                        entry.block_id_put = 0;
+                    }
+                } else if (entry.reserved_put_num < 0) {
+                    LOG(ERROR) << kv.first << " reserved put num = " << entry.reserved_put_num;
+                }
+            }
+        });
+    }
+}
+
+/// @brief clear table
+/// @param tx the transaction to be finalized
+void Loom::ClearTable(T tx) {
+    DLOG(INFO) << "Clear table of tx " << tx->id;
+    tx->committed.store(true);
+    // release reserved put
+    for (auto& kv : tx->local_put) {
+        table.Put(std::get<0>(kv), [&](LoomEntry& entry) {
+            if (entry.block_id_put == tx->block_id) {
+                // update block id put
+                if (entry.next_reserved_put > 0) {
+                    entry.block_id_put++;
+                    entry.reserved_put_num = entry.next_reserved_put;
+                    entry.next_reserved_put = 0;
+                } else {
+                    entry.block_id_put = 0;
+                    entry.reserved_put_num = 0;
+                }
+            }
+        });
+    }
+}
+
+/* old version
 /// @brief finalize a transaction
 /// @param tx the transaction to be finalized
 void Loom::Finalize(T tx) {
@@ -431,6 +499,7 @@ void Loom::Finalize(T tx) {
         });
     }
 }
+*/
 
 /// @brief notify retry
 void Loom::notifyRetry() {
@@ -500,6 +569,7 @@ void LoomTransaction::Execute() {
     if (aborted.load()) return;
     auto& tx = m_tx->m_rootVertex->m_cost;
     loom::Exec(tx);
+    m_tx->m_commit_time = chrono::steady_clock::now();
 }
 
 /// @brief initialize the loom table
@@ -510,6 +580,46 @@ LoomTable::LoomTable(
     Table::Table(partitions)
 {}
 
+/// @brief reserve a get operation
+/// @param tx the transaction
+/// @param k the key
+void LoomTable::ReserveGet(T tx, const K& k) {
+    Table::Put(k, [&](LoomEntry& entry) {
+        DLOG(INFO) << tx->block_id << ":" <<  tx->id << " reserve get " << k << ", current tx(" << entry.block_id_get << ")" << endl;
+        // don't have war conflict
+        if (entry.block_id_put == 0 || entry.block_id_put == tx->block_id) {
+            entry.block_id_get = max(entry.block_id_get, tx->block_id);
+            DLOG(INFO) << tx->block_id << ":" << tx->id << " reserve get " << k << " ok" << std::endl;
+        } else {
+            tx->aborted.store(true);
+            DLOG(INFO) << tx->block_id << ":" << tx->id << " reserve get " << k << " failed: put id = " << entry.block_id_put << std::endl;
+        }
+    });
+}
+
+/// @brief reserve a put operation
+/// @param tx the transaction
+/// @param k the key
+void LoomTable::ReservePut(T tx, const K& k) {
+    Table::Put(k, [&](LoomEntry& entry) {
+        DLOG(INFO) << tx->block_id << ":" <<  tx->id << " reserve put " << k << ", current tx(" << entry.block_id_get << ")" << endl;
+        if (entry.block_id_put == 0) {
+            // reserve put
+            entry.block_id_put = tx->block_id;
+            // flag have a bigger block_id put
+            entry.reserved_put_num = 1;
+        } else if (entry.block_id_put == tx->block_id) {
+            // store reserved put
+            entry.reserved_put_num++;
+        } else if (entry.block_id_put < tx->block_id) {
+            // restore next reserved put
+            entry.next_reserved_put++;
+        }
+        DLOG(INFO) << tx->block_id << ":" << tx->id << " reserve put " << k << " ok" << std::endl;
+    });
+}
+
+/* old version
 /// @brief reserve a get operation
 /// @param tx the transaction
 /// @param k the key
@@ -565,6 +675,7 @@ void LoomTable::ReservePut(T tx, const K& k) {
         DLOG(INFO) << tx->block_id << ":" << tx->id << " reserve put " << k << " ok" << std::endl;
     });
 }
+*/
 
 #undef T
 #undef K

@@ -256,6 +256,7 @@ void AriaExecutor::Run() {
         for (auto& tx : batch) {
             this->CleanLockTable(&tx);
         }
+        statistics.JournalBlock();
         #undef LATENCY
     }
 }

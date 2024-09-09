@@ -21,11 +21,11 @@ namespace loom {
 /// @brief aria tranaction with local read and write set.
 struct SerialTransaction: public Transaction {
     size_t      id;
-    size_t      batch_id;
+    size_t      block_id;
     std::chrono::time_point<std::chrono::steady_clock> start_time;
     std::unordered_map<string, string> local_get;
     std::unordered_map<string, string> local_put;
-    SerialTransaction(Transaction&& inner, size_t id, size_t batch_id);
+    SerialTransaction(Transaction&& inner, size_t id, size_t block_id);
     SerialTransaction(SerialTransaction&& tx) noexcept; // move constructor
     SerialTransaction(const SerialTransaction& other); // copy constructor
 };

@@ -101,6 +101,7 @@ void Moss::Start() {
         for (auto& future : futures) {
             future.get();
         }
+        statistics.JournalBlock();
         LOG(INFO) << "block " << i + 1 << " done, " << last_finalized.load() << " txs committed" << endl;
     }
 }

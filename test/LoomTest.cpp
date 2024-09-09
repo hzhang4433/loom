@@ -710,12 +710,12 @@ TEST(LoomTest, TestOtherPool) {
 
 TEST(LoomTest, TestLoom) {
     // Generate a workload
-    TxGenerator txGenerator(loom::BLOCK_SIZE * 1);
+    TxGenerator txGenerator(loom::BLOCK_SIZE * 2);
     auto blocks = txGenerator.generateWorkload(true);
     // Create a Statistics instance
     auto statistics = Statistics();
     // Create a loom instance
-    auto protocol = Loom(blocks, statistics, 36, false, false, 36);
+    auto protocol = Loom(blocks, statistics, 36, true, true, 36);
     // Start the protocol
     protocol.Start();
     // Wait for the protocol to finish

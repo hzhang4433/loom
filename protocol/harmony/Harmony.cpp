@@ -168,7 +168,6 @@ HarmonyExecutor::HarmonyExecutor(Harmony& harmony, size_t worker_id, vector<vect
 
 /// @brief run transactions
 void HarmonyExecutor::Run() {
-
     if (enable_inter_block) {
         DLOG(INFO) << "worker " << worker_id << " size of batchTxs " << batchTxs.size() << std::endl;
         // Processing Block Streamly
@@ -221,6 +220,7 @@ void HarmonyExecutor::Run() {
             for (auto& tx : batch) {
                 this->CleanLockTable(&tx);
             }
+            statistics.JournalBlock();
             #undef LATENCY
         }
     }
@@ -290,6 +290,7 @@ void HarmonyExecutor::InterBlockExecute(vector<T> batch) {
             this->CleanLockTable(&tx);
         }
     }
+    statistics.JournalBlock();
     #undef LATENCY
 }
 

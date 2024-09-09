@@ -26,18 +26,23 @@ void Serial::Start() {
     LOG(INFO) << "Serial Start";
     vector<T> workloads;
     for (auto& block: blocks) {
-        size_t batch_id = block->getBlockId();
+        size_t block_id = block->getBlockId();
         for (auto& tx: block->getTxs()) {
             size_t txid = tx->GetTx()->m_hyperId;
-            workloads.emplace_back(std::move(*tx), txid, batch_id);
+            workloads.emplace_back(std::move(*tx), txid, block_id);
         }
     }
 
     thread = new std::thread([this, txs = std::move(workloads)]() {
         size_t idx = 0;
+        size_t block_id = 0;
         LOG(INFO) << "Execution Start";
         while (!stop_flag.load() && idx < txs.size()) {
             auto tx = std::move(txs[idx]);
+            if (tx.block_id != block_id) {
+                block_id = tx.block_id;
+                statistics.JournalBlock();
+            }
             auto start_time = std::chrono::steady_clock::now();
             tx.InstallGetStorageHandler([&](
                 const std::unordered_set<string>& readSet
@@ -87,11 +92,11 @@ void Serial::Stop() {
 
 /// @brief construct an empty serial transaction
 SerialTransaction::SerialTransaction(
-    Transaction&& inner, size_t id, size_t batch_id
+    Transaction&& inner, size_t id, size_t block_id
 ):
     Transaction{std::move(inner)},
     id{id},
-    batch_id{batch_id}
+    block_id{block_id}
 {
     // initial readSet and writeSet empty
     local_get = std::unordered_map<string, string>();
@@ -104,7 +109,7 @@ SerialTransaction::SerialTransaction(
 ) noexcept:
     Transaction{std::move(tx)},
     id{tx.id},
-    batch_id{tx.batch_id},
+    block_id{tx.block_id},
     start_time{tx.start_time},
     local_get{std::move(tx.local_get)},
     local_put{std::move(tx.local_put)}
@@ -116,7 +121,7 @@ SerialTransaction::SerialTransaction(
 ):
     Transaction{other},
     id{other.id},
-    batch_id{other.batch_id},
+    block_id{other.block_id},
     start_time{other.start_time},
     local_get{other.local_get},
     local_put{other.local_put}

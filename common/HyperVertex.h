@@ -46,13 +46,14 @@ class HyperVertex : public std::enable_shared_from_this<HyperVertex>
 
     // 公共变量
         int m_hyperId;      // 超节点ID
-        bool m_isNested;      // 标记节点是否是嵌套节点
+        bool m_isNested;    // 标记节点是否是嵌套节点
         int m_min_in;       // 超节点的最小入度ID
         int m_min_out;      // 超节点的最小出度ID
         double m_cost;      // 超节点的最小回滚代价
         double m_in_cost;   // 超节点的最小入度回滚代价 m_in_cost = in_cost1 + in_cost2 + ... + in_costn
         double m_out_cost;  // 超节点的最小出度回滚代价 m_out_cost = out_cost1 + out_cost2 + ... + out_costn
-        bool m_aborted; // 超节点是否回滚
+        bool m_aborted;     // 超节点是否回滚
+        chrono::time_point<chrono::steady_clock> m_commit_time; // transaction commit time
         tbb::concurrent_unordered_set<Vertex::Ptr, Vertex::VertexHash> m_in_allRB;  // 记录超节点中所有入边的级联回滚子事务, 格式：rbVertex => num
         tbb::concurrent_unordered_map<Vertex::Ptr, int, Vertex::VertexHash> m_out_allRB; // 记录超节点中所有出边的级联回滚子事务
 

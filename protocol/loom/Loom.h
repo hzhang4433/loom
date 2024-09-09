@@ -59,6 +59,7 @@ public:
     void MinWRollBack(vector<T>& batch, Block::Ptr block, vector<Vertex::Ptr>& rbList, vector<vector<int>>& serialOrders);
     void ReExecute(Block::Ptr block, vector<Vertex::Ptr>& rbList, vector<vector<int>>& serialOrders);
     void Finalize(T tx);
+    void ClearTable(T tx);
     void notifyRetry();
     void resetRetry();
 

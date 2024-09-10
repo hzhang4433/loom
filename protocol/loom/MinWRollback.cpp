@@ -258,18 +258,29 @@ void MinWRollback::buildGraphNoEdgeC(ThreadPool::Ptr& Pool, std::vector<std::fut
     size_t chunkSize = totalPairs / UTIL_DEFAULT_THREAD_SIZE;
     size_t remainder = totalPairs % UTIL_DEFAULT_THREAD_SIZE;
     // cout << "totalPairs: " << totalPairs << " chunkSize: " << chunkSize << endl;
-
+    
+    // std::vector<std::function<void()>> taskList;
+    std::vector<std::tuple<std::function<void()>>> taskList;
     for (size_t i = 0; i < UTIL_DEFAULT_THREAD_SIZE; ++i) {
         size_t startIdx = i * chunkSize + std::min(i, remainder);
         size_t endIdx = startIdx + chunkSize + (i < remainder ? 1 : 0);
         endIdx = std::min(endIdx, totalPairs);
-        // enqueue the threadpool
-        futures.emplace_back(Pool->enqueue([this, &rwPairs, startIdx, endIdx] {
+        // // enqueue the threadpool
+        // futures.emplace_back(Pool->enqueue([this, &rwPairs, startIdx, endIdx] {
+        //     // LOG(INFO) << "begin onRWCNoEdge";
+        //     for (size_t j = startIdx; j < endIdx; ++j) {
+        //         onRWCNoEdge(rwPairs[j].first, rwPairs[j].second);
+        //     }
+        // }));
+        taskList.emplace_back(std::make_tuple([this, &rwPairs, startIdx, endIdx] {
+            DLOG(INFO) << "begin onRWCNoEdge";
             for (size_t j = startIdx; j < endIdx; ++j) {
                 onRWCNoEdge(rwPairs[j].first, rwPairs[j].second);
             }
         }));
     }
+
+    futures = Pool->enqueueBatch(taskList);
 
     // 等待所有任务完成
     for (auto &future : futures) {

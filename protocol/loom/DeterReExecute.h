@@ -54,7 +54,7 @@ class DeterReExecute {
         void reExcution(Util::UThreadPoolPtr& Pool, std::vector<std::future<void>>& futures, Statistics& statistics);
         void reExcution(ThreadPool::Ptr& Pool, std::vector<std::future<void>>& futures, Statistics& statistics);
         void executeTransaction(const Vertex::Ptr& tx, Statistics& statistics);
-
+        void executeTransactionWithPool(const Vertex::Ptr& tx, Statistics& statistics, ThreadPool::Ptr& Pool, std::atomic<int>& taskCounter);
 
     // 定义私有变量
     private:

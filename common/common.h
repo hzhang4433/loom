@@ -16,6 +16,11 @@ enum class EdgeType {
     BOTH
 };
 
+enum class TaskPriority {
+    HIGH_PRIORITY,
+    LOW_PRIORITY
+};
+
 static std::string edgeTypeToString(loom::EdgeType type) {
     switch (type) {
         case loom::EdgeType::IN:
@@ -24,6 +29,17 @@ static std::string edgeTypeToString(loom::EdgeType type) {
             return "OUT";
         case loom::EdgeType::BOTH:
             return "BOTH";
+        default:
+            return "UNKNOWN";
+    }
+}
+
+static std::string taskPriorityToString(loom::TaskPriority type) {
+    switch (type) {
+        case loom::TaskPriority::HIGH_PRIORITY:
+            return "HIGH_PRIORITY";
+        case loom::TaskPriority::LOW_PRIORITY:
+            return "LOW_PRIORITY";
         default:
             return "UNKNOWN";
     }

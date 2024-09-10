@@ -832,7 +832,7 @@ void DeterReExecute::reExcution(UThreadPoolPtr& Pool, std::vector<std::future<vo
 }
 
 void DeterReExecute::reExcution(ThreadPool::Ptr& Pool, std::vector<std::future<void>>& futures, Statistics& statistics) {
-    
+    // build dependency graph
     for (auto& tx : m_rbList) {
         if (tx->m_should_wait) {
             dependencyGraph[tx->m_should_wait].push_back(tx);
@@ -840,16 +840,29 @@ void DeterReExecute::reExcution(ThreadPool::Ptr& Pool, std::vector<std::future<v
     }
 
     // 在依赖关系完整建立后，提交无依赖的任务
+    std::atomic<int> taskCounter(0);
+    std::vector<std::tuple<std::function<void()>>> taskList;
     for (auto& tx : m_rbList) {
         if (!tx->m_should_wait) {
-            futures.emplace_back(Pool->enqueue([this, tx, &statistics] {
-                this->executeTransaction(tx, statistics);
+            // futures.emplace_back(Pool->enqueue([this, tx, &statistics] {
+            //     this->executeTransaction(tx, statistics);
+            // }));
+            // // batch version
+            // taskList.emplace_back(std::make_tuple([this, tx, &statistics] {
+            //     this->executeTransaction(tx, statistics);
+            // }));
+            taskCounter.fetch_add(1, std::memory_order_relaxed);
+            taskList.emplace_back(std::make_tuple([this, tx, &statistics, &Pool, &taskCounter] {
+                this->executeTransactionWithPool(tx, statistics, Pool, taskCounter);
             }));
         }
     }
-
-    for (auto &future : futures) {
-        future.get();
+    futures = Pool->enqueueBatch(taskList);
+    // for (auto &future : futures) {
+    //     future.get();
+    // }
+    while (taskCounter.load(std::memory_order_relaxed) > 0) {
+        std::this_thread::yield();
     }
 }
 
@@ -868,6 +881,24 @@ void DeterReExecute::executeTransaction(const Vertex::Ptr& tx, Statistics& stati
     }
 }
 
+void DeterReExecute::executeTransactionWithPool(const Vertex::Ptr& tx, Statistics& statistics, ThreadPool::Ptr& Pool, std::atomic<int>& taskCounter) {
+    tx->Execute();
+    // record the last commit time
+    tx->m_hyperVertex->m_commit_time = chrono::steady_clock::now();
+    statistics.JournalOverheads(tx->CountOverheads());
+    auto it = dependencyGraph.find(tx);
+    if (it != dependencyGraph.end()) {
+        auto& dependents = it->second;
+        // 对于每个依赖项，提交任务到线程池，并将它们的 future 添加到 futures 中
+        for (auto& dependent : dependents) {
+            taskCounter.fetch_add(1, std::memory_order_relaxed);
+            Pool->enqueue([this, dependent, &statistics, &Pool, &taskCounter] {
+                executeTransactionWithPool(dependent, statistics, Pool, taskCounter);
+            });
+        }
+    }
+    taskCounter.fetch_sub(1, std::memory_order_relaxed);
+}
 
 /* 获取事务列表 */
 std::vector<Vertex::Ptr>& DeterReExecute::getRbList() {return m_rbList;}

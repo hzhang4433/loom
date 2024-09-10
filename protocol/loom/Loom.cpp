@@ -100,20 +100,25 @@ void Loom::NormalMode(Block::Ptr block, vector<T>& batch) {
     ReExecute(block, rbList, serialOrders);
 
     // finalize
+    std::vector<std::tuple<std::function<void()>>> finalizeTasks;
     for (auto tx : batch) {
         if (!tx->committed.load()) {
             statistics.JournalCommit(LATENCY, COMMIT_TIME);
-            finalFutures.push_back(pool->enqueue([this, tx] {
+            // finalFutures.push_back(pool->enqueue([this, tx] {
+            //     ClearTable(tx);
+            // }));
+            finalizeTasks.emplace_back(std::make_tuple([this, tx] {
                 ClearTable(tx);
             }));
         }
     }
+    finalFutures = pool->enqueueBatch(finalizeTasks);
     for (auto& future : finalFutures) {
         future.get();
     }
 
     // mark block as committed
-    committed_block.fetch_add(1, memory_order_relaxed);
+    // committed_block.fetch_add(1, memory_order_relaxed);
     statistics.JournalBlock();
     LOG(INFO) << "Block " << block->getBlockId() << " finalize done";
     #undef LATENCY
@@ -156,21 +161,26 @@ void Loom::PostExecuteBlock(Block::Ptr block, vector<T> batch) {
     // re-execute
     ReExecute(block, rbList, serialOrders);
     // finalize
+    std::vector<std::tuple<std::function<void()>>> finalizeTasks;
     for (auto tx : batch) {
         if (!tx->committed.load()) {
             statistics.JournalCommit(LATENCY, COMMIT_TIME);
-            finalFutures.push_back(pool->enqueue([this, tx] {
+            // finalFutures.push_back(pool->enqueue([this, tx] {
+            //     ClearTable(tx);
+            // }));
+            finalizeTasks.emplace_back(std::make_tuple([this, tx] {
                 ClearTable(tx);
             }));
         }
     }
+    finalFutures = pool->enqueueBatch(finalizeTasks);
     for (auto& future : finalFutures) {
         future.get();
     }
     // notify retry
     notifyRetry();
     // mark block as committed
-    committed_block.fetch_add(1, memory_order_relaxed);
+    // committed_block.fetch_add(1, memory_order_relaxed);
     statistics.JournalBlock();
     LOG(INFO) << "InterBlockMode block " << block->getBlockId() << " finalize done";
     #undef LATENCY
@@ -233,6 +243,7 @@ void Loom::PreExecuteInterBlock(vector<T>& batch, const size_t& block_id) {
     tbb::concurrent_vector<T> retryTxs;
     // Lambda for executing a single transaction
     std::function<void(T)> executeTx = [&](T tx) {
+        // LOG(INFO) << "PreExecute block " << block_id << " tx " << tx->id;
         // Reset aborted state before each execution
         tx->aborted.store(false);
         // read locally from local storage
@@ -278,7 +289,7 @@ void Loom::PreExecuteInterBlock(vector<T>& batch, const size_t& block_id) {
     for (T tx : batch) {
         preExecFutures.push_back(pool->enqueue([this, executeTx, tx] {
             executeTx(tx);
-        }));
+        }, loom::TaskPriority::LOW_PRIORITY));
     }
     // wait for all futures to finish
     for (auto& future : preExecFutures) {
@@ -309,7 +320,7 @@ void Loom::PreExecuteInterBlock(vector<T>& batch, const size_t& block_id) {
         for (T tx : currentRetryTxs) {
             retryFutures.push_back(pool->enqueue([this, executeTx, tx] { 
                 executeTx(tx);
-            }));
+            }, loom::TaskPriority::LOW_PRIORITY));
         }
         // Wait for all retry transactions to finish
         for (auto& future : retryFutures) {
@@ -340,8 +351,19 @@ void Loom::MinWRollBack(vector<T>& batch, Block::Ptr block, vector<Vertex::Ptr>&
     minw.onWarm2SCC();
     // rollback transactions
     minw.fastRollback(block->getRBIndex(), rbList);
+    std::vector<std::tuple<std::function<loom::ReExecuteInfo()>>> taskList;
     for (auto& scc : minw.m_sccs) {
-        rollbackFutures.emplace_back(pool->enqueue([this, &scc, &minw] {
+        // rollbackFutures.emplace_back(pool->enqueue([this, &scc, &minw] {
+        //     // 回滚事务
+        //     auto reExecuteInfo = minw.rollbackNoEdge(scc, true);
+        //     // 获得回滚事务并根据事务顺序排序
+        //     set<Vertex::Ptr, loom::customCompare> rollbackTxs(loom::customCompare(reExecuteInfo.m_serialOrder));            
+        //     rollbackTxs.insert(reExecuteInfo.m_rollbackTxs.begin(), reExecuteInfo.m_rollbackTxs.end());
+        //     // 更新m_orderedRollbackTxs
+        //     reExecuteInfo.m_orderedRollbackTxs = std::move(rollbackTxs);
+        //     return std::move(reExecuteInfo);
+        // }));
+        taskList.emplace_back(std::make_tuple([this, &scc, &minw]() {
             // 回滚事务
             auto reExecuteInfo = minw.rollbackNoEdge(scc, true);
             // 获得回滚事务并根据事务顺序排序
@@ -352,6 +374,7 @@ void Loom::MinWRollBack(vector<T>& batch, Block::Ptr block, vector<Vertex::Ptr>&
             return std::move(reExecuteInfo);
         }));
     }
+    rollbackFutures = pool->enqueueBatch(taskList);
     // wait for all futures to finish
     for (auto& future : rollbackFutures) {
         auto res = future.get();
@@ -367,20 +390,25 @@ void Loom::MinWRollBack(vector<T>& batch, Block::Ptr block, vector<Vertex::Ptr>&
     }
 
     // finalize all txs (maybe async latter)
+    std::vector<std::tuple<std::function<void()>>> finalizeTasks;
     for (auto tx : batch) {
         if (!tx->GetTx()->m_aborted) {
             statistics.JournalCommit(LATENCY, COMMIT_TIME);
-            finalFutures.push_back(pool->enqueue([this, tx] {
+            // finalFutures.push_back(pool->enqueue([this, tx] {
+            //     Finalize(tx);
+            // }));
+            finalizeTasks.emplace_back(std::make_tuple([this, tx] {
                 Finalize(tx);
             }));
         }
     }
+    finalFutures = pool->enqueueBatch(finalizeTasks);
     for (auto& future : finalFutures) {
         future.get();
     }
 
     // notify retry
-    notifyRetry();
+    // notifyRetry();
 
     LOG(INFO) << "MinWRollBack block " << block->getBlockId() << " done";
     #undef LATENCY

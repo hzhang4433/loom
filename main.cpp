@@ -46,15 +46,20 @@ int main(int argc, char** argv) {
     // ::testing::GTEST_FLAG(filter) = "HarmonyTest.TestHarmony";
     // ::testing::GTEST_FLAG(filter) = "FractalTest.TestFractal";
     // ::testing::GTEST_FLAG(filter) = "MossTest.TestMoss";
-    ::testing::GTEST_FLAG(filter) = "LoomTest.TestLoom";
+    // ::testing::GTEST_FLAG(filter) = "LoomTest.TestLoom";
     
-    
-    int result = RUN_ALL_TESTS();
+    // int result = RUN_ALL_TESTS();
 
-    if (result == 0) {
-        cout << "All tests passed." << endl;
-    } else {
-        cout << "Some tests failed." << endl;
+    // if (result == 0) {
+    //     cout << "All tests passed." << endl;
+    // } else {
+    //     cout << "Some tests failed." << endl;
+    // }
+
+    for (int i = 0; i < 10; i++) {
+        ::testing::GTEST_FLAG(filter) = "LoomTest.TestLoom";
+        cout << "Running test iteration: " << (i + 1) << endl;
+        int result = RUN_ALL_TESTS();
     }
 
     // 关闭glog

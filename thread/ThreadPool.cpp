@@ -2,6 +2,7 @@
 #include <pthread.h>
 #include <sstream>
 #include <iostream>
+#include <glog/logging.h>
 
 void ThreadPool::PinRoundRobin(std::thread& thread, unsigned rotate_id) {
     auto core_id = rotate_id % std::thread::hardware_concurrency(); // 获取核心ID
@@ -63,25 +64,40 @@ ThreadPool::ThreadPool(size_t threadNum) : stop(false), threadDurations(threadNu
                 for(;;) { // 每个线程会无限循环这个函数，直到线程被停止
                     // 用于存储要从任务队列中取出的任务
                     std::function<void()> task;
+                    // Task task;
                     {
                         // 锁住任务队列
                         std::unique_lock<std::mutex> lock(this->queue_mutex);
                         // 如果任务队列为空，就等待
-                        this->condition.wait(lock, [this]{ return this->stop || !this->tasks.empty(); });
+                        // this->condition.wait(lock, [this]{ return this->stop || !this->tasks.empty(); });
+                        condition.wait(lock, [this] { return stop || !highPriorityTasks.empty() || !lowPriorityTasks.empty(); });
                         // 如果收到停止信号，并且任务队列为空，就退出循环
-                        if(this->stop && this->tasks.empty())
-                            return;
+                        // if(this->stop && this->tasks.empty()) return;
+                        if(this->stop && highPriorityTasks.empty() && lowPriorityTasks.empty()) return;
                         // 从任务队列中取出一个任务
-                        task = std::move(this->tasks.front());
+                        // task = std::move(this->tasks.front());
+                        // task = std::move(this->tasks.top());
+                        if (!highPriorityTasks.empty()) {
+                            // LOG(INFO) << "Task priority: HIGH";
+                            task = highPriorityTasks.front();
+                            highPriorityTasks.pop();
+                        } else {
+                            // LOG(INFO) << "Task priority: LOW";
+                            task = lowPriorityTasks.front();
+                            lowPriorityTasks.pop();
+                        }
                         // 删除已经取出的任务
-                        this->tasks.pop();
+                        // this->tasks.pop();
                     }
-                    // 执行任务
-                    auto start = std::chrono::high_resolution_clock::now();
+                    // 后面可以用来统计线程利用率？
+                    // auto start = std::chrono::high_resolution_clock::now();
+                    // execute task
+                    // LOG(INFO) << "Task priority: " << loom::taskPriorityToString(task.priority);
                     task();
-                    auto end = std::chrono::high_resolution_clock::now();
-                    threadDurations[i] += std::chrono::duration_cast<std::chrono::microseconds>(end - start);
-                    taskCounts[i] += 1; // 更新任务计数
+                    // task.func();
+                    // auto end = std::chrono::high_resolution_clock::now();
+                    // threadDurations[i] += std::chrono::duration_cast<std::chrono::microseconds>(end - start);
+                    // taskCounts[i] += 1; // 更新任务计数
                 }
             }
         );
@@ -95,8 +111,8 @@ ThreadPool::~ThreadPool() {
     shutdown();
 }
 
-// 添加任务到任务队列
-std::future<void> ThreadPool::enqueue(std::function<void()> task) {
+/* 添加任务到任务队列
+std::future<void> ThreadPool::enqueue(std::function<void()> task, loom::TaskPriority priority) {
     // 创建一个packaged_task，它包装了你的任务
     auto packaged_task = std::make_shared<std::packaged_task<void()>>(std::move(task));
     // 获取与packaged_task关联的future
@@ -107,12 +123,31 @@ std::future<void> ThreadPool::enqueue(std::function<void()> task) {
         // 如果收到停止信号，就抛出异常
         if(stop) throw std::runtime_error("enqueue on stopped ThreadPool");
         // 将任务添加到任务队列
-        tasks.push([packaged_task](){ (*packaged_task)();});
+        tasks.push({priority, [packaged_task](){ (*packaged_task)();}});
     }
     // 唤醒一个等待的线程
     condition.notify_one();
     return future;
 }
+
+std::future<void> ThreadPool::enqueue(std::function<void()> task) {
+    // // 创建一个packaged_task，它包装了你的任务
+    // auto packaged_task = std::make_shared<std::packaged_task<void()>>(std::move(task));
+    // // 获取与packaged_task关联的future
+    // auto future = packaged_task->get_future();
+    // {
+    //     // 锁住任务队列
+    //     std::unique_lock<std::mutex> lock(queue_mutex);
+    //     // 如果收到停止信号，就抛出异常
+    //     if(stop) throw std::runtime_error("enqueue on stopped ThreadPool");
+    //     // 将任务添加到任务队列
+    //     tasks.push([packaged_task](){ (*packaged_task)();});
+    // }
+    // // 唤醒一个等待的线程
+    // condition.notify_one();
+    // return future;
+}
+*/
 
 /// @brief shutdown the thread pool
 void ThreadPool::shutdown() {

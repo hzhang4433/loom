@@ -76,12 +76,13 @@ inline std::vector<Block::Ptr> ParseWorkload(const char* arg) {
     auto args = split(arg);
     auto name = *args.begin();
     auto iter = args.begin();
+    TPCC::N_WAREHOUSES = INT;
     loom::BLOCK_SIZE = INT;
     auto num_blocks = INT;
-    TPCC::N_WAREHOUSES = INT;
     auto is_nest = BOOL;
     // Generate a workload
     TxGenerator txGenerator(loom::BLOCK_SIZE * num_blocks);
+    LOG(INFO) << "Generating workload with " << num_blocks << " blocks of size " << loom::BLOCK_SIZE << " and " << TPCC::N_WAREHOUSES << " warehouses";
     return txGenerator.generateWorkload(is_nest);
 }
 

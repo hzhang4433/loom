@@ -1,7 +1,7 @@
 #include <loom/protocol/harmony/Harmony.h>
 #include <fmt/core.h>
 #include <glog/logging.h>
-#include <loom/thread/ThreadPool.h>
+#include <loom/utils/thread/ThreadPool.h>
 #include <limits>
 
 

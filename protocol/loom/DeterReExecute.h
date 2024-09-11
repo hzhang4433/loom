@@ -4,7 +4,7 @@
 #include <mutex>
 #include <tbb/concurrent_unordered_map.h>
 #include <loom/utils/ThreadPool/UThreadPool.h>
-#include <loom/thread/ThreadPool.h>
+#include <loom/utils/thread/ThreadPool.h>
 #include <loom/protocol/loom/common.h>
 #include <tbb/tbb.h>
 #include <loom/utils/Statistic/Statistics.h>

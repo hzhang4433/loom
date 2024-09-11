@@ -7,7 +7,7 @@
 #include <loom/common/Block.h>
 #include <loom/common/Transaction.h>
 #include <unordered_set>
-#include <loom/thread/ThreadPool.h>
+#include <loom/utils/thread/ThreadPool.h>
 #include <loom/utils/Statistic/Statistics.h>
 
 

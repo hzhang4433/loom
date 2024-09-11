@@ -1,10 +1,10 @@
 #include <gtest/gtest.h>
 #include <chrono>
-#include "thread/ThreadPool.h"
+#include <loom/utils/thread/ThreadPool.h>
 
-#include "protocol/loom/MinWRollback.h"
-#include "workload/tpcc/Workload.hpp"
-#include "utils/ThreadPool/UThreadPool.h"
+#include <loom/protocol/loom/MinWRollback.h>
+#include <loom/workload/tpcc/Workload.hpp>
+#include <loom/utils/ThreadPool/UThreadPool.h>
 
 using namespace std;
 using namespace Util;

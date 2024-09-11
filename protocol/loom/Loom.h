@@ -4,7 +4,7 @@
 #include <loom/common/Transaction.h>
 #include <loom/protocol/loom/common.h>
 #include <loom/utils/Ulock.h>
-#include <loom/thread/ThreadPool.h>
+#include <loom/utils/thread/ThreadPool.h>
 #include <loom/common/Block.h>
 #include <loom/utils/Statistic/Statistics.h>
 

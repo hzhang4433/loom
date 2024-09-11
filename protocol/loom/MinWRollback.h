@@ -3,9 +3,9 @@
 #include <atomic>
 #include <stack>
 #include <boost/heap/fibonacci_heap.hpp>
-#include "thread/ThreadPool.h"
-#include "thread/threadpool.h"
-#include "utils/ThreadPool/UThreadPool.h"
+#include <loom/utils/thread/ThreadPool.h>
+#include <loom/utils/thread/threadpool.h>
+#include <loom/utils/ThreadPool/UThreadPool.h>
 #include "common.h"
 
 

@@ -114,7 +114,7 @@ void Moss::Stop() {
 
 /// @brief execute the sub-transaction
 /// @param tx the transaction to be executed
-void Moss::Execute(ST stx) {
+void Moss::Execute(ST stx, bool reExecute) {
     // set the handlers
     stx->InstallGetStorageHandler([this, stx](
         const std::unordered_set<string>& readSet
@@ -149,13 +149,14 @@ void Moss::Execute(ST stx) {
 
     // execute the current transaction
     stx->Execute();
+    if (reExecute) statistics.JournalRollback(stx->CountOverheads());
     statistics.JournalOverheads(stx->CountOverheads());
-    if (stx->ftx->HasWAR(stx)) { return; }
+    if (stx->ftx->HasWAR(stx)) return;
 
     // execute sub-transactions
     auto children = stx->children_txs;
     for (auto& child : children) {
-        Execute(child);
+        Execute(child, reExecute);
     }
 }
 
@@ -175,7 +176,7 @@ void Moss::ReExecute(T tx) {
         rerun_tx->local_get.clear();
         rerun_tx->local_put.clear();
         // re-execute the transaction
-        Execute(rerun_tx);
+        Execute(rerun_tx, true);
     }
 }
 

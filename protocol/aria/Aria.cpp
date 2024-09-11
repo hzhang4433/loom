@@ -248,6 +248,7 @@ void AriaExecutor::Run() {
                 statistics.JournalExecute();
                 statistics.JournalCommit(LATENCY);
                 statistics.JournalOverheads(tx.CountOverheads());
+                statistics.JournalRollback(tx.CountOverheads());
             }
         }
         // stage 4: clean up

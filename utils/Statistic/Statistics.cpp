@@ -40,6 +40,10 @@ void Statistics::JournalOverheads(size_t count) {
     count_overhead.fetch_add(count, std::memory_order_relaxed);
 }
 
+void Statistics::JournalRollback(size_t count) {
+    count_rollback.fetch_add(count, std::memory_order_relaxed);
+}
+
 void Statistics::JournalBlock() {
     count_block.fetch_add(1, std::memory_order_relaxed);
 }
@@ -63,6 +67,7 @@ std::string Statistics::Print() {
         "commit             {}\n"
         "execution          {}\n"
         "overhead           {}\n"
+        "rollback           {}\n"
         "tx latency         {:.3f} ms\n"
         "block latency      {:.3f} ms\n"
         "tps                {:.3f} tx/s",
@@ -70,6 +75,7 @@ std::string Statistics::Print() {
         count_commit.load(),
         count_execution.load(),
         count_overhead.load(),
+        count_rollback.load(),
         LATENCY(count_latency, count_commit),
         BLOCKLATENCY(count_block),
         TPS(count_commit)

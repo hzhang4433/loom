@@ -75,7 +75,7 @@ public:
     void Preparation(vector<vector<T>>& m_blocks);
     void BuildRoot(ST stx, Vertex::Ptr v, T ftx);
     void Execute(T tx);
-    void Execute(ST stx);
+    void Execute(ST stx, bool reExecute = false);
     void ReExecute(T tx);
     void Finalize(T tx);
     void ClearTable(ST tx);

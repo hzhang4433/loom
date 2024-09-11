@@ -871,6 +871,7 @@ void DeterReExecute::executeTransaction(const Vertex::Ptr& tx, Statistics& stati
     // record the last commit time
     tx->m_hyperVertex->m_commit_time = chrono::steady_clock::now();
     statistics.JournalOverheads(tx->CountOverheads());
+    statistics.JournalRollback(tx->CountOverheads());
     auto it = dependencyGraph.find(tx);
     if (it != dependencyGraph.end()) {
         auto& dependents = it->second;
@@ -886,6 +887,7 @@ void DeterReExecute::executeTransactionWithPool(const Vertex::Ptr& tx, Statistic
     // tx->m_hyperVertex->m_commit_time = chrono::steady_clock::now();
     tx->m_hyperVertex->setCommitTime(chrono::steady_clock::now());
     statistics.JournalOverheads(tx->CountOverheads());
+    statistics.JournalRollback(tx->CountOverheads());
     auto it = dependencyGraph.find(tx);
     if (it != dependencyGraph.end()) {
         auto& dependents = it->second;

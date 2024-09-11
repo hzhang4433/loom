@@ -12,35 +12,25 @@ keys = 1000000
 workload = 'TPCC'
 repeat = 10
 times_to_tun = 2
+warehouse = 1
+block_num = 2
+thread = 36
+table_partition = 9973
 timestamp = int(time.time())
 
 if __name__ == '__main__':
-    df = pd.DataFrame(columns=['protocol', 'threads', 'zipf', 'table_partition', 'commit', 'abort', 'latency_50', 'latency_75', 'latency_95', 'latency_99'])
+    df = pd.DataFrame(columns=['protocol', 'warehouse', 'threads', 'table_partition', 'commit', 'overhead', 'rollback', 'tx latency', 'block latency', 'tps'])
     conf = {'stdout': subprocess.PIPE, 'stderr': subprocess.PIPE}
     hash = subprocess.run(["git", "rev-parse", "HEAD"], **conf).stdout.decode('utf-8').strip()
-    batch_size = 100
     with open(f'./exp_results/bench_results_{timestamp}', 'w') as f:
-        for num_threads in list(range(6, 42, 6)):
-            table_partitions    = 9973
-            protocols       = [
-                f"Calvin:{num_threads}:{table_partitions}:{batch_size // num_threads}",
-                f"Aria:{num_threads}:{table_partitions}:{batch_size // num_threads}:FALSE", 
-                f"Aria:{num_threads}:{table_partitions}:{batch_size // num_threads}:TRUE",
-                f"Sparkle:{num_threads}:{table_partitions}", 
-                # f"Spectrum:{num_threads}:{table_partitions}:COPYONWRITE",
-                # # f"SpectrumPreSched:{num_threads}:{table_partitions}:COPYONWRITE",
-                # # f"Dummy:{num_threads}:{table_partitions}:COPYONWRITE",
-                f"Serial:BASIC:{1}",
-                # # f"Spectrum:{num_threads}:{table_partitions}:COPYONWRITE",
-                # # f"Spectrum:{num_threads}:{table_partitions}:STRAWMAN",
-                # # f"SpectrumNoPartial:{num_threads}:{table_partitions}:BASIC",
-                # f"SpectrumNoPartial:{num_threads}:{table_partitions}:BASIC",
-                # f"SpectrumNoPartialPreSched:{num_threads}:{table_partitions}:BASIC",
-                f"Spectrum:{num_threads}:{table_partitions}:COPYONWRITE",
-                # f"SpectrumPreSched:{num_threads}:{table_partitions}:COPYONWRITE",
-                # f"Sparkle:{num_threads}:{table_partitions}",
-                # f"SparklePreSched:{num_threads}:{table_partitions}:BASIC",
-                # f"SparklePartial:{num_threads}:{table_partitions}:COPYONWRITE",
+        for block_size in [1000]:
+            protocols = [
+                f"Serial:{table_partition}:{1}",
+                # f"Aria:{num_threads}:{table_partition}:{batch_size // num_threads}:FALSE", 
+                f"Aria:{num_threads}:{table_partition}:{batch_size // num_threads}:TRUE",
+                f"Harmony:{num_threads}:{table_partition}:{batch_size // num_threads}",
+                f"Moss:{num_threads}:{table_partition}", 
+                f"Loom:{num_threads}:{table_partition}:COPYONWRITE",
             ]
             for cc in protocols:
                 print(f"#COMMIT-{hash}",  f"CONFIG-{cc}")
@@ -80,7 +70,7 @@ if __name__ == '__main__':
                     'protocol': cc.split(':')[0] if cc.split(':')[-1] != 'FALSE' else 'AriaFB', 
                     'threads': num_threads, 
                     'zipf': 0, 
-                    'table_partition': table_partitions, 
+                    'table_partition': table_partition, 
                     'commit': sum_commit / succeed_repeat,
                     'abort': (sum_execution - sum_commit) / succeed_repeat,
                     'latency_50': sum_latency_50 / succeed_repeat,
@@ -91,19 +81,20 @@ if __name__ == '__main__':
                 print(df)
     df.to_csv(f'./exp_results/bench_results_{timestamp}.csv')
 
-    recs = df
-    X, XLABEL = "threads", "Threads"
-    Y, YLABEL = "commit", "Troughput(Txn/s)"
-    p = MyPlot(1, 1)
-    ax: plt.Axes = p.axes
-    ax.grid(axis=p.grid, linewidth=p.border_width)
-    p.init(ax)
-    for idx, schema in enumerate(recs['protocol'].unique()):
-        records = recs[recs['protocol'] == schema]
-        p.plot(ax, xdata=records[X], ydata=records[Y], color=None, legend_label=schema,)
-    ax.set_xticks([int(t) for t in recs['threads'].unique()])
-    p.format_yticks(ax, suffix='K')
-    # ax.set_ylim(None, p.max_y_data * 1.15)       # 折线图的Y轴上限设置为数据最大值的1.15倍
-    p.set_labels(ax, XLABEL, YLABEL)
-    p.legend(ax, loc="upper center", ncol=3, anchor=(0.5, 1.25))
-    p.save(f'exp_results/bench_results_{timestamp}.pdf')
+## Plot the results
+    # recs = df
+    # X, XLABEL = "threads", "Threads"
+    # Y, YLABEL = "commit", "Troughput(Txn/s)"
+    # p = MyPlot(1, 1)
+    # ax: plt.Axes = p.axes
+    # ax.grid(axis=p.grid, linewidth=p.border_width)
+    # p.init(ax)
+    # for idx, schema in enumerate(recs['protocol'].unique()):
+    #     records = recs[recs['protocol'] == schema]
+    #     p.plot(ax, xdata=records[X], ydata=records[Y], color=None, legend_label=schema,)
+    # ax.set_xticks([int(t) for t in recs['threads'].unique()])
+    # p.format_yticks(ax, suffix='K')
+    # # ax.set_ylim(None, p.max_y_data * 1.15)       # 折线图的Y轴上限设置为数据最大值的1.15倍
+    # p.set_labels(ax, XLABEL, YLABEL)
+    # p.legend(ax, loc="upper center", ncol=3, anchor=(0.5, 1.25))
+    # p.save(f'exp_results/bench_results_{timestamp}.pdf')

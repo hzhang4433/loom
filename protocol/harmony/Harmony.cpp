@@ -212,6 +212,7 @@ void HarmonyExecutor::Run() {
                     statistics.JournalExecute();
                     statistics.JournalCommit(LATENCY);
                     statistics.JournalOverheads(tx.CountOverheads());
+                    statistics.JournalRollback(tx.CountOverheads());
                 }
             }
             // stage 4: clean up
@@ -275,6 +276,7 @@ void HarmonyExecutor::InterBlockExecute(vector<T> batch) {
             statistics.JournalExecute();
             statistics.JournalCommit(LATENCY);
             statistics.JournalOverheads(tx.CountOverheads());
+            statistics.JournalRollback(tx.CountOverheads());
         }
     }
     // stage 4: streamly execute next block

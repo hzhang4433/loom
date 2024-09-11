@@ -12,6 +12,7 @@ HyperVertex::HyperVertex(int id, bool isNested): m_hyperId(id), m_isNested(isNes
     m_in_cost = 0;
     m_out_cost = 0;
     m_aborted = false;
+    m_setted = false;
 
     m_out_edges.resize(loom::BLOCK_SIZE + 1);
     m_in_edges.resize(loom::BLOCK_SIZE + 1);
@@ -137,6 +138,14 @@ void HyperVertex::printVertexTree() {
     if (m_rootVertex) {
         m_rootVertex->printVertex();
     }
+}
+
+/// @brief set the commit time
+/// @param commit_time the commit time
+void HyperVertex::setCommitTime(chrono::time_point<chrono::steady_clock> commit_time) {
+    if (m_setted) return;
+    m_commit_time = commit_time;
+    m_setted = true;
 }
 
 }

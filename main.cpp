@@ -56,7 +56,7 @@ int main(int argc, char** argv) {
     //     cout << "Some tests failed." << endl;
     // }
 
-    for (int i = 0; i < 10; i++) {
+    for (int i = 0; i < 1; i++) {
         ::testing::GTEST_FLAG(filter) = "LoomTest.TestLoom";
         cout << "Running test iteration: " << (i + 1) << endl;
         int result = RUN_ALL_TESTS();

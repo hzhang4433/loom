@@ -883,8 +883,8 @@ void DeterReExecute::executeTransaction(const Vertex::Ptr& tx, Statistics& stati
 
 void DeterReExecute::executeTransactionWithPool(const Vertex::Ptr& tx, Statistics& statistics, ThreadPool::Ptr& Pool, std::atomic<int>& taskCounter) {
     tx->Execute();
-    // record the last commit time
-    tx->m_hyperVertex->m_commit_time = chrono::steady_clock::now();
+    // tx->m_hyperVertex->m_commit_time = chrono::steady_clock::now();
+    tx->m_hyperVertex->setCommitTime(chrono::steady_clock::now());
     statistics.JournalOverheads(tx->CountOverheads());
     auto it = dependencyGraph.find(tx);
     if (it != dependencyGraph.end()) {

@@ -58,6 +58,7 @@ static auto _ = [] {
     return 0;
 }();
 
-uint64_t TPCCTransaction::wd_orderLineCounters[TPCC::N_WAREHOUSES][TPCC::N_DISTRICTS];
+// uint64_t TPCCTransaction::wd_orderLineCounters[TPCC::N_WAREHOUSES][TPCC::N_DISTRICTS];
+std::vector<std::vector<uint64_t>> TPCCTransaction::wd_orderLineCounters(TPCC::N_WAREHOUSES, std::vector<uint64_t>(TPCC::N_DISTRICTS));
 
 std::map<size_t, int> TPCCTransaction::ol_i_id_num;

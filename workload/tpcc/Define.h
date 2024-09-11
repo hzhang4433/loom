@@ -35,9 +35,9 @@ static std::string transactionTypeToString(TransactionType type) {
     }
 }
 
-static const int N_WAREHOUSES = 1;
-static const int N_DISTRICTS = 10;
-static const int N_CUSTOMERS = 3000;
-static const int N_CARRIERS = 10;
+static size_t N_WAREHOUSES = 1;
+static const size_t N_DISTRICTS = 10;
+static const size_t N_CUSTOMERS = 3000;
+static const size_t N_CARRIERS = 10;
 
 }

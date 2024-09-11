@@ -139,8 +139,8 @@ class TPCCTransaction : public std::enable_shared_from_this<TPCCTransaction>
         static std::unordered_map<std::string, OrderInfo> wdc_latestOrder;                      // format: (w_id-d_id-c_id, {o_id, o_ol_cnt})
         static std::unordered_map<std::string, std::queue<OrderInfo>> wd_oldestNewOrder;        // format: (w_id-d_id, {o_id, o_c_id, o_ol_cnt})
         static std::unordered_map<std::string, std::vector<OrderLineInfo>> wd_latestOrderLines; // format: (d_id, [{o_id, ol_i_id}, ...])
-        static uint64_t wd_orderLineCounters[TPCC::N_WAREHOUSES][TPCC::N_DISTRICTS];            // warehouse-distirct orderLine counter
-        
+        // static uint64_t wd_orderLineCounters[TPCC::N_WAREHOUSES][TPCC::N_DISTRICTS];            // warehouse-distirct orderLine counter
+        static std::vector<std::vector<uint64_t>> wd_orderLineCounters;
         static std::map<size_t, int> ol_i_id_num; // 测试订单行出现频率
 
         // tx operations

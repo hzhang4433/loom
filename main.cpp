@@ -1,6 +1,7 @@
 #include <iostream>
 #include <gtest/gtest.h>
 #include <glog/logging.h>
+#include <gflags/gflags.h>
 #include <loom/test/TpccTest.cpp>
 #include <loom/test/MinWRollbackTest.cpp>
 #include <loom/test/FabricPPTest.cpp>
@@ -12,26 +13,64 @@
 #include <loom/test/HarmonyTest.cpp>
 #include <loom/test/FractalTest.cpp>
 #include <loom/test/MossTest.cpp>
+#include <loom/utils/UArgparse.hpp>
 
 
 using namespace std;
 
 int main(int argc, char** argv) {
-#ifdef NDEBUG
-    std::cout << "NDEBUG is defined" << std::endl;
-#else
-    std::cout << "NDEBUG is not defined" << std::endl;
-#endif
-
-    // 设置日志输出路径
+    // set log dir
     FLAGS_log_dir = "/home/z/zh/loom/log";
-    // 设置日志级别：0-INFO
-    FLAGS_v = 0;
-
-    // 初始化glog
+    // set log level to info
+    FLAGS_v = google::INFO;
+    // set error threshold to warning
+    FLAGS_stderrthreshold = google::WARNING;
+    // init google logging
     google::InitGoogleLogging(argv[0]);
+    gflags::ParseCommandLineFlags(&argc, &argv, true);
+    // check if the rest arguments have the correct number
+    CHECK(argc == 4) << "Except google logging flags, we expect 3 arguments. " << "But we got " << argc - 1 << " ." << std::endl;
+    DLOG(WARNING) << "Debug Mode: don't expect good performance. ";
+    /* args list:
+      for block:
+        1. block size
+        2. number of blocks
+        3. warehouse number
+        4. nest or not
+      for protocol:
+        5. protocol name
+        6. thread number
+        7. partition number
+        8. inter-block / nested-reExecute
+      for test:
+        9. time for running
+    */
+    auto statistics = Statistics();
+    auto workload = ParseWorkload(argv[2]);
+    auto protocol = ParseProtocol(argv[1], workload, statistics);
+    auto duration = to<milliseconds>(argv[3]);
+    protocol->Start();
+    std::this_thread::sleep_for(duration);
+    protocol->Stop();
+    // print statistics
+    cerr << statistics.Print() << endl;
+    // showdown glog
+    google::ShutdownGoogleLogging();
+}
 
-    /* 启用gtest测试 */
+/*
+int main(int argc, char** argv) {
+    // set log dir
+    FLAGS_log_dir = "/home/z/zh/loom/log";
+    // set log level to info
+    FLAGS_v = google::INFO;
+    // set error threshold to warning
+    FLAGS_stderrthreshold = google::WARNING;
+    // init google logging
+    google::InitGoogleLogging(argv[0]);
+    gflags::ParseCommandLineFlags(&argc, &argv, true);    
+
+    // 启用gtest测试
     testing::InitGoogleTest(&argc, argv);
     // ::testing::GTEST_FLAG(filter) = "TpccTest.MultiWarehouseTEST";
     // ::testing::GTEST_FLAG(filter) = "MinWRollbackTest.TestConcurrentBuild";
@@ -42,28 +81,29 @@ int main(int argc, char** argv) {
     // ::testing::GTEST_FLAG(filter) = "LoomTest.TestOtherPool";
     // ::testing::GTEST_FLAG(filter) = "LoomTest.TestLooptime";
     // ::testing::GTEST_FLAG(filter) = "SerialTest.TestSerial:AriaTest.TestAria";
+    ::testing::GTEST_FLAG(filter) = "SerialTest.TestSerial";
     // ::testing::GTEST_FLAG(filter) = "AriaTest.TestAria";
     // ::testing::GTEST_FLAG(filter) = "HarmonyTest.TestHarmony";
     // ::testing::GTEST_FLAG(filter) = "FractalTest.TestFractal";
     // ::testing::GTEST_FLAG(filter) = "MossTest.TestMoss";
     // ::testing::GTEST_FLAG(filter) = "LoomTest.TestLoom";
     
-    // int result = RUN_ALL_TESTS();
+    int result = RUN_ALL_TESTS();
 
-    // if (result == 0) {
-    //     cout << "All tests passed." << endl;
-    // } else {
-    //     cout << "Some tests failed." << endl;
-    // }
-
-    for (int i = 0; i < 1; i++) {
-        ::testing::GTEST_FLAG(filter) = "LoomTest.TestLoom";
-        cout << "Running test iteration: " << (i + 1) << endl;
-        int result = RUN_ALL_TESTS();
+    if (result == 0) {
+        cout << "All tests passed." << endl;
+    } else {
+        cout << "Some tests failed." << endl;
     }
+
+    // for (int i = 0; i < 1; i++) {
+    //     ::testing::GTEST_FLAG(filter) = "LoomTest.TestLoom";
+    //     cout << "Running test iteration: " << (i + 1) << endl;
+    //     int result = RUN_ALL_TESTS();
+    // }
 
     // 关闭glog
     google::ShutdownGoogleLogging();
 
     return 0;
-}
+}*/

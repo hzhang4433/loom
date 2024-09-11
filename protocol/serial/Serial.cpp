@@ -12,11 +12,12 @@
 /// @param table_partitions number of partitions for table
 Serial::Serial(
     vector<Block::Ptr> blocks, Statistics& statistics, 
-    size_t table_partitions
+    size_t table_partitions, size_t repeat
 ): 
     blocks(blocks), 
     statistics(statistics), 
-    table(table_partitions) 
+    table(table_partitions),
+    repeat(repeat)
 {
     LOG(INFO) << fmt::format("Serial(table_partitions={})", table_partitions) << std::endl;
 }

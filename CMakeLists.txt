@@ -34,7 +34,8 @@ set(GLOG_LIBRARIES /usr/lib/x86_64-linux-gnu/libglog.so)
 include_directories(${GLOG_INCLUDE_DIRS})
 
 # find gflags
-find_package(GFlags REQUIRED)
+find_package(gflags REQUIRED)
+set(GFLAGS_LIBRARIES /usr/lib/x86_64-linux-gnu/libgflags.so)
 include_directories(${GFLAGS_INCLUDE_DIRS})
 
 # find fmt
@@ -55,7 +56,7 @@ add_definitions(-DTBB_SUPPRESS_DEPRECATED_MESSAGES=1)
 add_executable(loom ${SRC_LIST} ${HEADERS})
 target_link_libraries(
     loom 
-    PUBLIC ${GTEST_LIBRARIES} ${TBB_LIBRARIES} ${Boost_LIBRARIES} ${GLOG_LIBRARIES} ${FMT_LIBRARIES} pthread)
+    PUBLIC ${GTEST_LIBRARIES} ${TBB_LIBRARIES} ${Boost_LIBRARIES} ${GLOG_LIBRARIES} ${GFLAGS_LIBRARIES} ${FMT_LIBRARIES} pthread)
 
 # Manage Compile Options
 if(ENABLE_NDEBUG)

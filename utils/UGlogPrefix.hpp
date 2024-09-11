@@ -1,6 +1,6 @@
-// #include <fmt/core.h>
-// #include <iomanip>
-// #include <glog/logging.h>
+#include <fmt/core.h>
+#include <iomanip>
+#include <glog/logging.h>
 
 // void PrefixFormatter(std::ostream& s, const google::LogMessage& m, void* data) {
 //     auto color = [&m]{

@@ -4,3 +4,4 @@ core.sh
 log/
 /scripts/exp_results
 **/__pycache__
+**/*.tar.gz

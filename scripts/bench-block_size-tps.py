@@ -26,12 +26,12 @@ if __name__ == '__main__':
         for block_size in [1000]:
             protocols = [
                 f"Serial:{table_partition}:{1}",
-                # f"Aria:{thread_num}:{table_partition}:FALSE",
-                f"Aria:{thread_num}:{table_partition}:TRUE",
-                # f"Harmony:{thread_num}:{table_partition}:FALSE",
-                f"Harmony:{thread_num}:{table_partition}:TRUE",
-                f"Moss:{thread_num}:{table_partition}",
-                f"Loom:{thread_num}:{table_partition}:TRUE:TRUE",
+                # # f"Aria:{thread_num}:{table_partition}:FALSE",
+                # f"Aria:{thread_num}:{table_partition}:TRUE",
+                # # f"Harmony:{thread_num}:{table_partition}:FALSE",
+                # f"Harmony:{thread_num}:{table_partition}:TRUE",
+                # f"Moss:{thread_num}:{table_partition}",
+                # f"Loom:{thread_num}:{table_partition}:TRUE:TRUE",
             ]
             for cc in protocols:
                 sum_commit = 0

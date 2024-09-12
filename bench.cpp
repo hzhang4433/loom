@@ -54,6 +54,7 @@ int main(int argc, char** argv) {
     protocol->Stop();
     // print statistics
     cerr << statistics.Print() << endl;
+    LOG(INFO) << statistics.Print();
     // showdown glog
     google::ShutdownGoogleLogging();
 }

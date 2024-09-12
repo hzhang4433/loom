@@ -8,10 +8,9 @@ import sys
 sys.path.extend(['.', '..', '../..'])
 from plot.plot import MyPlot
 
-keys = 1000000
 workload = 'TPCC'
 repeat = 10
-times_to_tun = 2
+times_to_tun = 3
 warehouse = 1
 block_num = 2
 thread_num = 36
@@ -22,15 +21,15 @@ if __name__ == '__main__':
     df = pd.DataFrame(columns=['protocol', 'warehouse', 'threads', 'table_partition', 'commit', 'overhead', 'rollback', 'tx_latency', 'block_latency', 'tps'])
     conf = {'stdout': subprocess.PIPE, 'stderr': subprocess.PIPE}
     hash = subprocess.run(["git", "rev-parse", "HEAD"], **conf).stdout.decode('utf-8').strip()
-    with open(f'./exp_results/bench_results_{timestamp}', 'w') as f:
+    with open(f'./exp_results/bench_block-size_{timestamp}', 'w') as f:
         for block_size in [1000]:
             protocols = [
-                f"Serial:{table_partition}:{1}",
+                # f"Serial:{table_partition}:{1}",
                 # # f"Aria:{thread_num}:{table_partition}:FALSE",
                 # f"Aria:{thread_num}:{table_partition}:TRUE",
                 # # f"Harmony:{thread_num}:{table_partition}:FALSE",
                 # f"Harmony:{thread_num}:{table_partition}:TRUE",
-                # f"Moss:{thread_num}:{table_partition}",
+                f"Moss:{thread_num}:{table_partition}",
                 # f"Loom:{thread_num}:{table_partition}:TRUE:TRUE",
             ]
             for cc in protocols:
@@ -81,7 +80,8 @@ if __name__ == '__main__':
                     'tps': sum_tps / succeed_repeat,
                 }
                 print(df)
-    df.to_csv(f'./exp_results/bench_block-size_results_{timestamp}.csv')
+    df.reset_index(inplace=True)
+    df.to_csv(f'./exp_results/bench_block-size_{timestamp}.csv', index=False)
 
 ## Plot the results
     # recs = df

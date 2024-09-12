@@ -40,11 +40,11 @@ int main(int argc, char** argv) {
     // ::testing::GTEST_FLAG(filter) = "LoomTest.TestOtherPool";
     // ::testing::GTEST_FLAG(filter) = "LoomTest.TestLooptime";
     // ::testing::GTEST_FLAG(filter) = "SerialTest.TestSerial:AriaTest.TestAria";
-    ::testing::GTEST_FLAG(filter) = "SerialTest.TestSerial";
+    // ::testing::GTEST_FLAG(filter) = "SerialTest.TestSerial";
     // ::testing::GTEST_FLAG(filter) = "AriaTest.TestAria";
     // ::testing::GTEST_FLAG(filter) = "HarmonyTest.TestHarmony";
     // ::testing::GTEST_FLAG(filter) = "FractalTest.TestFractal";
-    // ::testing::GTEST_FLAG(filter) = "MossTest.TestMoss";
+    ::testing::GTEST_FLAG(filter) = "MossTest.TestMoss";
     // ::testing::GTEST_FLAG(filter) = "LoomTest.TestLoom";
     
     int result = RUN_ALL_TESTS();

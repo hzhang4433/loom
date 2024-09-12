@@ -55,6 +55,7 @@ std::string Statistics::Print() {
 
     #define LATENCY(X, Y) ((double)(X.load()) / (double)(Y.load()) / (double)(1000))
     #define BLOCKLATENCY(X) ((double)(duration) / (double)(X.load()) / (double)(1000))
+    #define AVG(X, Y) ((double)(X.load()) / (double)(Y.load()))
     #define TPS(X) ((double)(X.load()) / (double)(duration) * (double)(1000000))
 
     
@@ -74,8 +75,8 @@ std::string Statistics::Print() {
         time_buffer,
         count_commit.load(),
         count_execution.load(),
-        count_overhead.load(),
-        count_rollback.load(),
+        AVG(count_overhead, count_block),
+        AVG(count_rollback, count_block),
         LATENCY(count_latency, count_commit),
         BLOCKLATENCY(count_block),
         TPS(count_commit)

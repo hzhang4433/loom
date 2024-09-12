@@ -82,7 +82,7 @@ void Moss::Start() {
                 DLOG(INFO) << "enqueue tx " << tx->id << endl;
                 // execute the transaction
                 tx->start_time = steady_clock::now();
-                Execute(tx->root_tx);
+                Execute(tx->root_tx, false);
                 statistics.JournalExecute();
                 while (true) {
                     if (tx->HasWAR()) {
@@ -102,6 +102,7 @@ void Moss::Start() {
             future.get();
         }
         statistics.JournalBlock();
+        last_finalized.store(0, std::memory_order_seq_cst);
         LOG(INFO) << "block " << i + 1 << " done, " << last_finalized.load() << " txs committed" << endl;
     }
 }
@@ -150,7 +151,7 @@ void Moss::Execute(ST stx, bool reExecute) {
     // execute the current transaction
     stx->Execute();
     if (reExecute) statistics.JournalRollback(stx->CountOverheads());
-    statistics.JournalOverheads(stx->CountOverheads());
+    else statistics.JournalOverheads(stx->CountOverheads());
     if (stx->ftx->HasWAR(stx)) return;
 
     // execute sub-transactions

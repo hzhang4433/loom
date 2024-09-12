@@ -10,7 +10,7 @@ using namespace std;
 
 TEST(MossTest, TestMoss) {
     // Generate a workload
-    TxGenerator txGenerator(loom::BLOCK_SIZE);
+    TxGenerator txGenerator(loom::BLOCK_SIZE * 2);
     auto blocks = txGenerator.generateWorkload(true);
     // Create a Statistics instance
     auto statistics = Statistics();

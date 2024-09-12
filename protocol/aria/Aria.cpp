@@ -59,6 +59,7 @@ void Aria::Start() {
         }
         // store block batch
         batches.push_back(std::move(batch));
+        statistics.JournalBlock();
     }
 
     for (size_t i = 0; i < num_threads; ++i) {
@@ -247,7 +248,6 @@ void AriaExecutor::Run() {
                 this->Fallback(&tx);
                 statistics.JournalExecute();
                 statistics.JournalCommit(LATENCY);
-                statistics.JournalOverheads(tx.CountOverheads());
                 statistics.JournalRollback(tx.CountOverheads());
             }
         }
@@ -257,7 +257,6 @@ void AriaExecutor::Run() {
         for (auto& tx : batch) {
             this->CleanLockTable(&tx);
         }
-        statistics.JournalBlock();
         #undef LATENCY
     }
 }

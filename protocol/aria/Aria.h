@@ -63,7 +63,7 @@ struct AriaLockTable: public Table<K, AriaLockEntry, KeyHasher> {
 class Aria: public Protocol {
 
 public:
-    Aria(vector<Block::Ptr> blocks, Statistics& statistics, size_t num_threads, bool enable_reordering, size_t table_partitions = 1);
+    Aria(vector<Block::Ptr> blocks, Statistics& statistics, size_t num_threads, size_t table_partitions = 1, bool enable_reordering = true);
     void Start() override;
     void Stop() override;
 

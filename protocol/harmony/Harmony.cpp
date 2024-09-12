@@ -17,7 +17,7 @@ using namespace std::chrono;
 /// @param table_partitions the number of partitions in table
 Harmony::Harmony(
     vector<Block::Ptr> blocks, Statistics& statistics,
-    size_t num_threads, bool enable_inter_block, size_t table_partitions
+    size_t num_threads, size_t table_partitions, bool enable_inter_block
 ):
     blocks(blocks),
     statistics(statistics),

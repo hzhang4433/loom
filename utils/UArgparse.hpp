@@ -99,10 +99,10 @@ inline std::unique_ptr<Protocol> ParseProtocol(const char* arg, vector<Block::Pt
         return static_cast<std::unique_ptr<Protocol>>(std::make_unique<X>(workload, statistics, FILLIN_ARGS(Y)));  \
     };
     OPT(Serial,      INT, INT)
-    OPT(Aria,        INT, BOOL, INT)
-    OPT(Harmony,     INT, BOOL, INT)
+    OPT(Aria,        INT, INT, BOOL)
+    OPT(Harmony,     INT, INT, BOOL)
     OPT(Moss,        INT, INT)
-    OPT(Loom,        INT, BOOL, BOOL, INT)
+    OPT(Loom,        INT, INT, BOOL, BOOL)
     #undef OPT
     // fallback to an error
     THROW("unknown protocol option ({})", std::string{name});

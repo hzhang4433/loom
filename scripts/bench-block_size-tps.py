@@ -3,8 +3,8 @@ import matplotlib.pyplot as plt
 import pandas as pd
 import re
 import time
-
 import sys
+
 sys.path.extend(['.', '..', '../..'])
 from plot.plot import MyPlot
 
@@ -15,7 +15,6 @@ times_to_tun = 2
 warehouse = 1
 block_num = 2
 thread_num = 36
-# is_nest = FALSE
 table_partition = 9973
 timestamp = int(time.time())
 
@@ -27,11 +26,12 @@ if __name__ == '__main__':
         for block_size in [1000]:
             protocols = [
                 f"Serial:{table_partition}:{1}",
-                # f"Aria:{thread_num}:FALSE:{table_partition}",
-                f"Aria:{thread_num}:TRUE:{table_partition}",
-                f"Harmony:{thread_num}:TRUE:{table_partition}",
+                # f"Aria:{thread_num}:{table_partition}:FALSE",
+                f"Aria:{thread_num}:{table_partition}:TRUE",
+                # f"Harmony:{thread_num}:{table_partition}:FALSE",
+                f"Harmony:{thread_num}:{table_partition}:TRUE",
                 f"Moss:{thread_num}:{table_partition}",
-                f"Loom:{thread_num}:TRUE:TRUE:{table_partition}",
+                f"Loom:{thread_num}:{table_partition}:TRUE:TRUE",
             ]
             for cc in protocols:
                 sum_commit = 0
@@ -43,9 +43,9 @@ if __name__ == '__main__':
                 sum_tps = 0
 
                 if cc.split(':')[0] in ['Moss', 'Loom']:
-                    is_nest = TRUE
+                    is_nest = 'TRUE'
                 else:
-                    is_nest = FALSE
+                    is_nest = 'FALSE'
                 
                 print(f"#COMMIT-{hash}",  f"CONFIG-{cc}")
                 f.write(f"#COMMIT-{hash} CONFIG-{cc}\n")
@@ -55,7 +55,7 @@ if __name__ == '__main__':
                 succeed_repeat = 0
                 for _ in range(repeat):
                     try:
-                        result = subprocess.run(["../build/loom", cc, f"{workload}:{warehouse}:{block_size}:{block_num}:{is_nest}", f"{times_to_tun}s"], **conf)
+                        result = subprocess.run(["../build/bench", cc, f"{workload}:{warehouse}:{block_size}:{block_num}:{is_nest}", f"{times_to_tun}s"], **conf)
                         result_str = result.stderr.decode('utf-8').strip()
                         f.write(result_str + '\n')
                         sum_commit += float(re.search(r'commit\s+([\d.]+)', result_str).group(1))
@@ -81,7 +81,7 @@ if __name__ == '__main__':
                     'tps': sum_tps / succeed_repeat,
                 }
                 print(df)
-    df.to_csv(f'./exp_results/bench_results_{timestamp}.csv')
+    df.to_csv(f'./exp_results/bench_block-size_results_{timestamp}.csv')
 
 ## Plot the results
     # recs = df

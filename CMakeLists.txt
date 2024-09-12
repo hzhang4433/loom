@@ -48,16 +48,23 @@ include_directories(${CMAKE_SOURCE_DIR})
 file(GLOB_RECURSE SRC_LIST "*.cpp")
 list(FILTER SRC_LIST EXCLUDE REGEX ".*/test/.*")
 list(FILTER SRC_LIST EXCLUDE REGEX ".*/build/.*")
+list(FILTER SRC_LIST EXCLUDE REGEX ".*/main.cpp")
+list(FILTER SRC_LIST EXCLUDE REGEX ".*/bench.cpp")
 file(GLOB_RECURSE HEADERS "*.h" "*.hpp")
 
 # 禁止tbb的deprecated警告
 add_definitions(-DTBB_SUPPRESS_DEPRECATED_MESSAGES=1)
 
-add_executable(loom ${SRC_LIST} ${HEADERS})
+add_executable(loom main.cpp ${SRC_LIST} ${HEADERS})
 target_link_libraries(
     loom 
     PUBLIC ${GTEST_LIBRARIES} ${TBB_LIBRARIES} ${Boost_LIBRARIES} ${GLOG_LIBRARIES} ${GFLAGS_LIBRARIES} ${FMT_LIBRARIES} pthread)
 
+add_executable(bench bench.cpp ${SRC_LIST} ${HEADERS})
+target_link_libraries(
+    bench 
+    PUBLIC ${GTEST_LIBRARIES} ${TBB_LIBRARIES} ${Boost_LIBRARIES} ${GLOG_LIBRARIES} ${GFLAGS_LIBRARIES} ${FMT_LIBRARIES} pthread)
+    
 # Manage Compile Options
 if(ENABLE_NDEBUG)
     message(STATUS "NDEBUG is enabled")
@@ -75,6 +82,8 @@ else()
 endif()
 
 target_compile_options(loom PRIVATE -Wno-deprecated -Wpedantic -Wno-unused-variable -Wno-unused-parameter -Wno-comment -Wno-sign-compare -Wno-pedantic -Wno-return-type -Wno-uninitialized)
+target_compile_options(bench PRIVATE -Wno-deprecated -Wpedantic -Wno-unused-variable -Wno-unused-parameter -Wno-comment -Wno-sign-compare -Wno-pedantic -Wno-return-type -Wno-uninitialized)
 # add project to include path
 message(STATUS "Project source directory: ${PROJECT_SOURCE_DIR}")
 target_include_directories(loom PRIVATE ${PROJECT_SOURCE_DIR}/..)
+target_include_directories(bench PRIVATE ${PROJECT_SOURCE_DIR}/..)

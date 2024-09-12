@@ -20,9 +20,9 @@ Loom::Loom(
     vector<Block::Ptr> blocks,
     Statistics& statistics,
     size_t num_threads, 
+    size_t table_partitions,
     bool enable_inter_block,
-    bool enable_nested_reExecution,
-    size_t table_partitions
+    bool enable_nested_reExecution
 ):
     blocks(std::move(blocks)),
     statistics(statistics),

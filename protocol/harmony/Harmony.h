@@ -62,7 +62,7 @@ struct HarmonyLockTable: public Table<K, HarmonyLockEntry, KeyHasher> {
 class Harmony: public Protocol {
 
 public:
-    Harmony(vector<Block::Ptr> blocks, Statistics& statistics, size_t num_threads, bool enable_inter_block, size_t table_partitions = 1);
+    Harmony(vector<Block::Ptr> blocks, Statistics& statistics, size_t num_threads, size_t table_partitions = 1, bool enable_inter_block = true);
     void Start() override;
     void Stop() override;
 

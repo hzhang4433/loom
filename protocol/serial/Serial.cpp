@@ -26,10 +26,7 @@ Serial::Serial(
 void Serial::Start() {
     LOG(INFO) << "Serial Start";
     vector<T> workloads;
-    LOG(INFO) << "blocks size: " << blocks.size();
-
     for (auto& block: blocks) {
-        LOG(INFO) << "block size: " << block->getTxs().size();
         size_t block_id = block->getBlockId();
         for (auto& tx: block->getTxs()) {
             size_t txid = tx->GetTx()->m_hyperId;

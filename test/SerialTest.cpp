@@ -11,6 +11,7 @@ using namespace std;
 TEST(SerialTest, TestSerial) {
     // Generate a workload
     loom::BLOCK_SIZE = 100;
+    TPCC::N_WAREHOUSES = 10;
     TxGenerator txGenerator(loom::BLOCK_SIZE * 2);
     auto blocks = txGenerator.generateWorkload(false);
     // Create a Statistics instance

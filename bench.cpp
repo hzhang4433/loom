@@ -22,6 +22,10 @@ namespace loom {
     size_t BLOCK_SIZE = 1000;
 };
 
+namespace TPCC {
+    size_t N_WAREHOUSES = 1;
+};
+
 int main(int argc, char** argv) {
     // Get protocol name from arguments
     string protocol_name;

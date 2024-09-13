@@ -106,6 +106,7 @@ class TPCCTransaction : public std::enable_shared_from_this<TPCCTransaction>
                 counter.store(1);
             }
             // wd_orderLineCounters
+            wd_orderLineCounters.resize(TPCC::N_WAREHOUSES, std::vector<uint64_t>(TPCC::N_DISTRICTS));
             for (int i = 0; i < TPCC::N_WAREHOUSES; i++) {
                 for (int j = 0; j < TPCC::N_DISTRICTS; j++) {
                     wd_orderLineCounters[i][j] = 0;

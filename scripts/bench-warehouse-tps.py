@@ -11,19 +11,19 @@ from plot.plot import MyPlot
 workload = 'TPCC'
 repeat = 10
 times_to_tun = 3
-warehouse = 1
+block_size = 900
 block_num = 2
 thread_num = 36
 table_partition = 9973
 timestamp = int(time.time())
 
 if __name__ == '__main__':
-    df = pd.DataFrame(columns=['protocol', 'block_size', 'warehouse', 'threads', 'table_partition', 'commit', 'overhead', 'rollback', 'tx_latency', 'block_latency', 'tps'])
+    df = pd.DataFrame(columns=['protocol', 'warehouse', 'block_size', 'threads', 'table_partition', 'commit', 'overhead', 'rollback', 'tx_latency', 'block_latency', 'tps'])
     conf = {'stdout': subprocess.PIPE, 'stderr': subprocess.PIPE}
     hash = subprocess.run(["git", "rev-parse", "HEAD"], **conf).stdout.decode('utf-8').strip()
-    with open(f'./exp_results/bench_block-size_{timestamp}', 'w') as f:
-        # list(range(100, 1501, 100)) / [1000]
-        for block_size in list(range(100, 1501, 100)):
+    with open(f'./exp_results/bench_warehouse_{timestamp}', 'w') as f:
+        # list(range(1, 21, 1)) / [10]
+        for warehouse in list(range(1, 21, 1)):
             protocols = [
                 f"Serial:{1}:{table_partition}",
                 # f"Aria:{thread_num}:{table_partition}:FALSE",
@@ -70,8 +70,8 @@ if __name__ == '__main__':
                         print(e)
                 df.loc[len(df)] = {
                     'protocol': cc.split(':')[0] if cc.split(':')[-1] != 'FALSE' else 'AriaFB', 
-                    'block_size': block_size,
                     'warehouse': warehouse,
+                    'block_size': block_size,
                     'threads': thread_num,
                     'table_partition': table_partition, 
                     'commit': sum_commit / succeed_repeat,
@@ -83,22 +83,22 @@ if __name__ == '__main__':
                 }
                 print(df)
     df.reset_index(inplace=True)
-    df.to_csv(f'./exp_results/bench_block-size_{timestamp}.csv', index=False)
+    df.to_csv(f'./exp_results/bench_warehouse_{timestamp}.csv', index=False)
 
-# Plot the results
-    recs = df
-    X, XLABEL = "block_size", "block size"
-    Y, YLABEL = "tps", "Troughput(Txn/s)"
-    p = MyPlot(1, 1)
-    ax: plt.Axes = p.axes
-    ax.grid(axis=p.grid, linewidth=p.border_width)
-    p.init(ax)
-    for idx, schema in enumerate(recs['protocol'].unique()):
-        records = recs[recs['protocol'] == schema]
-        p.plot(ax, xdata=records[X], ydata=records[Y], color=None, legend_label=schema,)
-    ax.set_xticks([int(t) for t in recs['block_size'].unique()])
-    p.format_yticks(ax, suffix='K')
-    # ax.set_ylim(None, p.max_y_data * 1.15)       # 折线图的Y轴上限设置为数据最大值的1.15倍
-    p.set_labels(ax, XLABEL, YLABEL)
-    p.legend(ax, loc="upper center", ncol=3, anchor=(0.5, 1.25))
-    p.save(f'exp_results/bench_block-size_results_{timestamp}.pdf')
+## Plot the results
+    # recs = df
+    # X, XLABEL = "threads", "Threads"
+    # Y, YLABEL = "commit", "Troughput(Txn/s)"
+    # p = MyPlot(1, 1)
+    # ax: plt.Axes = p.axes
+    # ax.grid(axis=p.grid, linewidth=p.border_width)
+    # p.init(ax)
+    # for idx, schema in enumerate(recs['protocol'].unique()):
+    #     records = recs[recs['protocol'] == schema]
+    #     p.plot(ax, xdata=records[X], ydata=records[Y], color=None, legend_label=schema,)
+    # ax.set_xticks([int(t) for t in recs['threads'].unique()])
+    # p.format_yticks(ax, suffix='K')
+    # # ax.set_ylim(None, p.max_y_data * 1.15)       # 折线图的Y轴上限设置为数据最大值的1.15倍
+    # p.set_labels(ax, XLABEL, YLABEL)
+    # p.legend(ax, loc="upper center", ncol=3, anchor=(0.5, 1.25))
+    # p.save(f'exp_results/bench_warehouse_results_{timestamp}.pdf')

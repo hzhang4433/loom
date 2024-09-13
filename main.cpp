@@ -22,6 +22,10 @@ namespace loom {
     size_t BLOCK_SIZE = 1000;
 };
 
+namespace TPCC {
+    size_t N_WAREHOUSES = 1;
+};
+
 int main(int argc, char** argv) {
     // set log dir
     FLAGS_log_dir = "/home/z/zh/loom/log";
@@ -34,7 +38,7 @@ int main(int argc, char** argv) {
 
     // 启用gtest测试
     testing::InitGoogleTest(&argc, argv);
-/*
+/**/
     // ::testing::GTEST_FLAG(filter) = "TpccTest.MultiWarehouseTEST";
     // ::testing::GTEST_FLAG(filter) = "MinWRollbackTest.TestConcurrentBuild";
     // ::testing::GTEST_FLAG(filter) = "MinWRollbackTest.TestSerialOrder";
@@ -44,11 +48,11 @@ int main(int argc, char** argv) {
     // ::testing::GTEST_FLAG(filter) = "LoomTest.TestOtherPool";
     // ::testing::GTEST_FLAG(filter) = "LoomTest.TestLooptime";
     // ::testing::GTEST_FLAG(filter) = "SerialTest.TestSerial:AriaTest.TestAria";
-    // ::testing::GTEST_FLAG(filter) = "SerialTest.TestSerial";
+    ::testing::GTEST_FLAG(filter) = "SerialTest.TestSerial";
     // ::testing::GTEST_FLAG(filter) = "AriaTest.TestAria";
     // ::testing::GTEST_FLAG(filter) = "HarmonyTest.TestHarmony";
     // ::testing::GTEST_FLAG(filter) = "FractalTest.TestFractal";
-    ::testing::GTEST_FLAG(filter) = "MossTest.TestMoss";
+    // ::testing::GTEST_FLAG(filter) = "MossTest.TestMoss";
     // ::testing::GTEST_FLAG(filter) = "LoomTest.TestLoom";
     
     int result = RUN_ALL_TESTS();
@@ -58,13 +62,13 @@ int main(int argc, char** argv) {
     } else {
         cout << "Some tests failed." << endl;
     }
-*/
 
-    for (int i = 0; i < 10; i++) {
-        ::testing::GTEST_FLAG(filter) = "MossTest.TestMoss";
-        cout << "Running test iteration: " << (i + 1) << endl;
-        int result = RUN_ALL_TESTS();
-    }
+
+    // for (int i = 0; i < 10; i++) {
+    //     ::testing::GTEST_FLAG(filter) = "MossTest.TestMoss";
+    //     cout << "Running test iteration: " << (i + 1) << endl;
+    //     int result = RUN_ALL_TESTS();
+    // }
 
     // 关闭glog
     google::ShutdownGoogleLogging();

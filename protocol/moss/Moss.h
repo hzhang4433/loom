@@ -85,6 +85,7 @@ private:
     vector<Block::Ptr>                      blocks;
     size_t                                  num_threads;
     MossTable                               table;
+    std::atomic<bool>                       stop_flag{false};
     std::atomic<size_t>                     last_finalized{0};
     std::shared_ptr<ThreadPool>             pool;
 };

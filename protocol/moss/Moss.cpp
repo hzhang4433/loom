@@ -73,6 +73,10 @@ void Moss::Start() {
     // execute all transactions in the blocks
     LOG(INFO) << "Start" << endl;
     DLOG(INFO) << "block num: " << m_blocks.size() << endl;
+
+    auto start_time = std::chrono::steady_clock::now();
+    std::chrono::seconds duration(2);
+
     for (size_t i = 0; i < m_blocks.size(); i++) {
         auto m_txs = m_blocks[i];
         // execute all transactions in the block
@@ -80,13 +84,19 @@ void Moss::Start() {
         std::vector<std::future<void>> futures;
         for (size_t j = 0; j < m_txs.size(); j++) {
             auto tx = m_txs[j];
-            futures.push_back(pool->enqueue([this, tx]() mutable {
+            futures.push_back(pool->enqueue([this, tx, start_time, duration]() mutable {
                 DLOG(INFO) << "enqueue tx " << tx->id << endl;
                 // execute the transaction
                 tx->start_time = steady_clock::now();
                 Execute(tx->root_tx, false);
                 statistics.JournalExecute();
-                while (true) {
+                while (!stop_flag.load()) {
+                    auto current_time = std::chrono::steady_clock::now();
+                    if (current_time - start_time >= duration) {
+                        stop_flag.store(true);  // 超时，设置停止标志
+                        break;
+                    }
+
                     if (tx->HasWAR()) {
                         // if there are war, re-execute entire transaction
                         ReExecute(tx);
@@ -103,14 +113,15 @@ void Moss::Start() {
         for (auto& future : futures) {
             future.get();
         }
-        last_finalized.store(0, std::memory_order_seq_cst);
         LOG(INFO) << "block " << i + 1 << " done, " << last_finalized.load() * (i + 1) << " txs committed" << endl;
+        last_finalized.store(0, std::memory_order_seq_cst);
         statistics.JournalBlock();
     }
 }
 
 /// @brief stop the protocol
 void Moss::Stop() {
+    stop_flag.store(true);
     pool->shutdown();
     LOG(INFO) << "Moss stop";
 }

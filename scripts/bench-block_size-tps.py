@@ -25,13 +25,13 @@ if __name__ == '__main__':
         # list(range(100, 1501, 100)) / [1000]
         for block_size in list(range(100, 1501, 100)):
             protocols = [
-                # f"Serial:{1}:{table_partition}",
-                # # f"Aria:{thread_num}:{table_partition}:FALSE",
-                # f"Aria:{thread_num}:{table_partition}:TRUE",
-                # # f"Harmony:{thread_num}:{table_partition}:FALSE",
-                # f"Harmony:{thread_num}:{table_partition}:TRUE",
+                f"Serial:{1}:{table_partition}",
+                # f"Aria:{thread_num}:{table_partition}:FALSE",
+                f"Aria:{thread_num}:{table_partition}:TRUE",
+                # f"Harmony:{thread_num}:{table_partition}:FALSE",
+                f"Harmony:{thread_num}:{table_partition}:TRUE",
                 f"Moss:{thread_num}:{table_partition}",
-                # f"Loom:{thread_num}:{table_partition}:TRUE:TRUE",
+                f"Loom:{thread_num}:{table_partition}:TRUE:TRUE",
             ]
             for cc in protocols:
                 sum_commit = 0

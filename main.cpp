@@ -30,11 +30,11 @@ int main(int argc, char** argv) {
     // set error threshold to warning
     FLAGS_stderrthreshold = google::WARNING;
     // init google logging
-    google::InitGoogleLogging(argv[0]);
-    gflags::ParseCommandLineFlags(&argc, &argv, true);    
+    google::InitGoogleLogging(argv[0]);   
 
     // 启用gtest测试
     testing::InitGoogleTest(&argc, argv);
+/*
     // ::testing::GTEST_FLAG(filter) = "TpccTest.MultiWarehouseTEST";
     // ::testing::GTEST_FLAG(filter) = "MinWRollbackTest.TestConcurrentBuild";
     // ::testing::GTEST_FLAG(filter) = "MinWRollbackTest.TestSerialOrder";
@@ -58,12 +58,13 @@ int main(int argc, char** argv) {
     } else {
         cout << "Some tests failed." << endl;
     }
+*/
 
-    // for (int i = 0; i < 1; i++) {
-    //     ::testing::GTEST_FLAG(filter) = "LoomTest.TestLoom";
-    //     cout << "Running test iteration: " << (i + 1) << endl;
-    //     int result = RUN_ALL_TESTS();
-    // }
+    for (int i = 0; i < 10; i++) {
+        ::testing::GTEST_FLAG(filter) = "MossTest.TestMoss";
+        cout << "Running test iteration: " << (i + 1) << endl;
+        int result = RUN_ALL_TESTS();
+    }
 
     // 关闭glog
     google::ShutdownGoogleLogging();

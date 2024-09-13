@@ -72,9 +72,11 @@ void Moss::Start() {
     
     // execute all transactions in the blocks
     LOG(INFO) << "Start" << endl;
+    DLOG(INFO) << "block num: " << m_blocks.size() << endl;
     for (size_t i = 0; i < m_blocks.size(); i++) {
         auto m_txs = m_blocks[i];
         // execute all transactions in the block
+        DLOG(INFO) << "block size: " << m_txs.size() << endl;
         std::vector<std::future<void>> futures;
         for (size_t j = 0; j < m_txs.size(); j++) {
             auto tx = m_txs[j];
@@ -101,9 +103,9 @@ void Moss::Start() {
         for (auto& future : futures) {
             future.get();
         }
-        statistics.JournalBlock();
-        LOG(INFO) << "block " << i + 1 << " done, " << last_finalized.load() * (i + 1) << " txs committed" << endl;
         last_finalized.store(0, std::memory_order_seq_cst);
+        LOG(INFO) << "block " << i + 1 << " done, " << last_finalized.load() * (i + 1) << " txs committed" << endl;
+        statistics.JournalBlock();
     }
 }
 

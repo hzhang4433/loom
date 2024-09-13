@@ -46,7 +46,7 @@ static std::string taskPriorityToString(loom::TaskPriority type) {
 }
 
 // 定义区块大小
-static size_t BLOCK_SIZE = 1000;
+extern size_t BLOCK_SIZE;
 
 // 全局变量控制输出
 static bool isOutputEnabled = false;

@@ -18,6 +18,10 @@
 
 using namespace std;
 
+namespace loom {
+    size_t BLOCK_SIZE = 1000;
+};
+
 int main(int argc, char** argv) {
     // Get protocol name from arguments
     string protocol_name;

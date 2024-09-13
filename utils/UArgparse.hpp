@@ -72,12 +72,14 @@ milliseconds to<milliseconds>(std::basic_string_view<char> s) {
 	return milliseconds{};
 }
 
-inline std::vector<Block::Ptr> ParseWorkload(const char* arg) {
+inline std::vector<Block::Ptr> ParseWorkload(const char* arg, size_t& warehouse_num, size_t& block_size) {
     auto args = split(arg);
     auto name = *args.begin();
     auto iter = args.begin();
     TPCC::N_WAREHOUSES = INT;
+    warehouse_num = TPCC::N_WAREHOUSES;
     loom::BLOCK_SIZE = INT;
+    block_size = loom::BLOCK_SIZE;
     auto num_blocks = INT;
     auto is_nest = BOOL;
     // Generate a workload
@@ -86,9 +88,11 @@ inline std::vector<Block::Ptr> ParseWorkload(const char* arg) {
     return txGenerator.generateWorkload(is_nest);
 }
 
-inline std::unique_ptr<Protocol> ParseProtocol(const char* arg, vector<Block::Ptr>& workload, Statistics& statistics) {
+inline std::unique_ptr<Protocol> ParseProtocol(const char* arg, vector<Block::Ptr>& workload, Statistics& statistics, std::string& protocol_name, size_t& thread_num) {
     auto args = split(arg);
     auto name = *args.begin();
+    protocol_name = name;
+    thread_num = std::stoi(args[1]);
     auto dist = (size_t) (std::distance(args.begin(), args.end()) - 1);
     auto iter = args.begin();
     // map each option to an argparser

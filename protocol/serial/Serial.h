@@ -43,14 +43,14 @@ struct SerialTable: public Table<K, SerialEntry, KeyHasher> {
 class Serial: public Protocol {
 
 public:
-    Serial(vector<Block::Ptr> blocks, Statistics& statistics, size_t table_partitions = 1, size_t repeat = 1);
+    Serial(vector<Block::Ptr> blocks, Statistics& statistics, size_t thread_num = 1, size_t table_partitions = 1);
     void Start() override;
     void Stop()  override;
 
 private:
     vector<Block::Ptr>  blocks;
     SerialTable         table;
-    size_t              repeat;
+    size_t              thread_num;
     std::thread*        thread{nullptr};
     std::atomic<bool>   stop_flag{false};
     Statistics&         statistics;

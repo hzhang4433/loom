@@ -9,7 +9,7 @@ sys.path.extend(['.', '..', '../..'])
 from plot.plot import MyPlot
 
 workload = 'TPCC'
-repeat = 10
+repeat = 1
 times_to_tun = 3
 warehouse = 1
 block_num = 2
@@ -18,19 +18,20 @@ table_partition = 9973
 timestamp = int(time.time())
 
 if __name__ == '__main__':
-    df = pd.DataFrame(columns=['protocol', 'warehouse', 'threads', 'table_partition', 'commit', 'overhead', 'rollback', 'tx_latency', 'block_latency', 'tps'])
+    df = pd.DataFrame(columns=['protocol', 'block_size', 'warehouse', 'threads', 'table_partition', 'commit', 'overhead', 'rollback', 'tx_latency', 'block_latency', 'tps'])
     conf = {'stdout': subprocess.PIPE, 'stderr': subprocess.PIPE}
     hash = subprocess.run(["git", "rev-parse", "HEAD"], **conf).stdout.decode('utf-8').strip()
     with open(f'./exp_results/bench_block-size_{timestamp}', 'w') as f:
-        for block_size in [1000]:
+        # list(range(100, 1501, 100)) / [1000]
+        for block_size in list(range(100, 1501, 100)):
             protocols = [
-                # f"Serial:{table_partition}:{1}",
-                # # f"Aria:{thread_num}:{table_partition}:FALSE",
-                # f"Aria:{thread_num}:{table_partition}:TRUE",
-                # # f"Harmony:{thread_num}:{table_partition}:FALSE",
-                # f"Harmony:{thread_num}:{table_partition}:TRUE",
+                f"Serial:{1}:{table_partition}",
+                # f"Aria:{thread_num}:{table_partition}:FALSE",
+                f"Aria:{thread_num}:{table_partition}:TRUE",
+                # f"Harmony:{thread_num}:{table_partition}:FALSE",
+                f"Harmony:{thread_num}:{table_partition}:TRUE",
                 f"Moss:{thread_num}:{table_partition}",
-                # f"Loom:{thread_num}:{table_partition}:TRUE:TRUE",
+                f"Loom:{thread_num}:{table_partition}:TRUE:TRUE",
             ]
             for cc in protocols:
                 sum_commit = 0
@@ -48,8 +49,8 @@ if __name__ == '__main__':
                 
                 print(f"#COMMIT-{hash}",  f"CONFIG-{cc}")
                 f.write(f"#COMMIT-{hash} CONFIG-{cc}\n")
-                print(f'../bench {cc} {workload}:{warehouse}:{block_size}:{block_num}:{is_nest} {times_to_tun}s')
-                f.write(f'../bench {cc} {workload}:{warehouse}:{block_size}:{block_num}:{is_nest} {times_to_tun}s' + '\n')
+                print(f'Protocol: {cc} {workload}:{warehouse}:{block_size}:{block_num}:{is_nest} {times_to_tun}s')
+                f.write(f'Protocol: {cc} {workload}:{warehouse}:{block_size}:{block_num}:{is_nest} {times_to_tun}s' + '\n')
 
                 succeed_repeat = 0
                 for _ in range(repeat):
@@ -69,6 +70,7 @@ if __name__ == '__main__':
                         print(e)
                 df.loc[len(df)] = {
                     'protocol': cc.split(':')[0] if cc.split(':')[-1] != 'FALSE' else 'AriaFB', 
+                    'block_size': block_size,
                     'warehouse': warehouse,
                     'threads': thread_num,
                     'table_partition': table_partition, 

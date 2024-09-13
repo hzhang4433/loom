@@ -18,7 +18,7 @@ namespace loom {
 
 class TxGenerator {
     public:
-        TxGenerator(int txNum); // 构造函数
+        TxGenerator(int txNum, size_t block_size = loom::BLOCK_SIZE); // 构造函数
 
         ~TxGenerator(){}; // 析构函数
 

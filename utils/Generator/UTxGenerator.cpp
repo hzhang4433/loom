@@ -2,7 +2,7 @@
 
 
 // 构造函数
-TxGenerator::TxGenerator(int txNum) : id_counter(0), m_txNum(txNum), m_blockSize(loom::BLOCK_SIZE) {}  
+TxGenerator::TxGenerator(int txNum, size_t block_size) : id_counter(0), m_txNum(txNum), m_blockSize(block_size) {}
 
 // 生成事务
 std::vector<Block::Ptr> TxGenerator::generateWorkload(bool isNest) {
@@ -10,6 +10,7 @@ std::vector<Block::Ptr> TxGenerator::generateWorkload(bool isNest) {
     // 140716047624829
     workload.set_seed(uint64_t(140703587571293));
     auto seed = workload.get_seed();
+    cout << "block size: " << m_blockSize << endl;
     cout << "seed: " << seed << endl;
     // generateBlock
     auto blockNum = m_txNum / m_blockSize;

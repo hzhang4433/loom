@@ -12,12 +12,12 @@
 /// @param table_partitions number of partitions for table
 Serial::Serial(
     vector<Block::Ptr> blocks, Statistics& statistics, 
-    size_t table_partitions, size_t repeat
+    size_t thread_num, size_t table_partitions
 ): 
     blocks(blocks), 
     statistics(statistics), 
-    table(table_partitions),
-    repeat(repeat)
+    thread_num(thread_num),
+    table(table_partitions)
 {
     LOG(INFO) << fmt::format("Serial(table_partitions={})", table_partitions) << std::endl;
 }
@@ -26,7 +26,10 @@ Serial::Serial(
 void Serial::Start() {
     LOG(INFO) << "Serial Start";
     vector<T> workloads;
+    LOG(INFO) << "blocks size: " << blocks.size();
+
     for (auto& block: blocks) {
+        LOG(INFO) << "block size: " << block->getTxs().size();
         size_t block_id = block->getBlockId();
         for (auto& tx: block->getTxs()) {
             size_t txid = tx->GetTx()->m_hyperId;

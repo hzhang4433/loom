@@ -276,13 +276,14 @@ void Loom::PreExecuteInterBlock(vector<T>& batch, const size_t& block_id) {
         tx->start_time = chrono::steady_clock::now();
         tx->Execute();
         statistics.JournalExecute();
-        statistics.JournalOverheads(tx->CountOverheads());
         // Check if transaction was aborted
         if (tx->aborted.load()) {
             DLOG(WARNING) << "Transaction " << tx->id << " aborted, queuing for retry...";
             // enqueue the task for retry and exit to avoid continuing the loop
             retryTxs.push_back(tx);
-        }
+            return;
+        } 
+        statistics.JournalOverheads(tx->CountOverheads());
     };
 
     // Enqueue all transactions for initial execution

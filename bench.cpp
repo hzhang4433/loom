@@ -19,14 +19,12 @@
 using namespace std;
 
 int main(int argc, char** argv) {
-    // set log dir
-    FLAGS_log_dir = "/home/z/zh/loom/log";
-    // set log level to info
-    FLAGS_v = google::INFO;
-    // set error threshold to warning
-    FLAGS_stderrthreshold = google::WARNING;
-    // init google logging
-    google::InitGoogleLogging(argv[0]);
+    // Get protocol name from arguments
+    string protocol_name;
+    size_t warehouse_num, block_size, thread_num;
+
+
+    /* parse arguments */
     gflags::ParseCommandLineFlags(&argc, &argv, true);
     // check if the rest arguments have the correct number
     CHECK(argc == 4) << "Except google logging flags, we expect 3 arguments. " << "But we got " << argc - 1 << " ." << std::endl;
@@ -46,9 +44,27 @@ int main(int argc, char** argv) {
         9. time for running
     */
     auto statistics = Statistics();
-    auto workload = ParseWorkload(argv[2]);
-    auto protocol = ParseProtocol(argv[1], workload, statistics);
+    auto workload = ParseWorkload(argv[2], warehouse_num, block_size);
+    auto protocol = ParseProtocol(argv[1], workload, statistics, protocol_name, thread_num);
     auto duration = to<milliseconds>(argv[3]);
+    
+    /*  init glog  */
+    // set log dir
+    FLAGS_log_dir = "/home/z/zh/loom/log";
+    
+    // set log level to info
+    FLAGS_v = google::INFO;
+    
+    // set error threshold to warning
+    FLAGS_stderrthreshold = google::WARNING;
+    
+    // Generate log file prefix
+    string log_prefix = protocol_name + "." + to_string(warehouse_num) + "." + to_string(block_size) + "." + to_string(thread_num) + ".";
+    google::SetLogDestination(google::INFO, (FLAGS_log_dir + "/" + log_prefix).c_str());
+    
+    // init google logging
+    google::InitGoogleLogging(argv[0]);
+
     protocol->Start();
     std::this_thread::sleep_for(duration);
     protocol->Stop();

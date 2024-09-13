@@ -102,8 +102,8 @@ void Moss::Start() {
             future.get();
         }
         statistics.JournalBlock();
+        LOG(INFO) << "block " << i + 1 << " done, " << last_finalized.load() * (i + 1) << " txs committed" << endl;
         last_finalized.store(0, std::memory_order_seq_cst);
-        LOG(INFO) << "block " << i + 1 << " done, " << last_finalized.load() << " txs committed" << endl;
     }
 }
 

@@ -10,12 +10,13 @@ using namespace std;
 
 TEST(SerialTest, TestSerial) {
     // Generate a workload
-    TxGenerator txGenerator(loom::BLOCK_SIZE);
+    loom::BLOCK_SIZE = 100;
+    TxGenerator txGenerator(loom::BLOCK_SIZE * 2);
     auto blocks = txGenerator.generateWorkload(false);
     // Create a Statistics instance
     auto statistics = Statistics();
     // Create a Serial instance
-    auto protocol = Serial(blocks, statistics, 36);
+    auto protocol = Serial(blocks, statistics, 1, 36);
     // Start the protocol
     protocol.Start();
     // Wait for the protocol to finish

@@ -716,7 +716,7 @@ TEST(LoomTest, TestLoom) {
     // Create a Statistics instance
     auto statistics = Statistics();
     // Create a loom instance
-    auto protocol = Loom(blocks, statistics, 36, true, true, 36);
+    auto protocol = Loom(blocks, statistics, 36, 36, true, true);
     // Start the protocol
     protocol.Start();
     // Wait for the protocol to finish

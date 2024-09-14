@@ -9,7 +9,7 @@ sys.path.extend(['.', '..', '../..'])
 from plot.plot import MyPlot
 
 workload = 'TPCC'
-repeat = 10
+repeat = 1
 times_to_tun = 3
 block_size = 900
 block_num = 2
@@ -31,6 +31,7 @@ if __name__ == '__main__':
                 # f"Harmony:{thread_num}:{table_partition}:FALSE",
                 f"Harmony:{thread_num}:{table_partition}:TRUE",
                 f"Moss:{thread_num}:{table_partition}",
+                f"Loom:{thread_num}:{table_partition}:TRUE:FALSE",
                 f"Loom:{thread_num}:{table_partition}:TRUE:TRUE",
             ]
             for cc in protocols:
@@ -69,7 +70,7 @@ if __name__ == '__main__':
                     except Exception as e:
                         print(e)
                 df.loc[len(df)] = {
-                    'protocol': cc.split(':')[0] if cc.split(':')[-1] != 'FALSE' else 'AriaFB', 
+                    'protocol': cc.split(':')[0] if cc.split(':')[-1] != 'FALSE' else 'LoomNIB', 
                     'warehouse': warehouse,
                     'block_size': block_size,
                     'threads': thread_num,
@@ -85,20 +86,20 @@ if __name__ == '__main__':
     df.reset_index(inplace=True)
     df.to_csv(f'./exp_results/bench_warehouse_{timestamp}.csv', index=False)
 
-## Plot the results
-    # recs = df
-    # X, XLABEL = "threads", "Threads"
-    # Y, YLABEL = "commit", "Troughput(Txn/s)"
-    # p = MyPlot(1, 1)
-    # ax: plt.Axes = p.axes
-    # ax.grid(axis=p.grid, linewidth=p.border_width)
-    # p.init(ax)
-    # for idx, schema in enumerate(recs['protocol'].unique()):
-    #     records = recs[recs['protocol'] == schema]
-    #     p.plot(ax, xdata=records[X], ydata=records[Y], color=None, legend_label=schema,)
-    # ax.set_xticks([int(t) for t in recs['threads'].unique()])
-    # p.format_yticks(ax, suffix='K')
-    # # ax.set_ylim(None, p.max_y_data * 1.15)       # 折线图的Y轴上限设置为数据最大值的1.15倍
-    # p.set_labels(ax, XLABEL, YLABEL)
-    # p.legend(ax, loc="upper center", ncol=3, anchor=(0.5, 1.25))
-    # p.save(f'exp_results/bench_warehouse_results_{timestamp}.pdf')
+# # Plot the results
+#     recs = df
+#     X, XLABEL = "warehouse", "Warehouse"
+#     Y, YLABEL = "tps", "Troughput(Txn/s)"
+#     p = MyPlot(1, 1)
+#     ax: plt.Axes = p.axes
+#     ax.grid(axis=p.grid, linewidth=p.border_width)
+#     p.init(ax)
+#     for idx, schema in enumerate(recs['protocol'].unique()):
+#         records = recs[recs['protocol'] == schema]
+#         p.plot(ax, xdata=records[X], ydata=records[Y], color=None, legend_label=schema,)
+#     ax.set_xticks([int(t) for t in recs['warehouse'].unique()])
+#     p.format_yticks(ax, suffix='K')
+#     # ax.set_ylim(None, p.max_y_data * 1.15)       # 折线图的Y轴上限设置为数据最大值的1.15倍
+#     p.set_labels(ax, XLABEL, YLABEL)
+#     p.legend(ax, loc="upper center", ncol=3, anchor=(0.5, 1.25))
+#     p.save(f'exp_results/bench_warehouse_results_{timestamp}.pdf')

@@ -16,8 +16,8 @@ class MinWRollback
     public:
         MinWRollback() : id_counter(0), m_hyperVertices(dummyHyperVertices), m_RWIndex(dummyRWIndex) {}
         
-        MinWRollback(std::vector<HyperVertex::Ptr>& hyperVertices, unordered_map<Vertex::Ptr, unordered_set<Vertex::Ptr, Vertex::VertexHash>, Vertex::VertexHash>& RWIndex)
-         : id_counter(0), m_hyperVertices(hyperVertices), m_RWIndex(RWIndex) {}
+        MinWRollback(std::vector<HyperVertex::Ptr>& hyperVertices, unordered_map<Vertex::Ptr, unordered_set<Vertex::Ptr, Vertex::VertexHash>, Vertex::VertexHash>& RWIndex, size_t thread_num = 36)
+         : id_counter(0), m_hyperVertices(hyperVertices), m_RWIndex(RWIndex), m_thread_num(thread_num) {}
         
         ~MinWRollback() = default;
 
@@ -164,6 +164,7 @@ class MinWRollback
         unordered_map<Vertex::Ptr, unordered_set<Vertex::Ptr, Vertex::VertexHash>, Vertex::VertexHash>& m_RWIndex;
         // 记录图中所有强连通分量
         vector<unordered_set<HyperVertex::Ptr, HyperVertex::HyperVertexHash>> m_sccs;
+        size_t m_thread_num;
     
     private:
         // 定义虚拟变量以供默认构造函数使用

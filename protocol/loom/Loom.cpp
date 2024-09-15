@@ -177,8 +177,8 @@ void Loom::PostExecuteBlock(Block::Ptr block, vector<T> batch) {
     for (auto& future : finalFutures) {
         future.get();
     }
-    // // notify retry
-    // notifyRetry();
+    // notify retry
+    notifyRetry();
     // mark block as committed
     // committed_block.fetch_add(1, memory_order_relaxed);
     statistics.JournalBlock();
@@ -194,7 +194,7 @@ void Loom::PreExecute(vector<T>& batch, const size_t& block_id) {
     LOG(INFO) << "PreExecute block " << block_id;
     vector<future<void>> preExecFutures;
     for (T tx : batch) {
-        preExecFutures.push_back(pool->enqueue([this, tx] {
+        preExecFutures.push_back(pool->enqueue([this, tx, &block_id] {
             // read locally from local storage
             tx->InstallGetStorageHandler([&](
                 const unordered_set<string>& readSet
@@ -221,9 +221,10 @@ void Loom::PreExecute(vector<T>& batch, const size_t& block_id) {
                     tx->local_put[key] = value;
                 }
             });
+            
             tx->start_time = chrono::steady_clock::now();
-            tx->Execute();
             statistics.JournalExecute();
+            tx->Execute();
             statistics.JournalOverheads(tx->CountOverheads());
         }));
     }
@@ -273,16 +274,16 @@ void Loom::PreExecuteInterBlock(vector<T>& batch, const size_t& block_id) {
             }
         });
         // Execute transaction
-        tx->start_time = chrono::steady_clock::now();
         tx->Execute();
-        statistics.JournalExecute();
+        tx->start_time = chrono::steady_clock::now();
         // Check if transaction was aborted
         if (tx->aborted.load()) {
             DLOG(WARNING) << "Transaction " << tx->id << " aborted, queuing for retry...";
             // enqueue the task for retry and exit to avoid continuing the loop
             retryTxs.push_back(tx);
             return;
-        } 
+        }
+        statistics.JournalExecute();
         statistics.JournalOverheads(tx->CountOverheads());
     };
 
@@ -299,17 +300,17 @@ void Loom::PreExecuteInterBlock(vector<T>& batch, const size_t& block_id) {
 
     // Continue processing retry transactions until all are complete
     while (!retryTxs.empty()) {
-        // LOG(INFO) << "Block " << block_id << " wait to retry...";
-        // // wait retry signal to be true
-        // std::unique_lock<std::mutex> lk(mtx);
-        // while (!canRetry.load()) {
-        //     cv.wait(lk);
-        // }
-        // // cv.wait(lk, [this] { return canRetry.load(); });
-        // // set retry signal to false
-        // resetRetry();
-        // // unlock mutex
-        // lk.unlock();
+        LOG(INFO) << "Block " << block_id << " wait to retry...";
+        // wait retry signal to be true
+        std::unique_lock<std::mutex> lk(mtx);
+        while (!canRetry.load()) {
+            cv.wait(lk);
+        }
+        // cv.wait(lk, [this] { return canRetry.load(); });
+        // set retry signal to false
+        resetRetry();
+        // unlock mutex
+        lk.unlock();
 
         LOG(INFO) << "Block " << block_id << " begin to retry...";
         // Swap retryTxs with currentTxs
@@ -344,7 +345,7 @@ void Loom::MinWRollBack(vector<T>& batch, Block::Ptr block, vector<Vertex::Ptr>&
     LOG(INFO) << "MinWRollBack block " << block->getBlockId();
     vector<future<void>> graphFutures, finalFutures;
     std::vector<std::future<loom::ReExecuteInfo>> rollbackFutures;
-    MinWRollback minw(block->getTxList(), block->getRWIndex());
+    MinWRollback minw(block->getTxList(), block->getRWIndex(), num_threads);
     // build graph
     minw.buildGraphNoEdgeC(pool, graphFutures);
     DLOG(INFO) << "build block " << block->getBlockId() << " graph done";

@@ -255,13 +255,14 @@ void MinWRollback::buildGraphNoEdgeC(ThreadPool::Ptr& Pool, std::vector<std::fut
     //     }));
     // }
 
-    size_t chunkSize = totalPairs / UTIL_DEFAULT_THREAD_SIZE;
-    size_t remainder = totalPairs % UTIL_DEFAULT_THREAD_SIZE;
+    size_t thread_num = min(m_thread_num, (size_t)36);
+    size_t chunkSize = totalPairs / thread_num;
+    size_t remainder = totalPairs % thread_num;
     // cout << "totalPairs: " << totalPairs << " chunkSize: " << chunkSize << endl;
     
     // std::vector<std::function<void()>> taskList;
     std::vector<std::tuple<std::function<void()>>> taskList;
-    for (size_t i = 0; i < UTIL_DEFAULT_THREAD_SIZE; ++i) {
+    for (size_t i = 0; i < thread_num; ++i) {
         size_t startIdx = i * chunkSize + std::min(i, remainder);
         size_t endIdx = startIdx + chunkSize + (i < remainder ? 1 : 0);
         endIdx = std::min(endIdx, totalPairs);

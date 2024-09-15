@@ -3,5 +3,6 @@ core.sh
 .cache
 log/
 /scripts/exp_results
+/scripts/pics
 **/__pycache__
 **/*.tar.gz

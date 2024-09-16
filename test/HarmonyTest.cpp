@@ -10,12 +10,13 @@ using namespace std;
 
 TEST(HarmonyTest, TestHarmony) {
     // Generate a workload
+    loom::BLOCK_SIZE = 5;
     TxGenerator txGenerator(loom::BLOCK_SIZE * 2);
     auto blocks = txGenerator.generateWorkload(false);
     // Create a Statistics instance
     auto statistics = Statistics();
     // Create a Harmony instance
-    auto protocol = Harmony(blocks, statistics, 36, true, 36);
+    auto protocol = Harmony(blocks, statistics, 36, 36, true);
     // Start the protocol
     protocol.Start();
     // Wait for the protocol to finish

@@ -128,16 +128,16 @@ if __name__ == '__main__':
     recs = df
     X, XLABEL = "warehouse", "Warehouse"
     Y, YLABEL = "tx_latency", "Latency(ms)"
-    p = MyPlot(1, 1)
-    ax: plt.Axes = p.axes
-    ax.grid(axis=p.grid, linewidth=p.border_width)
-    p.init(ax)
+    p2 = MyPlot(1, 1)
+    ax: plt.Axes = p2.axes
+    ax.grid(axis=p2.grid, linewidth=p2.border_width)
+    p2.init(ax)
     for idx, schema in enumerate(recs['protocol'].unique()):
         records = recs[recs['protocol'] == schema]
-        p.plot(ax, xdata=records[X], ydata=records[Y], color=None, legend_label=schema,)
+        p2.plot(ax, xdata=records[X], ydata=records[Y], color=None, legend_label=schema,)
     ax.set_xticks([int(t) for t in recs['warehouse'].unique()])
-    # p.format_yticks(ax, suffix='K')
-    # ax.set_ylim(None, p.max_y_data * 1.15)       # 折线图的Y轴上限设置为数据最大值的1.15倍
-    p.set_labels(ax, XLABEL, YLABEL)
-    p.legend(ax, loc="upper center", ncol=3, anchor=(0.5, 1.25))
-    p.save(f'./pics/bench_warehouse_latency_{timestamp}.pdf')
+    # p2.format_yticks(ax, suffix='K')
+    # ax.set_ylim(None, p2.max_y_data * 1.15)       # 折线图的Y轴上限设置为数据最大值的1.15倍
+    p2.set_labels(ax, XLABEL, YLABEL)
+    p2.legend(ax, loc="upper center", ncol=3, anchor=(0.5, 1.25))
+    p2.save(f'./pics/bench_warehouse_latency_{timestamp}.pdf')

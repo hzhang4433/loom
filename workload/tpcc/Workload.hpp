@@ -7,13 +7,14 @@ class Workload {
     public:
         Workload() : random(reinterpret_cast<uint64_t>(this)), tx_random(reinterpret_cast<uint64_t>(this)){
             // 重置静态变量的值
+            txGenerator = std::make_shared<TPCCTransaction>(tx_random);
             txGenerator->resetStatic();
-            txGenerator = std::make_shared<NewOrderTransaction>(tx_random);
-            txGenerator->makeTransaction();
+            init();
         }
         
         Workload(uint64_t seed) : random(seed), tx_random(seed) {
             // 重置静态变量的值
+            txGenerator = std::make_shared<TPCCTransaction>(tx_random);
             txGenerator->resetStatic();
             txGenerator = std::make_shared<NewOrderTransaction>(tx_random);
             txGenerator->makeTransaction();
@@ -55,8 +56,15 @@ class Workload {
             txGenerator->resetStatic();
             random.set_seed(seed);
             tx_random.set_seed(seed);
+            // txGenerator = std::make_shared<NewOrderTransaction>(tx_random);
+            // txGenerator->makeTransaction();
+            init();
+        }
+
+        void init() {
             txGenerator = std::make_shared<NewOrderTransaction>(tx_random);
-            txGenerator->makeTransaction();
+            for (int i = 0; i < 50; i++)
+                txGenerator->makeTransaction();
         }
 
     private:

@@ -133,7 +133,7 @@ HarmonyTransaction::HarmonyTransaction(const HarmonyTransaction& other) :
 /// @param Ti the transaction write key
 /// @param Tj the transaction read key
 void HarmonyTable::on_seeing_rw_dependency(T* Ti, T* Tj) {
-    DLOG(INFO) << "handle r-w dependency: " << Tj->id << " -> " << Ti->id << std::endl;
+    DLOG(INFO) << "handle r-w dependency: " << Tj->batch_id << ":" << Tj->id << " -> " << Ti->batch_id << ":" << Ti->id << std::endl;
     if (Ti->id < Tj->min_out) {
         Tj->min_out = Ti->id;
         Tj->out_batch_id = Ti->batch_id;
@@ -228,10 +228,10 @@ void HarmonyExecutor::Run() {
 
 /// @brief get next batch txs of executor
 vector<T> HarmonyExecutor::NextBatch() {
-    if (batchIdx >= batchTxs.size()) {
-        DLOG(INFO) << "worker " << worker_id << " no more batch" << std::endl;
-        return {};
-    }
+    // if (batchIdx >= batchTxs.size()) {
+    //     DLOG(INFO) << "worker " << worker_id << " no more batch" << std::endl;
+    //     return {};
+    // }
     return batchTxs[batchIdx++];
 }
 
@@ -266,7 +266,7 @@ void HarmonyExecutor::InterBlockExecute(vector<T> batch) {
     // stage 3: fallback
     barrier.arrive_and_wait();
     if (worker_id == 0) {
-        LOG(INFO) << "committed num " << counter.load() << endl;
+        DLOG(INFO) << "committed num " << counter.load() << endl;
     }
     DLOG(INFO) << "worker " << worker_id << " fallbacking batch " << batchIdx << std::endl;
     for (auto& tx : batch) {
@@ -278,10 +278,9 @@ void HarmonyExecutor::InterBlockExecute(vector<T> batch) {
         }
     }
     // stage 4: streamly execute next block
-    auto batch_next = NextBatch();
-    if (batch_next.size() > 0) {
+    if (batchIdx < batchTxs.size()) {
         DLOG(INFO) << "worker " << worker_id << " streamly next block" << std::endl;
-        InterBlockExecute(batch_next);
+        InterBlockExecute(NextBatch());
     } else {
     // stage 5: clean up
         barrier.arrive_and_wait();

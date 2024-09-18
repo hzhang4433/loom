@@ -178,6 +178,7 @@ void HarmonyExecutor::Run() {
         // Processing Block One by One
         for (auto& batch : batchTxs) {
             #define LATENCY duration_cast<microseconds>(steady_clock::now() - tx.start_time).count()
+            #define PHASE_TIME duration_cast<microseconds>(steady_clock::now() - begin_time).count()
             // stage 1: execute
             auto _stop = confirm_exit.load() == num_threads;
             barrier.arrive_and_wait();
@@ -195,6 +196,8 @@ void HarmonyExecutor::Run() {
             // stage 2: verify + commit
             barrier.arrive_and_wait();
             DLOG(INFO) << "worker " << worker_id << " verifying" << std::endl;
+            time_point<steady_clock> begin_time;
+            if (worker_id == 0) begin_time = steady_clock::now();
             for (auto& tx : batch) {
                 this->Verify(&tx);
                 if (tx.flag_conflict) {
@@ -206,7 +209,9 @@ void HarmonyExecutor::Run() {
             }
             // stage 3: fallback
             barrier.arrive_and_wait();
+            if (worker_id == 0) statistics.JournalRollbackExecution(PHASE_TIME);
             DLOG(INFO) << "worker " << worker_id << " fallbacking" << std::endl;
+            if (worker_id == 0) begin_time = steady_clock::now();
             for (auto& tx : batch) {
                 if (tx.flag_conflict) {
                     this->Fallback(&tx);
@@ -217,11 +222,13 @@ void HarmonyExecutor::Run() {
             }
             // stage 4: clean up
             barrier.arrive_and_wait();
+            if (worker_id == 0) statistics.JournalReExecution(PHASE_TIME);
             DLOG(INFO) << "worker " << worker_id << " cleaning up" << std::endl;
             for (auto& tx : batch) {
                 this->CleanLockTable(&tx);
             }
             #undef LATENCY
+            #undef PHASE_TIME
         }
     }
 }
@@ -239,6 +246,7 @@ vector<T> HarmonyExecutor::NextBatch() {
 /// @param batch the batch of transactions
 void HarmonyExecutor::InterBlockExecute(vector<T> batch) {
     #define LATENCY duration_cast<microseconds>(steady_clock::now() - tx.start_time).count()
+    #define PHASE_TIME duration_cast<microseconds>(steady_clock::now() - begin_time).count()
     // stage 1: execute
     auto _stop = confirm_exit.load() == num_threads;
     if (_stop) {return;}
@@ -253,7 +261,9 @@ void HarmonyExecutor::InterBlockExecute(vector<T> batch) {
     }
     // stage 2: verify + commit
     barrier.arrive_and_wait();
-    DLOG(INFO) << "worker " << worker_id << " verifying batch " << batchIdx << std::endl;
+    DLOG(INFO) << "worker " << worker_id << " verifying batch " << batchIdx;
+    time_point<steady_clock> begin_time;
+    if (worker_id == 0) begin_time = steady_clock::now();
     for (auto& tx : batch) {
         this->Verify(&tx);
         if (tx.flag_conflict) {
@@ -265,10 +275,9 @@ void HarmonyExecutor::InterBlockExecute(vector<T> batch) {
     }
     // stage 3: fallback
     barrier.arrive_and_wait();
-    if (worker_id == 0) {
-        DLOG(INFO) << "committed num " << counter.load() << endl;
-    }
-    DLOG(INFO) << "worker " << worker_id << " fallbacking batch " << batchIdx << std::endl;
+    if (worker_id == 0) statistics.JournalRollbackExecution(PHASE_TIME);
+    DLOG(INFO) << "worker " << worker_id << " fallbacking batch " << batchIdx;
+    begin_time = steady_clock::now();
     for (auto& tx : batch) {
         if (tx.flag_conflict) {
             this->Fallback(&tx);
@@ -279,17 +288,24 @@ void HarmonyExecutor::InterBlockExecute(vector<T> batch) {
     }
     // stage 4: streamly execute next block
     if (batchIdx < batchTxs.size()) {
+        counter.fetch_add(1, std::memory_order_relaxed);
+        if (counter.load() == num_threads) {
+            statistics.JournalReExecution(PHASE_TIME);
+            counter.store(0);
+        }
         DLOG(INFO) << "worker " << worker_id << " streamly next block" << std::endl;
         InterBlockExecute(NextBatch());
     } else {
     // stage 5: clean up
         barrier.arrive_and_wait();
+        if (worker_id == 0) statistics.JournalReExecution(PHASE_TIME);
         DLOG(INFO) << "worker " << worker_id << " cleaning up batch " << batchIdx << std::endl;
         for (auto& tx : batch) {
             this->CleanLockTable(&tx);
         }
     }
     #undef LATENCY
+    #undef PHASE_TIME
 }
 
 /// @brief execute a transaction and journal write operations locally
@@ -373,7 +389,7 @@ void HarmonyExecutor::Commit(T* tx) {
             entry.value = std::get<1>(tup);
         });
     }
-    counter.fetch_add(1, std::memory_order_relaxed);
+    // counter.fetch_add(1, std::memory_order_relaxed);
     DLOG(INFO) << "tx " << tx->id << " committed" << std::endl;
 }
 
@@ -443,7 +459,7 @@ void HarmonyExecutor::Fallback(T* tx) {
     while(should_wait && !should_wait->committed.load()) {}
     tx->Execute();
     tx->committed.store(true);
-    counter.fetch_add(1, std::memory_order_relaxed);
+    // counter.fetch_add(1, std::memory_order_relaxed);
     DLOG(INFO) << "tx " << tx->id << " committed" << std::endl;
 }
 

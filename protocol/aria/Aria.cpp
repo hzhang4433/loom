@@ -207,6 +207,7 @@ AriaExecutor::AriaExecutor(Aria& aria, size_t worker_id, vector<vector<T>> batch
 void AriaExecutor::Run() {
     for (auto& batch : batchTxs) {
         #define LATENCY duration_cast<microseconds>(steady_clock::now() - tx.start_time).count()
+        #define PHASE_TIME duration_cast<microseconds>(steady_clock::now() - begin_time).count()
         // stage 1: execute
         auto _stop = confirm_exit.load() == num_threads;
         barrier.arrive_and_wait();
@@ -227,6 +228,8 @@ void AriaExecutor::Run() {
         // stage 2: verify + commit
         barrier.arrive_and_wait();
         DLOG(INFO) << "worker " << worker_id << " verifying" << std::endl;
+        time_point<steady_clock> begin_time;
+        if (worker_id == 0) begin_time = steady_clock::now();
         for (auto& tx : batch) {
             this->Verify(&tx);
             if (tx.flag_conflict) {
@@ -239,7 +242,9 @@ void AriaExecutor::Run() {
         }
         // stage 3: fallback
         barrier.arrive_and_wait();
+        if (worker_id == 0) statistics.JournalRollbackExecution(PHASE_TIME);
         DLOG(INFO) << "worker " << worker_id << " fallbacking" << std::endl;
+        if (worker_id == 0) begin_time = steady_clock::now();
         if (!has_conflict.load()) {
             continue;
         }
@@ -253,11 +258,13 @@ void AriaExecutor::Run() {
         }
         // stage 4: clean up
         barrier.arrive_and_wait();
+        if (worker_id == 0) statistics.JournalReExecution(PHASE_TIME);
         DLOG(INFO) << "worker " << worker_id << " cleaning up" << std::endl;
         for (auto& tx : batch) {
             this->CleanLockTable(&tx);
         }
         #undef LATENCY
+        #undef PHASE_TIME
     }
 }
 

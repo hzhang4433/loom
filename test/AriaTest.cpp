@@ -10,12 +10,14 @@ using namespace std;
 
 TEST(AriaTest, TestAria) {
     // Generate a workload
-    TxGenerator txGenerator(loom::BLOCK_SIZE);
+    loom::BLOCK_SIZE = 1000;
+    TPCC::N_WAREHOUSES = 60;
+    TxGenerator txGenerator(loom::BLOCK_SIZE * 2);
     auto blocks = txGenerator.generateWorkload(false);
     // Create a Statistics instance
     auto statistics = Statistics();
     // Create a Aria instance
-    auto protocol = Aria(blocks, statistics, 36, true, 36);
+    auto protocol = Aria(blocks, statistics, 48, 9973, true);
     // Start the protocol
     protocol.Start();
     // Wait for the protocol to finish

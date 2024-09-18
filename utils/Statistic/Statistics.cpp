@@ -48,14 +48,23 @@ void Statistics::JournalBlock() {
     count_block.fetch_add(1, std::memory_order_relaxed);
 }
 
+void Statistics::JournalRollbackExecution(size_t latency) {
+    count_latency_rollback.fetch_add(latency, std::memory_order_relaxed);
+}
+
+void Statistics::JournalReExecution(size_t latency) {
+    count_latency_reExecution.fetch_add(latency, std::memory_order_relaxed);
+}
+
 std::string Statistics::Print() {
     // calculate the statistics duration
     auto duration = std::chrono::duration_cast<std::chrono::microseconds>(end_time - begin_time).count();
     LOG(INFO) << std::fixed << std::setprecision(3) << "duration: " << duration / (double)(1000) << "ms";
 
-    #define LATENCY(X, Y) ((double)(X.load()) / (double)(Y.load()) / (double)(1000))
+    #define TIME(X, Y) ((double)(X.load()) / (double)(Y.load()) / (double)(1000))
     #define BLOCKLATENCY(X) ((double)(duration) / (double)(X.load()) / (double)(1000))
-    #define AVG(X, Y) ((double)(X.load()) / (double)(Y.load()))
+    #define PRELATENCY(X, Y, Z) (BLOCKLATENCY(Z) - TIME(X, Z) - TIME(Y, Z))
+    #define RATIO(X, Y) ((double)(X.load()) / (double)(Y.load()))
     #define TPS(X) ((double)(X.load()) / (double)(duration) * (double)(1000000))
 
     
@@ -67,19 +76,29 @@ std::string Statistics::Print() {
         "{}\n"
         "commit             {}\n"
         "execution          {}\n"
-        "overhead           {}\n"
-        "rollback           {}\n"
+        "overhead           {:.3f}\n"
+        "rollback           {:.3f}\n"
+        "rollback ratio     {:.3f}\n"
         "tx latency         {:.3f} ms\n"
+        "tps                {:.3f} tx/s\n"
         "block latency      {:.3f} ms\n"
-        "tps                {:.3f} tx/s",
+        "execute latency    {:.3f} ms\n"
+        "rollback latency   {:.3f} ms\n"
+        "re-execute latency {:.3f} ms\n"
+        "concurrency ratio  {:.3f}",
         time_buffer,
         count_commit.load(),
         count_execution.load(),
-        AVG(count_overhead, count_block),
-        AVG(count_rollback, count_block),
-        LATENCY(count_latency, count_commit),
+        TIME(count_overhead, count_block),
+        TIME(count_rollback, count_block),
+        RATIO(count_rollback, count_overhead),
+        TIME(count_latency, count_commit),
+        TPS(count_commit),
         BLOCKLATENCY(count_block),
-        TPS(count_commit)
+        PRELATENCY(count_latency_rollback, count_latency_reExecution, count_block),
+        TIME(count_latency_rollback, count_block),
+        TIME(count_latency_reExecution, count_block),
+        RATIO(count_rollback, count_latency_reExecution)
     ));
     #undef TPS
     #undef LATENCY

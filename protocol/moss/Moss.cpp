@@ -85,13 +85,15 @@ void Moss::Start() {
         for (size_t j = 0; j < m_txs.size(); j++) {
             auto tx = m_txs[j];
             futures.push_back(pool->enqueue([this, tx, start_time, duration]() mutable {
+                // #define REEXECUTE duration_cast<microseconds>(steady_clock::now() - begin_time).count()
                 DLOG(INFO) << "enqueue tx " << tx->id << endl;
                 // execute the transaction
                 tx->start_time = steady_clock::now();
                 Execute(tx->root_tx, false);
                 statistics.JournalExecute();
+                // auto begin_time = steady_clock::now();
                 while (!stop_flag.load()) {
-                    auto current_time = std::chrono::steady_clock::now();
+                    auto current_time = steady_clock::now();
                     if (current_time - start_time >= duration) {
                         stop_flag.store(true);  // 超时，设置停止标志
                         break;
@@ -103,10 +105,12 @@ void Moss::Start() {
                     } else if (last_finalized.load() + 1 == tx->id && !tx->HasWAR()) {
                         // if last transaction has finalized, and currently i don't have to re-execute, 
                         // then i can final commit and do another transaction. 
+                        // statistics.JournalReExecution(REEXECUTE);
                         Finalize(tx);
                         break;
                     }
                 }
+                // #undef REEXECUTE
             }));
         }
         // wait for all transactions in the block to complete

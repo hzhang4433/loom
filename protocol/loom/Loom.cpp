@@ -370,8 +370,10 @@ void Loom::PreExecuteInterBlock(vector<T>& batch, const size_t& block_id) {
 void Loom::MinWRollBack(vector<T>& batch, Block::Ptr block, vector<Vertex::Ptr>& rbList, vector<vector<int>>& serialOrders, ThreadPool::Ptr pool) {
     #define LATENCY duration_cast<microseconds>(tx->GetTx()->m_commit_time - tx->start_time).count()
     #define COMMIT_TIME tx->GetTx()->m_commit_time
+    #define PRASE_TIME duration_cast<microseconds>(chrono::steady_clock::now() - begin_time).count()
 
     LOG(INFO) << "MinWRollBack block " << block->getBlockId();
+    auto begin_time = chrono::steady_clock::now();
     vector<future<void>> graphFutures, finalFutures;
     std::vector<std::future<loom::ReExecuteInfo>> rollbackFutures;
     MinWRollback minw(block->getTxList(), block->getRWIndex(), num_threads);
@@ -440,21 +442,26 @@ void Loom::MinWRollBack(vector<T>& batch, Block::Ptr block, vector<Vertex::Ptr>&
 
     // notify retry
     // notifyRetry();
-
+    if(block->getBlockId() != 1) statistics.JournalRollbackExecution(PRASE_TIME * 2);
     LOG(INFO) << "MinWRollBack block " << block->getBlockId() << " done";
     #undef LATENCY
     #undef COMMIT_TIME
+    #undef PRASE_TIME
 }
 
 /// @brief re-execute transactions
 void Loom::ReExecute(Block::Ptr block, vector<Vertex::Ptr>& rbList, vector<vector<int>>& serialOrders, ThreadPool::Ptr pool) {
+    #define PRASE_TIME duration_cast<microseconds>(chrono::steady_clock::now() - begin_time).count()
+    
     LOG(INFO) << "ReExecute block " << block->getBlockId();
     std::vector<std::future<void>> reExecuteFutures;
+    chrono::time_point<steady_clock> begin_time;
 
     if (enable_nested_reExecution) {
         // re-execute using nested structure
         DeterReExecute reExecute(rbList, serialOrders, block->getConflictIndex());
         reExecute.buildAndReSchedule();
+        begin_time = chrono::steady_clock::now();
         reExecute.reExcution(pool, reExecuteFutures, statistics);
     } else {
         // re-execute using flat structure
@@ -462,10 +469,13 @@ void Loom::ReExecute(Block::Ptr block, vector<Vertex::Ptr>& rbList, vector<vecto
         DeterReExecute::setNormalList(rbList, normalList);
         DeterReExecute reExecute(normalList, serialOrders, block->getConflictIndex());
         reExecute.buildAndReScheduleFlat();
+        begin_time = chrono::steady_clock::now();
         reExecute.reExcution(pool, reExecuteFutures, statistics);
     }
     
+    if (block->getBlockId() != 1) statistics.JournalReExecution(PRASE_TIME * 2);
     LOG(INFO) << "ReExecute block " << block->getBlockId() << " done";
+    #undef PRASE_TIME
 }
 
 /// @brief finalize a transaction

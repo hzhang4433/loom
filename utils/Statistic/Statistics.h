@@ -14,6 +14,8 @@ class Statistics {
     std::atomic<size_t> count_execution{0};
     std::atomic<size_t> count_overhead{0};
     std::atomic<size_t> count_latency{0};
+    std::atomic<size_t> count_latency_rollback{0};
+    std::atomic<size_t> count_latency_reExecution{0};
     std::atomic<size_t> count_block{0};
     std::atomic<size_t> count_rollback{0};
     std::chrono::steady_clock::time_point begin_time;
@@ -28,6 +30,8 @@ class Statistics {
     void JournalOverheads(size_t count);
     void JournalRollback(size_t count);
     void JournalBlock();
+    void JournalRollbackExecution(size_t latency);
+    void JournalReExecution(size_t latency);
     std::string Print();
 
 };

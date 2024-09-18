@@ -11,7 +11,7 @@ from plot.plot import MyPlot
 workload = 'TPCC'
 repeat = 20
 times_to_tun = 2
-block_size = 900 # 100, 500, 900
+block_size = 1000 # 100, 500, 1000
 block_num = 2
 thread_num = 48
 table_partition = 9973
@@ -23,16 +23,16 @@ if __name__ == '__main__':
     hash = subprocess.run(["git", "rev-parse", "HEAD"], **conf).stdout.decode('utf-8').strip()
     with open(f'./exp_results/bench_warehouse_{block_size}:{thread_num}_{timestamp}', 'w') as f:
         # list(range(1, 21, 1)) / [10]
-        for warehouse in list(range(0, 81, 5)):
+        for warehouse in list(range(0, 61, 5)):
             if warehouse == 0:
                 warehouse = 1
             protocols = [
-                # f"Serial:{1}:{table_partition}",
-                # # f"Aria:{thread_num}:{table_partition}:FALSE",
-                # f"Aria:{thread_num}:{table_partition}:TRUE",
-                # # f"Harmony:{thread_num}:{table_partition}:FALSE",
-                # f"Harmony:{thread_num}:{table_partition}:TRUE",
-                # f"Moss:{thread_num}:{table_partition}",
+                f"Serial:{1}:{table_partition}",
+                # f"Aria:{thread_num}:{table_partition}:FALSE",
+                f"Aria:{thread_num}:{table_partition}:TRUE",
+                # f"Harmony:{thread_num}:{table_partition}:FALSE",
+                f"Harmony:{thread_num}:{table_partition}:TRUE",
+                f"Moss:{thread_num}:{table_partition}",
                 f"Loom:{thread_num}:{table_partition}:TRUE:FALSE",
                 f"Loom:{thread_num}:{table_partition}:TRUE:TRUE",
             ]

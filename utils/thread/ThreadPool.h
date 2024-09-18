@@ -28,6 +28,8 @@ class ThreadPool : public std::enable_shared_from_this<ThreadPool>
         typedef std::shared_ptr <ThreadPool> Ptr;
 
         ThreadPool(size_t threadNum);
+
+        ThreadPool(size_t threadNum, size_t offset);
         
         ~ThreadPool();
 
@@ -136,6 +138,10 @@ class ThreadPool : public std::enable_shared_from_this<ThreadPool>
 
         void shutdown();
 
+        void workerFunc(size_t worker_id);
+
+        void resizePool(size_t newSize);
+
         static void PinRoundRobin(std::thread& thread, unsigned rotate_id);
         static void PinRoundRobin(pthread_t& thread, unsigned rotate_id);
         static void PinRoundRobin(std::jthread& thread, unsigned rotate_id);
@@ -157,6 +163,7 @@ class ThreadPool : public std::enable_shared_from_this<ThreadPool>
         std::vector<std::chrono::microseconds> threadDurations; // 存储每个线程的工作时间
         std::vector<size_t> taskCounts; // 新增成员变量存储任务计数
         int threadNum;
+        std::vector<bool> stopFlags;            // 每个线程的停止标志
 
         /*
         // 线程池中的工作线程

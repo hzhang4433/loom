@@ -21,7 +21,7 @@ if __name__ == '__main__':
     df = pd.DataFrame(columns=['protocol', 'warehouse', 'block_size', 'threads', 'table_partition', 'commit', 'overhead', 'rollback', 'tx_latency', 'block_latency', 'tps'])
     conf = {'stdout': subprocess.PIPE, 'stderr': subprocess.PIPE}
     hash = subprocess.run(["git", "rev-parse", "HEAD"], **conf).stdout.decode('utf-8').strip()
-    with open(f'./exp_results/bench_thread_{timestamp}', 'w') as f:
+    with open(f'./exp_results/bench_thread_{warehouse}:{block_size}_{timestamp}', 'w') as f:
         # list(range(8, 57, 4)) / [36]
         for thread_num in list(range(48, 57, 4)):
             protocols = [
@@ -93,7 +93,7 @@ if __name__ == '__main__':
                 }
                 print(df)
     df.reset_index(inplace=True)
-    df.to_csv(f'./exp_results/bench_thread_{timestamp}.csv', index=False)
+    df.to_csv(f'./exp_results/bench_thread_{warehouse}:{block_size}_{timestamp}.csv', index=False)
 
 # Plot the results
 # for tps
@@ -112,7 +112,7 @@ if __name__ == '__main__':
     # ax.set_ylim(None, p.max_y_data * 1.15)       # 折线图的Y轴上限设置为数据最大值的1.15倍
     p.set_labels(ax, XLABEL, YLABEL)
     p.legend(ax, loc="upper center", ncol=3, anchor=(0.5, 1.25))
-    p.save(f'./pics/bench_thread_tps_{timestamp}.pdf')
+    p.save(f'./pics/bench_thread_{warehouse}:{block_size}_tps_{timestamp}.pdf')
     
 # for latency
     recs = df
@@ -130,4 +130,4 @@ if __name__ == '__main__':
     # ax.set_ylim(None, p2.max_y_data * 1.15)       # 折线图的Y轴上限设置为数据最大值的1.15倍
     p2.set_labels(ax, XLABEL, YLABEL)
     p2.legend(ax, loc="upper center", ncol=3, anchor=(0.5, 1.25))
-    p2.save(f'./pics/bench_thread_latency_{timestamp}.pdf')
+    p2.save(f'./pics/bench_thread_{warehouse}:{block_size}_latency_{timestamp}.pdf')

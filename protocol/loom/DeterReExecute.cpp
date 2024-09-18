@@ -847,30 +847,30 @@ void DeterReExecute::reExcution(ThreadPool::Ptr& Pool, std::vector<std::future<v
             // futures.emplace_back(Pool->enqueue([this, tx, &statistics] {
             //     this->executeTransaction(tx, statistics);
             // }));
-            // // batch version
-            // taskList.emplace_back(std::make_tuple([this, tx, &statistics] {
-            //     this->executeTransaction(tx, statistics);
-            // }));
-            taskCounter.fetch_add(1, std::memory_order_relaxed);
-            taskList.emplace_back(std::make_tuple([this, tx, &statistics, &Pool, &taskCounter] {
-                this->executeTransactionWithPool(tx, statistics, Pool, taskCounter);
+            // batch version
+            taskList.emplace_back(std::make_tuple([this, tx, &statistics] {
+                this->executeTransaction(tx, statistics);
             }));
+            // taskCounter.fetch_add(1, std::memory_order_relaxed);
+            // taskList.emplace_back(std::make_tuple([this, tx, &statistics, &Pool, &taskCounter] {
+            //     this->executeTransactionWithPool(tx, statistics, Pool, taskCounter);
+            // }));
         }
     }
     futures = Pool->enqueueBatch(taskList);
-    // for (auto &future : futures) {
-    //     future.get();
-    // }
-    while (taskCounter.load(std::memory_order_relaxed) > 0) {
-        std::this_thread::yield();
+    for (auto &future : futures) {
+        future.get();
     }
+    // while (taskCounter.load(std::memory_order_relaxed) > 0) {
+    //     std::this_thread::yield();
+    // }
 }
 
 void DeterReExecute::executeTransaction(const Vertex::Ptr& tx, Statistics& statistics) {
     tx->Execute();
     // record the last commit time
-    tx->m_hyperVertex->m_commit_time = chrono::steady_clock::now();
-    statistics.JournalOverheads(tx->CountOverheads());
+    // tx->m_hyperVertex->m_commit_time = chrono::steady_clock::now();
+    tx->m_hyperVertex->setCommitTime(chrono::steady_clock::now());
     statistics.JournalRollback(tx->CountOverheads());
     auto it = dependencyGraph.find(tx);
     if (it != dependencyGraph.end()) {

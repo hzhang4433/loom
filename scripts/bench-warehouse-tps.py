@@ -9,11 +9,11 @@ sys.path.extend(['.', '..', '../..'])
 from plot.plot import MyPlot
 
 workload = 'TPCC'
-repeat = 5
+repeat = 20
 times_to_tun = 2
-block_size = 900
+block_size = 900 # 100, 500, 900
 block_num = 2
-thread_num = 36
+thread_num = 48
 table_partition = 9973
 timestamp = int(time.time())
 
@@ -21,7 +21,7 @@ if __name__ == '__main__':
     df = pd.DataFrame(columns=['protocol', 'warehouse', 'block_size', 'threads', 'table_partition', 'commit', 'overhead', 'rollback', 'tx_latency', 'block_latency', 'tps'])
     conf = {'stdout': subprocess.PIPE, 'stderr': subprocess.PIPE}
     hash = subprocess.run(["git", "rev-parse", "HEAD"], **conf).stdout.decode('utf-8').strip()
-    with open(f'./exp_results/bench_warehouse_{timestamp}', 'w') as f:
+    with open(f'./exp_results/bench_warehouse_{block_size}:{thread_num}_{timestamp}', 'w') as f:
         # list(range(1, 21, 1)) / [10]
         for warehouse in list(range(0, 81, 5)):
             if warehouse == 0:
@@ -55,6 +55,7 @@ if __name__ == '__main__':
                 print(f'Protocol: {cc} {workload}:{warehouse}:{block_size}:{block_num}:{is_nest} {times_to_tun}s')
                 f.write(f'Protocol: {cc} {workload}:{warehouse}:{block_size}:{block_num}:{is_nest} {times_to_tun}s' + '\n')
                 
+                # if cc.split(':')[0] == 'Loom':
                 if cc.split(':')[0] == 'Loom' and cc.split(':')[-1] == 'TRUE':
                     tx_latency = float('inf')
                     block_latency = float('inf')
@@ -97,13 +98,13 @@ if __name__ == '__main__':
                     'commit': sum_commit / succeed_repeat,
                     'overhead': sum_overhead / succeed_repeat,
                     'rollback': sum_rollback / succeed_repeat,
-                    'tx_latency': tx_latency if cc.split(':')[0] == 'Loom' else sum_tx_latency / succeed_repeat,
-                    'block_latency': block_latency if cc.split(':')[0] == 'Loom' else sum_block_latency / succeed_repeat,
-                    'tps': tps if cc.split(':')[0] == 'Loom' else sum_tps / succeed_repeat,
+                    'tx_latency': tx_latency if (cc.split(':')[0] == 'Loom') else sum_tx_latency / succeed_repeat,
+                    'block_latency': block_latency if (cc.split(':')[0] == 'Loom') else sum_block_latency / succeed_repeat,
+                    'tps': tps if (cc.split(':')[0] == 'Loom') else sum_tps / succeed_repeat,
                 }
                 print(df)
     df.reset_index(inplace=True)
-    df.to_csv(f'./exp_results/bench_warehouse_{timestamp}.csv', index=False)
+    df.to_csv(f'./exp_results/bench_warehouse_{block_size}:{thread_num}_{timestamp}.csv', index=False)
 
 # Plot the results
 # for tps
@@ -122,7 +123,7 @@ if __name__ == '__main__':
     # ax.set_ylim(None, p.max_y_data * 1.15)       # 折线图的Y轴上限设置为数据最大值的1.15倍
     p.set_labels(ax, XLABEL, YLABEL)
     p.legend(ax, loc="upper center", ncol=3, anchor=(0.5, 1.25))
-    p.save(f'./pics/bench_warehouse_tps_{timestamp}.pdf')
+    p.save(f'./pics/bench_warehouse_{block_size}:{thread_num}_tps_{timestamp}.pdf')
     
 # for latency
     recs = df
@@ -140,4 +141,4 @@ if __name__ == '__main__':
     # ax.set_ylim(None, p2.max_y_data * 1.15)       # 折线图的Y轴上限设置为数据最大值的1.15倍
     p2.set_labels(ax, XLABEL, YLABEL)
     p2.legend(ax, loc="upper center", ncol=3, anchor=(0.5, 1.25))
-    p2.save(f'./pics/bench_warehouse_latency_{timestamp}.pdf')
+    p2.save(f'./pics/bench_warehouse_{block_size}:{thread_num}_latency_{timestamp}.pdf')

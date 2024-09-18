@@ -1,10 +1,10 @@
 ##### run by cmd #####
-HELP = 'python draw_warehouses_tps.py -f file_path -w workload -c contention'
+HELP = 'python draw_blocksize_tps.py -f file_path -w warehouse -t thread'
 ##### run by cmd #####
 
-X = "warehouse"
+X = "block_size"
 Y = "tps"
-XLABEL = "Warehouses"
+XLABEL = "Block Size(X100)"
 YLABEL = "Troughput(Txn/s)"
 
 import pandas as pd
@@ -20,17 +20,16 @@ from plot.plot import MyPlot
 #################### 参数解析 ####################
 parser = argparse.ArgumentParser(HELP)
 parser.add_argument('-f', '--file', type=str, required=True, help='file to plot')
-# parser.add_argument("-w", "--workload", type=str, required=True, help="workload: smallbank or ycsb")
-# parser.add_argument("-c", "--contention", type=str, required=True, help="contention: uniform or skewed")
+parser.add_argument("-w", "--warehouse", type=str, required=True, help="warehouse: warehouse number")
+parser.add_argument("-t", "--thread", type=str, required=True, help="thread: thread number")
 args = parser.parse_args()
 file: str = args.file
 # assert args.workload in ['smallbank', 'ycsb']
-# workload = args.workload
+warehouse = args.warehouse
 # assert args.contention in ['uniform', 'skewed']
-# contention = args.contention
+thread_num = args.thread
 
-# savepath = f'threads-tps-{workload}-{contention}.pdf'
-savepath = './pics/threads-tps-warehouse.pdf'
+savepath = f'../pics/bench_blocksize_{warehouse}:{thread_num}_tps_.pdf'
 
 
 #################### 数据准备 ####################
@@ -103,13 +102,14 @@ for idx, schema in enumerate(schemas):
         xdata=records[X],
         ydata=records[Y],
         color=None, legend_label=schema,
-        marker=marker_list[idx % len(marker_list)]
+        # marker=marker_list[idx % len(marker_list)]
     )
 
-print(recs['warehouse'].unique())
+print(recs['block_size'].unique())
 
 # 设置X轴标签
-ax.set_xticks([int(t) for t in recs['warehouse'].unique()])
+ax.set_xticks([int(t) for t in recs['block_size'].unique()])
+ax.set_xticklabels([str(int(t) // 100) for t in recs['block_size'].unique()])
 
 # 自适应Y轴变化
 p.format_yticks(ax, suffix='K', step_num=4)

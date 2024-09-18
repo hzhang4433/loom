@@ -58,51 +58,24 @@ void ThreadPool::PinRoundRobin(std::jthread& thread, unsigned rotate_id) {
 ThreadPool::ThreadPool(size_t threadNum) : stop(false), threadDurations(threadNum), threadNum(threadNum), taskCounts(threadNum, 0) {
     // 创建指定数量的线程
     for(size_t i = 0; i < threadNum; ++i) {
+        stopFlags.push_back(false); // 初始化停止标志
         // 将新创建的线程添加到线程池中
-        workers.emplace_back(
-            [this, i] {
-                for(;;) { // 每个线程会无限循环这个函数，直到线程被停止
-                    // 用于存储要从任务队列中取出的任务
-                    std::function<void()> task;
-                    // Task task;
-                    {
-                        // 锁住任务队列
-                        std::unique_lock<std::mutex> lock(this->queue_mutex);
-                        // 如果任务队列为空，就等待
-                        // this->condition.wait(lock, [this]{ return this->stop || !this->tasks.empty(); });
-                        condition.wait(lock, [this] { return stop || !highPriorityTasks.empty() || !lowPriorityTasks.empty(); });
-                        // 如果收到停止信号，并且任务队列为空，就退出循环
-                        // if(this->stop && this->tasks.empty()) return;
-                        if(this->stop && highPriorityTasks.empty() && lowPriorityTasks.empty()) return;
-                        // 从任务队列中取出一个任务
-                        // task = std::move(this->tasks.front());
-                        // task = std::move(this->tasks.top());
-                        if (!highPriorityTasks.empty()) {
-                            // LOG(INFO) << "Task priority: HIGH";
-                            task = highPriorityTasks.front();
-                            highPriorityTasks.pop();
-                        } else {
-                            // LOG(INFO) << "Task priority: LOW";
-                            task = lowPriorityTasks.front();
-                            lowPriorityTasks.pop();
-                        }
-                        // 删除已经取出的任务
-                        // this->tasks.pop();
-                    }
-                    // 后面可以用来统计线程利用率？
-                    // auto start = std::chrono::high_resolution_clock::now();
-                    // execute task
-                    // LOG(INFO) << "Task priority: " << loom::taskPriorityToString(task.priority);
-                    task();
-                    // task.func();
-                    // auto end = std::chrono::high_resolution_clock::now();
-                    // threadDurations[i] += std::chrono::duration_cast<std::chrono::microseconds>(end - start);
-                    // taskCounts[i] += 1; // 更新任务计数
-                }
-            }
-        );
+        workers.emplace_back([this, i] { workerFunc(i); });
         // 绑定线程到核心
+        DLOG(INFO) << "Binding thread-" << workers.back().get_id() << " to core " << i;
         PinRoundRobin(workers[i], i);
+    }
+}
+
+ThreadPool::ThreadPool(size_t threadNum, size_t offset) : stop(false), threadDurations(threadNum), threadNum(threadNum), taskCounts(threadNum, 0) {
+    // 创建指定数量的线程
+    for(size_t i = 0; i < threadNum; ++i) {
+        stopFlags.push_back(false); // 初始化停止标志
+        // 将新创建的线程添加到线程池中
+        workers.emplace_back([this, i] { workerFunc(i); });
+        // 绑定线程到核心
+        DLOG(INFO) << "Binding thread-" << workers.back().get_id() << " to core " << offset + i;
+        PinRoundRobin(workers.back(), offset + i);
     }
 }
 
@@ -148,6 +121,88 @@ std::future<void> ThreadPool::enqueue(std::function<void()> task) {
     // return future;
 }
 */
+
+/// @brief worker function for each thread
+/// @param worker_id the id of the worker
+void ThreadPool::workerFunc(size_t worker_id) {
+    while(true) { // 每个线程会无限循环这个函数，直到线程被停止
+        // 用于存储要从任务队列中取出的任务
+        std::function<void()> task;
+        // Task task;
+        {
+            // 锁住任务队列
+            std::unique_lock<std::mutex> lock(this->queue_mutex);
+            // 如果任务队列为空，就等待
+            // this->condition.wait(lock, [this]{ return this->stop || !this->tasks.empty(); });
+            condition.wait(lock, [this, worker_id] { 
+                return stop || stopFlags[worker_id] || !highPriorityTasks.empty() || !lowPriorityTasks.empty(); 
+            });
+            // 如果收到停止信号，并且任务队列为空，就退出循环
+            // if(this->stop && this->tasks.empty()) return;
+            if(this->stop && highPriorityTasks.empty() && lowPriorityTasks.empty()) return;
+
+            // 当前线程应该停止
+            if (stopFlags[worker_id]) return;
+
+            // 从任务队列中取出一个任务
+            // task = std::move(this->tasks.front());
+            // task = std::move(this->tasks.top());
+            if (!highPriorityTasks.empty()) {
+                // LOG(INFO) << "Task priority: HIGH";
+                task = highPriorityTasks.front();
+                highPriorityTasks.pop();
+            } else {
+                // LOG(INFO) << "Task priority: LOW";
+                task = lowPriorityTasks.front();
+                lowPriorityTasks.pop();
+            }
+            // 删除已经取出的任务
+            // this->tasks.pop();
+        }
+        // 后面可以用来统计线程利用率？
+        // auto start = std::chrono::high_resolution_clock::now();
+        // execute task
+        // LOG(INFO) << "Task priority: " << loom::taskPriorityToString(task.priority);
+        task();
+        // task.func();
+        // auto end = std::chrono::high_resolution_clock::now();
+        // threadDurations[i] += std::chrono::duration_cast<std::chrono::microseconds>(end - start);
+        // taskCounts[i] += 1; // 更新任务计数
+    }
+}
+
+/// @brief resize the thread pool
+/// @param newSize the new size of the thread pool
+void ThreadPool::resizePool(size_t newSize) {
+    std::unique_lock<std::mutex> lock(queue_mutex);
+
+    size_t currentSize = workers.size();
+    if (newSize > currentSize) {
+        // 增加线程
+        for (size_t i = currentSize; i < newSize; ++i) {
+            stopFlags.push_back(false); // 初始化停止标志
+            workers.emplace_back([this, i] { workerFunc(i); });
+            PinRoundRobin(workers.back(), i);  // 绑定新的线程到物理核
+        }
+    } else if (newSize < currentSize) {
+        // 减少线程，按顺序让后创建的线程退出
+        for (size_t i = newSize; i < currentSize; ++i) {
+            stopFlags[i] = true; // 设置停止标志
+        }
+        condition.notify_all(); // 唤醒等待中的线程，让它们退出
+
+        // 等待这些多余的线程结束
+        for (size_t i = newSize; i < currentSize; ++i) {
+            if (workers[i].joinable())
+                workers[i].join();
+        }
+
+        workers.resize(newSize);
+        stopFlags.resize(newSize);
+    }
+    threadNum = newSize;
+    std::cout << "Resized thread pool to " << newSize << " threads." << std::endl;
+}
 
 /// @brief shutdown the thread pool
 void ThreadPool::shutdown() {

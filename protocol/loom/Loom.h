@@ -53,11 +53,12 @@ public:
     void Stop() override;
     void NormalMode(Block::Ptr block, vector<T>& batch);
     void InterBlockMode(Block::Ptr block, vector<T> batch);
-    void PostExecuteBlock(Block::Ptr block, vector<T> batch);
+    void PostExecuteBlock(Block::Ptr block, vector<T> batch, ThreadPool::Ptr pool);
+    void ExecuteNextBlock(Block::Ptr block, vector<T> batch);
     void PreExecute(vector<T>& batch, const size_t& block_id);
     void PreExecuteInterBlock(vector<T>& batch, const size_t& block_id);
-    void MinWRollBack(vector<T>& batch, Block::Ptr block, vector<Vertex::Ptr>& rbList, vector<vector<int>>& serialOrders);
-    void ReExecute(Block::Ptr block, vector<Vertex::Ptr>& rbList, vector<vector<int>>& serialOrders);
+    void MinWRollBack(vector<T>& batch, Block::Ptr block, vector<Vertex::Ptr>& rbList, vector<vector<int>>& serialOrders, ThreadPool::Ptr pool);
+    void ReExecute(Block::Ptr block, vector<Vertex::Ptr>& rbList, vector<vector<int>>& serialOrders, ThreadPool::Ptr pool);
     void Finalize(T tx);
     void ClearTable(T tx);
     void notifyRetry();
@@ -72,7 +73,8 @@ private:
     std::atomic<size_t>             committed_block;
     bool                            enable_inter_block;
     bool                            enable_nested_reExecution;
-    std::shared_ptr<ThreadPool>     pool;
+    std::shared_ptr<ThreadPool>     pool1;
+    std::shared_ptr<ThreadPool>     pool2;
     size_t                          block_idx;
     std::mutex                      mtx;
     std::condition_variable         cv;

@@ -64,7 +64,7 @@ std::string Statistics::Print() {
     #define TIME(X, Y) ((double)(X.load()) / (double)(Y.load()) / (double)(1000))
     #define BLOCKLATENCY(X) ((double)(duration) / (double)(X.load()) / (double)(1000))
     #define PRELATENCY(X, Y, Z) (BLOCKLATENCY(Z) - TIME(X, Z) - TIME(Y, Z))
-    #define RATIO(X, Y) ((double)(X.load()) / (double)(Y.load()))
+    #define RATIO(X, Y) ((Y.load() == 0) ? 0 : ((double)(X.load()) / (double)(Y.load())))
     #define TPS(X) ((double)(X.load()) / (double)(duration) * (double)(1000000))
 
     

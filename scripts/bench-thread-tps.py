@@ -11,7 +11,7 @@ from plot.plot import MyPlot
 workload = 'TPCC'
 repeat = 20
 times_to_tun = 3
-block_size = 500
+block_size = 1000
 block_num = 2
 warehouse = 20
 table_partition = 9973

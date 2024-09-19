@@ -1,5 +1,5 @@
 ##### run by cmd #####
-HELP = 'python draw_warehouses_tps.py -f file_path -w workload -c contention'
+HELP = 'python draw_warehouses_tps.py -f file_path -b blocksize -t thread'
 ##### run by cmd #####
 
 X = "warehouse"
@@ -20,17 +20,16 @@ from plot.plot import MyPlot
 #################### 参数解析 ####################
 parser = argparse.ArgumentParser(HELP)
 parser.add_argument('-f', '--file', type=str, required=True, help='file to plot')
-# parser.add_argument("-w", "--workload", type=str, required=True, help="workload: smallbank or ycsb")
-# parser.add_argument("-c", "--contention", type=str, required=True, help="contention: uniform or skewed")
+parser.add_argument("-b", "--blocksize", type=str, required=True, help="blocksize: size of block")
+parser.add_argument("-c", "--thread", type=str, required=True, help="thread: thread number")
 args = parser.parse_args()
 file: str = args.file
 # assert args.workload in ['smallbank', 'ycsb']
-# workload = args.workload
+block_size = args.blocksize
 # assert args.contention in ['uniform', 'skewed']
-# contention = args.contention
+thread_num = args.thread
 
-# savepath = f'threads-tps-{workload}-{contention}.pdf'
-savepath = '../pics/threads-tps-warehouse.pdf'
+savepath = f'../pics/bench_warehouse_{block_size}:{thread_num}_tps.pdf'
 
 
 #################### 数据准备 ####################

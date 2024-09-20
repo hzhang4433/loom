@@ -65,7 +65,7 @@ class MyPlot:
 
     # 点相关
     # marker_list = ['o', 's', 'v', '^', '<', '>', '1', '2', '3', '4']    # 点的形状
-    marker_list = ['1', '2', '3', '4', '>', '<', '^', 'v', 'o', 's']        # 点的形状 pop
+    marker_list = ['X', 'p', '>', '<', '^', 'v', 's', 'o']        # 点的形状 pop
     marker_size = 7                                                      # 点大小
 
     ##### 变量 #####
@@ -123,7 +123,7 @@ class MyPlot:
                 else: self.init (axs)
         else: self.init(self.axes)
 
-        self.marker_list = ['1', '2', '3', '4', '>', '<', '^', 'v', 'o', 's']       
+        self.marker_list = ['o', 's', 'v', '^', '<', '>', '1', '2', '3', '4']   
     
     def plot(
         self,

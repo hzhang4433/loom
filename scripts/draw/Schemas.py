@@ -13,8 +13,8 @@ schemas = [
     ('Aria'         ,       '#8c564b'),  # 棕色
     ('Harmony'      ,       '#2ca02c'),  # 绿色
     ('HarmonyIB'    ,       '#ff7f0e'),  # 橙色
-    ('Moss'         ,       '#1f77b4'),  # 蓝色
-    ('Serial'       ,       '#9467bd')   # 紫色
+    ('Moss'         ,       '#9467bd'),  # 紫色
+    ('Serial'       ,       '#1f77b4')   # 蓝色
 ]
 
 schemas_for_bar = [

@@ -13,7 +13,7 @@ from plot.plot import MyPlot
 workload = 'TPCC'
 repeat = 20
 times_to_tun = 3
-warehouse = 1 #1 20 60
+warehouse = 60 #1 20 60
 block_num = 2
 thread_num = 48
 table_partition = 9973
@@ -86,6 +86,7 @@ if __name__ == '__main__':
                         sum_execution += float(re.search(r'execution\s+([\d.]+)', result_str).group(1))
                         sum_overhead += float(re.search(r'overhead\s+([\d.]+)', result_str).group(1))
                         sum_rollback += float(re.search(r'rollback\s+([\d.]+)', result_str).group(1))
+                        sum_rollback_ratio += float(re.search(r'rollback ratio\s+([\d.]+)', result_str).group(1))
                         if cc.split(':')[0] == 'Loom' and cc.split(':')[-1] == 'TRUE':
                             tx_latency = min(tx_latency, float(re.search(r'tx latency\s+([\d.]+)\s+ms', result_str).group(1)))
                             block_latency = min(block_latency, float(re.search(r'block latency\s+([\d.]+)\s+ms', result_str).group(1)))
@@ -166,7 +167,7 @@ if __name__ == '__main__':
     p.format_yticks(ax, suffix='K')
     p.set_labels(ax, XLABEL, YLABEL)
     p.legend(ax, loc="upper center", ncol=3, anchor=(0.5, 1.25))
-    p.save(f'./pics/blocksize/bench_blocksize_{warehouse}:{thread_num}_tps_{timestamp}.pdf')
+    p.save(f'../pics/blocksize/bench_blocksize_{warehouse}:{thread_num}_tps_{timestamp}.pdf')
 
 # for latency
     recs = df
@@ -191,4 +192,4 @@ if __name__ == '__main__':
     # ax.set_xticklabels([str(int(t) // 100) for t in recs['block_size'].unique()])
     p2.set_labels(ax, XLABEL, YLABEL)
     p2.legend(ax, loc="upper center", ncol=3, anchor=(0.5, 1.25))
-    p2.save(f'./pics/blocksize/bench_blocksize_{warehouse}:{thread_num}_latency_{timestamp}.pdf')
+    p2.save(f'../pics/blocksize/bench_blocksize_{warehouse}:{thread_num}_latency_{timestamp}.pdf')

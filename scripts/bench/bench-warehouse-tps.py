@@ -151,7 +151,7 @@ if __name__ == '__main__':
     # ax.set_ylim(None, p.max_y_data * 1.15)       # 折线图的Y轴上限设置为数据最大值的1.15倍
     p.set_labels(ax, XLABEL, YLABEL)
     p.legend(ax, loc="upper center", ncol=3, anchor=(0.5, 1.25))
-    p.save(f'./pics/warehouse/bench_warehouse_{block_size}:{thread_num}_tps_{timestamp}.pdf')
+    p.save(f'../pics/warehouse/bench_warehouse_{block_size}:{thread_num}_tps_{timestamp}.pdf')
     
 # for latency
     recs = df
@@ -169,4 +169,4 @@ if __name__ == '__main__':
     # ax.set_ylim(None, p2.max_y_data * 1.15)       # 折线图的Y轴上限设置为数据最大值的1.15倍
     p2.set_labels(ax, XLABEL, YLABEL)
     p2.legend(ax, loc="upper center", ncol=3, anchor=(0.5, 1.25))
-    p2.save(f'./pics/warehouse/bench_warehouse_{block_size}:{thread_num}_latency_{timestamp}.pdf')
+    p2.save(f'../pics/warehouse/bench_warehouse_{block_size}:{thread_num}_latency_{timestamp}.pdf')

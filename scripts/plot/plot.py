@@ -123,7 +123,7 @@ class MyPlot:
                 else: self.init (axs)
         else: self.init(self.axes)
 
-        self.marker_list = ['o', 's', 'v', '^', '<', '>', '1', '2', '3', '4']   
+        self.marker_list = ['X', 'p', '>', '<', '^', 'v', 's', 'o']
     
     def plot(
         self,

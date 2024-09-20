@@ -13,7 +13,6 @@ import sys
 import numpy as np
 
 sys.path.extend(['.', '..', '../..'])
-from plot.parse import parse_records_from_file
 import matplotlib.pyplot as plt
 from plot.plot import MyPlot
 from Schemas import schemas
@@ -28,7 +27,7 @@ file: str = args.file
 warehouse = args.warehouse
 thread_num = args.thread
 
-savepath = f'../pics/blocksize/bench_blocksize_{warehouse}:{thread_num}_tps_.pdf'
+savepath = f'../pics/blocksize/bench_blocksize_{warehouse}:{thread_num}_tps.pdf'
 
 
 #################### 数据准备 ####################
@@ -57,7 +56,8 @@ for idx, (schema, color) in enumerate(schemas):
         xdata=uniform_ticks,
         # xdata=records[X],
         ydata=records[Y],
-        color=color, legend_label=schema,
+        color=color, 
+        legend_label=schema,
     )
 
 # 设置X轴标签

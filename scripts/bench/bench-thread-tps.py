@@ -8,12 +8,13 @@ import sys
 sys.path.extend(['.', '..', '../..'])
 from plot.plot import MyPlot
 
+# target: see the linear scalability of throughput -- 45 angles
 workload = 'TPCC'
 repeat = 20
 times_to_tun = 3
-block_size = 400
+block_size = 1600
 block_num = 2
-warehouse = 20
+warehouse = 60 #20
 table_partition = 9973
 timestamp = int(time.time())
 
@@ -110,7 +111,9 @@ if __name__ == '__main__':
                     except Exception as e:
                         print(e)
                 df.loc[len(df)] = {
-                    'protocol': cc.split(':')[0] if cc.split(':')[-1] != 'FALSE' else 'LoomNIB', 
+                    # 'protocol': cc.split(':')[0] if cc.split(':')[-1] != 'FALSE' else 'LoomNIB', 
+                    # 'protocol': cc.split(':')[0] if (cc.split(':')[0] != 'Harmony' or cc.split(':')[-1] == 'FALSE') else 'HarmonyIB',
+                    'protocol': 'Fractal' if cc.split(':')[0] == 'Moss' else (cc.split(':')[0] if (cc.split(':')[0] != 'Harmony' or cc.split(':')[-1] == 'FALSE') else 'HarmonyIB'),
                     'block_size': block_size,
                     'warehouse': warehouse,
                     'threads': thread_num,

@@ -11,7 +11,7 @@ from plot.plot import MyPlot
 workload = 'TPCC'
 repeat = 20
 times_to_tun = 2
-block_size = 100 # 100, 400, 1600
+block_size = 1600 # 100, 400, 1600
 block_num = 2
 thread_num = 48
 table_partition = 9973
@@ -113,7 +113,8 @@ if __name__ == '__main__':
                         print(e)
                 df.loc[len(df)] = {
                     # 'protocol': cc.split(':')[0] if cc.split(':')[-1] != 'FALSE' else 'LoomNIB', 
-                    'protocol': cc.split(':')[0] if (cc.split(':')[0] != 'Harmony' or cc.split(':')[-1] == 'FALSE') else 'HarmonyIB',
+                    # 'protocol': cc.split(':')[0] if (cc.split(':')[0] != 'Harmony' or cc.split(':')[-1] == 'FALSE') else 'HarmonyIB',
+                    'protocol': 'Fractal' if cc.split(':')[0] == 'Moss' else (cc.split(':')[0] if (cc.split(':')[0] != 'Harmony' or cc.split(':')[-1] == 'FALSE') else 'HarmonyIB'),
                     'warehouse': warehouse,
                     'block_size': block_size,
                     'threads': thread_num,

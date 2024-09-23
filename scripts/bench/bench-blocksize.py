@@ -39,8 +39,6 @@ if __name__ == '__main__':
                 f"Harmony:{thread_num}:{table_partition}:FALSE",
                 f"Harmony:{thread_num}:{table_partition}:TRUE",
                 f"Moss:{thread_num}:{table_partition}",
-                # f"Loom:{thread_num}:{table_partition}:FALSE:FALSE",
-                # f"Loom:{thread_num}:{table_partition}:TRUE:FALSE",
                 f"Loom:{thread_num}:{table_partition}:TRUE:TRUE",
             ]
             for cc in protocols:

@@ -10,9 +10,9 @@ from plot.plot import MyPlot
 
 # target: see the linear scalability of throughput -- 45 angles
 workload = 'TPCC'
-repeat = 20
+repeat = 30
 times_to_tun = 3
-block_size = 1600
+block_size = 1600 #400
 block_num = 2
 warehouse = 60 #20
 table_partition = 9973
@@ -23,7 +23,7 @@ if __name__ == '__main__':
     conf = {'stdout': subprocess.PIPE, 'stderr': subprocess.PIPE}
     hash = subprocess.run(["git", "rev-parse", "HEAD"], **conf).stdout.decode('utf-8').strip()
     with open(f'../exp_results/thread/bench_thread_{warehouse}:{block_size}_{timestamp}', 'w') as f:
-        # list(range(8, 49, 4)) / [48]
+        # list(range(8, 49, 4)) / [36, 40, 44, 48]
         for thread_num in list(range(8, 49, 4)):
             protocols = [
                 f"Serial:{1}:{table_partition}",
@@ -31,8 +31,6 @@ if __name__ == '__main__':
                 f"Harmony:{thread_num}:{table_partition}:FALSE",
                 f"Harmony:{thread_num}:{table_partition}:TRUE",
                 f"Moss:{thread_num}:{table_partition}",
-                # f"Loom:{thread_num}:{table_partition}:FALSE:FALSE",
-                # f"Loom:{thread_num}:{table_partition}:TRUE:FALSE",
                 f"Loom:{thread_num}:{table_partition}:TRUE:TRUE",
             ]
             for cc in protocols:
@@ -64,9 +62,12 @@ if __name__ == '__main__':
                     block_latency = float('inf')
                     tps = float('-inf')
                 elif cc.split(':')[0] == 'Loom' and cc.split(':')[-1] == 'FALSE':
-                    tx_latency = float('-inf')
-                    block_latency = float('-inf')
-                    tps = float('inf')
+                    tx_latency = float('inf')
+                    block_latency = float('inf')
+                    tps = float('-inf')
+                    # tx_latency = float('-inf')
+                    # block_latency = float('-inf')
+                    # tps = float('inf')
                 concurrency_ratio = 0
                 succeed_repeat = 0
                 for _ in range(repeat):
@@ -90,15 +91,24 @@ if __name__ == '__main__':
                                 rollback_latency = float(re.search(r'rollback latency\s+([\d.]+)\s+ms', result_str).group(1))
                                 execution_latency = float(re.search(r'execute latency\s+([\d.]+)\s+ms', result_str).group(1))
                         elif cc.split(':')[0] == 'Loom' and cc.split(':')[-1] == 'FALSE':
-                            tx_latency = max(tx_latency, float(re.search(r'tx latency\s+([\d.]+)\s+ms', result_str).group(1)))
-                            block_latency = max(block_latency, float(re.search(r'block latency\s+([\d.]+)\s+ms', result_str).group(1)))
-                            tps = min(tps, float(re.search(r'tps\s+([\d.]+)\s+tx/s', result_str).group(1)))
+                            tx_latency = min(tx_latency, float(re.search(r'tx latency\s+([\d.]+)\s+ms', result_str).group(1)))
+                            block_latency = min(block_latency, float(re.search(r'block latency\s+([\d.]+)\s+ms', result_str).group(1)))
+                            tps = max(tps, float(re.search(r'tps\s+([\d.]+)\s+tx/s', result_str).group(1)))
                             temp_concurrency_ratio = float(re.search(r'concurrency ratio\s+([\d.]+)', result_str).group(1))
                             if (temp_concurrency_ratio > concurrency_ratio):
                                 concurrency_ratio = temp_concurrency_ratio
                                 reExecute_latency = float(re.search(r're-execute latency\s+([\d.]+)\s+ms', result_str).group(1))
                                 rollback_latency = float(re.search(r'rollback latency\s+([\d.]+)\s+ms', result_str).group(1))
                                 execution_latency = float(re.search(r'execute latency\s+([\d.]+)\s+ms', result_str).group(1))
+                            # tx_latency = max(tx_latency, float(re.search(r'tx latency\s+([\d.]+)\s+ms', result_str).group(1)))
+                            # block_latency = max(block_latency, float(re.search(r'block latency\s+([\d.]+)\s+ms', result_str).group(1)))
+                            # tps = min(tps, float(re.search(r'tps\s+([\d.]+)\s+tx/s', result_str).group(1)))
+                            # temp_concurrency_ratio = float(re.search(r'concurrency ratio\s+([\d.]+)', result_str).group(1))
+                            # if (temp_concurrency_ratio > concurrency_ratio):
+                            #     concurrency_ratio = temp_concurrency_ratio
+                            #     reExecute_latency = float(re.search(r're-execute latency\s+([\d.]+)\s+ms', result_str).group(1))
+                            #     rollback_latency = float(re.search(r'rollback latency\s+([\d.]+)\s+ms', result_str).group(1))
+                            #     execution_latency = float(re.search(r'execute latency\s+([\d.]+)\s+ms', result_str).group(1))
                         else:
                             sum_tx_latency += float(re.search(r'tx latency\s+([\d.]+)\s+ms', result_str).group(1))
                             sum_block_latency += float(re.search(r'block latency\s+([\d.]+)\s+ms', result_str).group(1))

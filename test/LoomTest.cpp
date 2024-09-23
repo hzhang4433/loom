@@ -710,9 +710,9 @@ TEST(LoomTest, TestOtherPool) {
 
 TEST(LoomTest, TestLoom) {
     // Generate a workload
-    loom::BLOCK_SIZE = 1000;
+    loom::BLOCK_SIZE = 1600;
     TPCC::N_WAREHOUSES = 60;
-    TxGenerator txGenerator(loom::BLOCK_SIZE * 2);
+    TxGenerator txGenerator(loom::BLOCK_SIZE * 3);
     auto blocks = txGenerator.generateWorkload(true);
     // Create a Statistics instance
     auto statistics = Statistics();

@@ -10,11 +10,19 @@
 schemas = [
     # 里面是 (协议名称, 颜色(RGB格式)的元组)
     ('Loom'         ,       '#d62728'),  # 红色
-    ('Fractal'         ,    '#9467bd'),  # 紫色
+    ('Fractal'      ,       '#9467bd'),  # 紫色
     ('Harmony'      ,       '#2ca02c'),  # 绿色
     ('HarmonyIB'    ,       '#8c564b'),  # 棕色
     ('Aria'         ,       '#ff7f0e'),  # 橙色
     ('Serial'       ,       '#1f77b4')   # 蓝色
+]
+
+schemas_for_ablation = [
+    # 里面是 (协议名称, 颜色(RGB格式)的元组)
+    ('LoomRaw'     ,        '#9467bd'),  # 紫色
+    ('LoomFR'      ,        '#ff7f0e'),  # 橙色
+    ('LoomMP'      ,        '#2ca02c'),  # 绿色
+    ('Loom'        ,        '#d62728'),  # 红色
 ]
 
 schemas_for_bar = [

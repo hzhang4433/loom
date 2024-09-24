@@ -207,8 +207,8 @@ void Loom::PostExecuteBlock(Block::Ptr block, vector<T> batch, ThreadPool::Ptr p
     for (auto& future : finalFutures) {
         future.get();
     }
-    // // notify retry
-    // notifyRetry();
+    // notify retry
+    notifyRetry();
     // mark block as committed
     // committed_block.fetch_add(1, memory_order_relaxed);
     statistics.JournalBlock();
@@ -329,17 +329,17 @@ void Loom::PreExecuteInterBlock(vector<T>& batch, const size_t& block_id) {
 
     // Continue processing retry transactions until all are complete
     while (!retryTxs.empty()) {
-        // LOG(INFO) << "Block " << block_id << " wait to retry...";
-        // // wait retry signal to be true
-        // std::unique_lock<std::mutex> lk(mtx);
-        // while (!canRetry.load()) {
-        //     cv.wait(lk);
-        // }
-        // // cv.wait(lk, [this] { return canRetry.load(); });
-        // // set retry signal to false
-        // resetRetry();
-        // // unlock mutex
-        // lk.unlock();
+        LOG(INFO) << "Block " << block_id << " wait to retry...";
+        // wait retry signal to be true
+        std::unique_lock<std::mutex> lk(mtx);
+        while (!canRetry.load()) {
+            cv.wait(lk);
+        }
+        // cv.wait(lk, [this] { return canRetry.load(); });
+        // set retry signal to false
+        resetRetry();
+        // unlock mutex
+        lk.unlock();
 
         LOG(INFO) << "Block " << block_id << " begin to retry...";
         // Swap retryTxs with currentTxs
@@ -453,7 +453,7 @@ void Loom::MinWRollBack(vector<T>& batch, Block::Ptr block, vector<Vertex::Ptr>&
 void Loom::ReExecute(Block::Ptr block, vector<Vertex::Ptr>& rbList, vector<vector<int>>& serialOrders, ThreadPool::Ptr pool) {
     #define PRASE_TIME duration_cast<microseconds>(chrono::steady_clock::now() - begin_time).count()
     
-    LOG(INFO) << "ReExecute block " << block->getBlockId();
+    LOG(INFO) << "ReExecute block " << block->getBlockId() << " with nested mode: " << enable_nested_reExecution;
     std::vector<std::future<void>> reExecuteFutures;
     chrono::time_point<steady_clock> begin_time;
 

@@ -13,7 +13,7 @@ repeat = 30
 times_to_tun = 3
 block_size = 1600
 block_num = 2
-warehouse = 1
+warehouse = 20
 table_partition = 9973
 timestamp = int(time.time())
 
@@ -35,10 +35,10 @@ if __name__ == '__main__':
         # list(range(8, 49, 4)) / [36, 40, 44, 48]
         for thread_num in list(range(24, 49, 4)):
             protocols = [
-                # f"Loom:{thread_num}:{table_partition}:FALSE:FALSE", # Loom-raw
-                # f"Loom:{thread_num}:{table_partition}:TRUE:FALSE", # Loom-FR
-                f"Loom:{thread_num}:{table_partition}:FALSE:TRUE", # Loom-MP
-                # f"Loom:{thread_num}:{table_partition}:TRUE:TRUE", # Loom
+                f"Loom:{thread_num}:{table_partition}:FALSE:FALSE", # LoomRaw
+                f"Loom:{thread_num}:{table_partition}:TRUE:FALSE", # LoomFR
+                # f"Loom:{thread_num}:{table_partition}:FALSE:TRUE", # LoomMP
+                f"Loom:{thread_num}:{table_partition}:TRUE:TRUE", # Loom
             ]
             for cc in protocols:
                 sum_commit = 0

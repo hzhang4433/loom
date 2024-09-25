@@ -17,14 +17,14 @@ using namespace std::chrono;
 /// @param num_threads the number of threads
 /// @param table_partitions the number of partitions for the table
 Loom::Loom(
-    vector<Block::Ptr> blocks,
+    vector<Block::Ptr>& blocks,
     Statistics& statistics,
     size_t num_threads, 
     size_t table_partitions,
     bool enable_nested_reExecution,
     bool enable_inter_block
 ):
-    blocks(std::move(blocks)),
+    blocks(blocks),
     statistics(statistics),
     batches(), // empty
     enable_inter_block(enable_inter_block),
@@ -49,10 +49,11 @@ void Loom::Start() {
         auto& block = blocks[i];
         auto& txs = block->getTxs();
         vector<T> batch;
+        batch.reserve(txs.size());
         size_t batch_id = i + 1;
         // get all batch of one block
         for (size_t j = 0; j < txs.size(); j++) {
-            auto tx = txs[j];
+            auto& tx = txs[j];
             size_t txid = tx->GetTx()->m_hyperId;
             batch.emplace_back(make_shared<LoomTransaction>(std::move(*tx), txid, batch_id));
         }
@@ -207,8 +208,8 @@ void Loom::PostExecuteBlock(Block::Ptr block, vector<T> batch, ThreadPool::Ptr p
     for (auto& future : finalFutures) {
         future.get();
     }
-    // notify retry
-    notifyRetry();
+    // // notify retry
+    // notifyRetry();
     // mark block as committed
     // committed_block.fetch_add(1, memory_order_relaxed);
     statistics.JournalBlock();
@@ -329,17 +330,17 @@ void Loom::PreExecuteInterBlock(vector<T>& batch, const size_t& block_id) {
 
     // Continue processing retry transactions until all are complete
     while (!retryTxs.empty()) {
-        LOG(INFO) << "Block " << block_id << " wait to retry...";
-        // wait retry signal to be true
-        std::unique_lock<std::mutex> lk(mtx);
-        while (!canRetry.load()) {
-            cv.wait(lk);
-        }
-        // cv.wait(lk, [this] { return canRetry.load(); });
-        // set retry signal to false
-        resetRetry();
-        // unlock mutex
-        lk.unlock();
+        // LOG(INFO) << "Block " << block_id << " wait to retry...";
+        // // wait retry signal to be true
+        // std::unique_lock<std::mutex> lk(mtx);
+        // while (!canRetry.load()) {
+        //     cv.wait(lk);
+        // }
+        // // cv.wait(lk, [this] { return canRetry.load(); });
+        // // set retry signal to false
+        // resetRetry();
+        // // unlock mutex
+        // lk.unlock();
 
         LOG(INFO) << "Block " << block_id << " begin to retry...";
         // Swap retryTxs with currentTxs

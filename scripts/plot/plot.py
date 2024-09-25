@@ -40,7 +40,8 @@ class MyPlot:
     legend_word_size = 13   # 图例字体大小
 
     # 画布相关
-    figsize = (5.5, 4)        # 画布大小
+    # figsize = (5.5, 4)        # 画布大小
+    figsize = (6.5, 4.5)      # 画布大小
     facecolor = 'white'     # 背景颜色
 
     # 边框相关
@@ -174,6 +175,42 @@ class MyPlot:
         )
         if not nogrid: ax.grid(axis=self.grid, linewidth=self.border_width)
         if max(ydata) > self.max_y_data: self.max_y_data = max(ydata + bottom if bottom else ydata)
+
+    def bar_new(
+        self,
+        ax: plt.Axes,
+        xdata: list,
+        ydata: list,
+        legend_label: str,
+        color: str,
+        bottom: list=None,
+        width: float=0.3,
+        hatch: str=None,
+        nogrid: bool=False
+    ):
+        self.count += 1
+        ax.bar(
+            xdata,
+            ydata,
+            bottom=bottom,
+            color=color,
+            label=legend_label,
+            hatch=hatch,
+            width=width,
+            ec='black', ls='-', lw=1
+        )
+        if not nogrid:
+            ax.grid(axis=self.grid, linewidth=self.border_width)
+        
+        # 检查 bottom 是否存在，确保数组操作正确
+        if bottom is not None:
+            combined = np.array(ydata) + np.array(bottom)
+        else:
+            combined = np.array(ydata)
+
+        # 使用 np.max 处理 combined 数据
+        if np.max(combined) > self.max_y_data:
+            self.max_y_data = np.max(combined)
 
     def set_labels(
         self,

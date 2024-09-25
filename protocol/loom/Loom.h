@@ -48,7 +48,7 @@ struct LoomTable: public Table<K, LoomEntry, KeyHasher> {
 /// @brief loom protocol master class
 class Loom: public Protocol {
 public:
-    Loom(vector<Block::Ptr> blocks, Statistics& statistics, size_t num_threads, size_t table_partitions = 1, bool enable_nested_reExecution = true, bool enable_inter_block = true);
+    Loom(vector<Block::Ptr>& blocks, Statistics& statistics, size_t num_threads, size_t table_partitions = 1, bool enable_nested_reExecution = true, bool enable_inter_block = true);
     void Start() override;
     void Stop() override;
     void NormalMode(Block::Ptr block, vector<T>& batch);
@@ -66,7 +66,7 @@ public:
 
 private:
     Statistics&                     statistics;
-    vector<Block::Ptr>              blocks;
+    vector<Block::Ptr>&             blocks;
     vector<vector<T>>               batches;
     size_t                          num_threads;
     LoomTable                       table;

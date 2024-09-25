@@ -1,11 +1,11 @@
 ##### run by cmd #####
-HELP = 'python draw_ablation_tps.py -f file_path -w warehouse -b blocksize'
+HELP = 'python draw_ablation_tps.py -f file_path'
 ##### run by cmd #####
 
 X = "threads"
-Y = "tx_latency"
+Y = "tps"
 XLABEL = "Threads"
-YLABEL = "Latency(ms)"
+YLABEL = "Troughput(Txn/s)"
 
 import pandas as pd
 import argparse
@@ -19,26 +19,30 @@ from Schemas import schemas_for_ablation as schemas
 #################### 参数解析 ####################
 parser = argparse.ArgumentParser(HELP)
 parser.add_argument('-f', '--file', type=str, required=True, help='file to plot')
-parser.add_argument("-w", "--warehouse", type=str, required=True, help="warehouse: warehouse number")
-parser.add_argument("-b", "--blocksize", type=str, required=True, help="blocksize: size of block")
 args = parser.parse_args()
 file: str = args.file
-warehouse = args.warehouse
-blocksize = args.blocksize
 
-savepath = f'../pics/ablation/bench_ablation_{warehouse}:{blocksize}_tps.pdf'
+savepath = f'../../pics/ablation/bench_ablation_tps.pdf'
 
 schemas_dict = {
-    'LoomFR': 'Loom$_\mathit{FR}$',
-    'LoomMP': 'Loom$_\mathit{MP}$',
-    'LoomRaw': 'Loom$_\mathit{Raw}$',
+    'Loom_20': 'Loom$_\mathit{Medium}$',
+    'LoomFR_20': 'LoomFR$_\mathit{Medium}$',
+    'LoomRaw_20': 'LoomRaw$_\mathit{Medium}$',
+    'Loom_1': 'Loom$_\mathit{High}$',
+    'LoomFR_1': 'LoomFR$_\mathit{High}$',
+    'LoomRaw_1': 'LoomRaw$_\mathit{High}$',
 }
 
 #################### 数据准备 ####################
-if (file.endswith('csv')):
-    recs = pd.read_csv(file)
-inner_schemas = recs['protocol'].unique()
-print(inner_schemas)
+recs = pd.read_csv(file)
+# inner_schemas = recs['protocol'].unique()
+# print(inner_schemas)
+
+recs['warehouse'] = recs['warehouse'].astype(str)
+recs['protocol_warehouse'] = recs['protocol'] + '_' + recs['warehouse']
+unique_protocols = recs['protocol_warehouse'].unique()
+print(unique_protocols)
+
 
 #################### 画图 ####################
 p = MyPlot(1, 1)
@@ -47,9 +51,10 @@ ax.grid(axis=p.grid, linewidth=p.border_width)
 p.init(ax)
 
 # for idx, (schema, color) in enumerate(schemas):
-marker_list = ['v', '^', 's', 'o', '<', '>', 'D', 'h'] 
+marker_list = ['<', 's', '>', 'v', 'o', '^', 'D', 'h'] 
 for idx, (schema, color) in enumerate(schemas):
-    records = recs[recs['protocol'] == schema]
+    # records = recs[recs['protocol'] == schema]
+    records = recs[recs['protocol_warehouse'] == schema]
     # print(records[Y])
     p.plot(
         ax,
@@ -81,7 +86,7 @@ p.set_labels(ax, XLABEL, YLABEL)
 # box2: plt.Bbox = ax.get_tightbbox()
 
 # 设置图例
-p.legend(ax, loc="upper center", ncol=4, anchor=(0.5, 1.16), columnspacing=0.8)
+p.legend(ax, loc="upper center", ncol=3, anchor=(0.5, 1.2), columnspacing=0.5)
 # if contention == 'pres':
 #     p.legend(
 #         ax, 

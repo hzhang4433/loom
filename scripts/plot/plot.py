@@ -40,8 +40,9 @@ class MyPlot:
     legend_word_size = 13   # 图例字体大小
 
     # 画布相关
-    # figsize = (5.5, 4)        # 画布大小
-    figsize = (6.5, 4.5)      # 画布大小
+    # figsize = (5.5, 4)     # 画布大小
+    # figsize = (6.5, 4.5)   # 画布大小 for 4 columns
+    figsize = (7.5, 2.5)     # 画布大小
     facecolor = 'white'     # 背景颜色
 
     # 边框相关

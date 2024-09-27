@@ -68,6 +68,8 @@ ax.set_yticks(np.arange(0, 101, 25))
 
 # 设置坐标轴标签
 p.set_labels(ax, XLABEL, YLABEL)
+ax.set_ylabel(YLABEL, loc='center', labelpad=0)
+
 
 # 添加图例
 p.legend(ax, loc="upper center", ncol=3, anchor=(0.48, 1.25), columnspacing=3) #, anchor=(0.5, 1.2), columnspacing=0.5

@@ -45,13 +45,23 @@ schemas_for_ablation_bar = [
 
 schemas_for_bar = [
     # 里面是 (协议名称, 颜色(RGB格式)的元组)
+    ('Serial'       ,       '#a780b7'),  # 紫色，饱和度降低
+    ('Fractal'      ,       '#3d6664'),  # 绿色，饱和度降低
     ('Loom'         ,       '#c85a59'),  # 红色，饱和度降低
-    ('Fractal'      ,       '#7a93c1'),  # 蓝色，饱和度降低
-    ('Harmony'      ,       '#7ab77a'),  # 绿色，饱和度降低
-    ('HarmonyIB'    ,       '#db9e67'),  # 橙色，饱和度降低
-    ('Aria'         ,       '#8d7876'),  # 棕色，饱和度降低
-    ('Serial'       ,       '#9b8bb9')   # 紫色，饱和度降低
+    ('Aria'         ,       '#4c7da8'),  # 蓝色，饱和度降低
+    ('Harmony'      ,       '#8d7876'),  # 棕色，饱和度降低
+    ('HarmonyIB'    ,       '#e8ac64'),  # 橙色，饱和度降低
 ]
+
+# schemas_for_bar = [
+#     # 里面是 (协议名称, 颜色(RGB格式)的元组)
+#     ('Serial'       ,       '#9b8bb9'),  # 紫色，饱和度降低
+#     ('Fractal'      ,       '#7a93c1'),  # 蓝色，饱和度降低
+#     ('Loom'         ,       '#c85a59'),  # 红色，饱和度降低
+#     ('Aria'         ,       '#8d7876'),  # 棕色，饱和度降低
+#     ('Harmony'      ,       '#7ab77a'),  # 绿色，饱和度降低
+#     ('HarmonyIB'    ,       '#db9e67'),  # 橙色，饱和度降低
+# ]
 
 # schemas_for_pre = [
 #     # 里面是 (协议名称, 颜色(RGB格式)的元组)

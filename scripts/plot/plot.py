@@ -40,9 +40,10 @@ class MyPlot:
     legend_word_size = 13   # 图例字体大小
 
     # 画布相关
-    # figsize = (5.5, 4)     # 画布大小
+    # figsize = (5.5, 4)     # 画布大小 origin
+    figsize = (5.8, 4)     # 画布大小 for overall
     # figsize = (6.5, 4.5)   # 画布大小 for 4 columns
-    figsize = (7.5, 2.5)     # 画布大小
+    # figsize = (7.5, 2.5)   # 画布大小 for time series
     facecolor = 'white'     # 背景颜色
 
     # 边框相关
@@ -233,7 +234,7 @@ class MyPlot:
         if not max_y_data: max_y_data = int(self.max_y_data)
         if not step: 
             step = max_y_data // step_num
-            step = step // (10 ** (len(str(step))-1) // 2) * (10 ** (len(str(step))-1) // 2)
+            step = step // (10 ** ((len(str(step))-1) // 2)) * (10 ** ((len(str(step))-1) // 2))
             print(max_y_data, step)
         if suffix: 
             suffix = suffix.upper()

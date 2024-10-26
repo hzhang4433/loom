@@ -6,3 +6,4 @@ log/
 /scripts/pics
 **/__pycache__
 **/*.tar.gz
+*.txt

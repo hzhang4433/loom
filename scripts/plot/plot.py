@@ -41,9 +41,10 @@ class MyPlot:
 
     # 画布相关
     # figsize = (5.5, 4)     # 画布大小 origin
-    figsize = (5.8, 4)     # 画布大小 for overall
+    # figsize = (5.8, 4)     # 画布大小 for overall
     # figsize = (6.5, 4.5)   # 画布大小 for 4 columns
     # figsize = (7.5, 2.5)   # 画布大小 for time series
+    figsize = (5.3, 4)      # 画布大小 for rollback
     facecolor = 'white'     # 背景颜色
 
     # 边框相关
@@ -253,6 +254,37 @@ class MyPlot:
             ax.set_yticks(
                 range(0, max_y_data, step), 
                 [str(x) for x in range(0, max_y_data, step)]
+            )
+
+    def format_yticks(
+        self, 
+        ax: plt.Axes, 
+        max_y_data: float=None,
+        step: float=None, 
+        step_num: int=4,
+        suffix: str=None # [None, 'K', 'W', 'M']
+    ):
+        if suffix: 
+            suffix = suffix.upper()
+            suffix_map = {
+                None: 1,
+                'K': 1000,
+                'W': 10000,
+                'M': 1000000,
+            }
+            if step > 5 * suffix_map[suffix]: step =  step // (5 * suffix_map[suffix]) * (5 * suffix_map[suffix])
+            ax.set_yticks(
+                np.arange(0, max_y_data + step, step),
+                [str(x) for x in np.arange(0, max_y_data + step, step)]
+                # range(0, max_y_data, step), 
+                # [str(x // suffix_map[suffix]) + suffix if x >= suffix_map[suffix] else str(x) for x in range(0, max_y_data, step)]
+            )
+        else:
+            ax.set_yticks(
+                np.arange(0, max_y_data + step, step),
+                [str(x) for x in np.arange(0, max_y_data + step, step)]
+                # range(0, max_y_data, step), 
+                # [str(x) for x in range(0, max_y_data, step)]
             )
 
     def legend(

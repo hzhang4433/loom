@@ -63,6 +63,20 @@ schemas_for_bar = [
 #     ('HarmonyIB'    ,       '#db9e67'),  # 橙色，饱和度降低
 # ]
 
+schemas_for_rollback = [
+    # 里面是 (协议名称, 颜色(RGB格式)的元组)
+    ('Loom'         ,       '#DE7875'),  # 红色，饱和度降低
+    ('Harmony'      ,       '#E6B98C'),  # 橙色，饱和度降低
+    ('Aria'         ,       '#4485BA'),  # 蓝色，饱和度降低
+]
+
+schemas_for_reExecution = [
+    # 里面是 (协议名称, 颜色(RGB格式)的元组)
+    ('Harmony'      ,       '#3d6664'),  # 绿色
+    ('Aria'         ,       '#e8ac64'),  # 橙色
+    ('Loom'         ,       '#D95353'),  # 红色
+]
+
 # schemas_for_pre = [
 #     # 里面是 (协议名称, 颜色(RGB格式)的元组)
 #     ('SpectrumPreSched' ,       '#9400D3'),  # 深紫色

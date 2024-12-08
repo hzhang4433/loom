@@ -27,24 +27,31 @@ class MyPlot:
 
     # 字体设置
     rcParams['font.family'] = 'sans-serif' # 使用字体中的无衬线体
-    rcParams['font.sans-serif'] = prop.get_name()  # 根据名称设置字体
+    # rcParams['font.sans-serif'] = prop.get_name()  # 根据名称设置字体
+    rcParams['font.sans-serif'] = 'Helvetica'  # 根据名称设置字体
     # rcParams['font.weight'] = 'bold' # 设置刻度标签粗细
     # rcParams['font.size'] = 10 # 设置字体大小
     rcParams['axes.unicode_minus'] = False # 使坐标轴刻度标签正常显示正负号
 
     dpi = 300
-    weight = 'normal'
+    # weight = 'normal'
+    weight = 'bold'
 
     # 图例相关
     anchor = (0.5, 1.23)    # 相对位置
     legend_word_size = 13   # 图例字体大小
+    # legend_word_size = 11   # 图例字体大小 for time serial
 
     # 画布相关
     # figsize = (5.5, 4)     # 画布大小 origin
+    # figsize = (5.8, 4.2)     # 画布大小 for bold b_w
+    # figsize = (5.8, 4.0)     # 画布大小 for bold thread
     # figsize = (5.8, 4)     # 画布大小 for overall
     # figsize = (6.5, 4.5)   # 画布大小 for 4 columns
-    # figsize = (7.5, 2.5)   # 画布大小 for time series
-    figsize = (5.3, 4)      # 画布大小 for rollback
+    # figsize = (8, 2.5)   # 画布大小 for time series
+    # figsize = (5.3, 4)      # 画布大小 for rollback
+    figsize = (5.3, 4)      # 画布大小 for bold re-execution and rollback
+    # figsize = (6.98, 4.7)   # 画布大小 for bold ablation
     facecolor = 'white'     # 背景颜色
 
     # 边框相关
@@ -54,14 +61,17 @@ class MyPlot:
     # 刻度相关
     tick_length = 10            # 刻度长度
     tick_width = border_width   # 刻度宽度默认和边框宽度相同
-    tick_word_size = 15         # 刻度字体大小
+    # tick_word_size = 15         # 刻度字体大小
+    tick_word_size = 20         # 刻度字体大小 for other
+    # tick_word_size = 10         # 刻度字体大小 for time serial
     tick_toward = 'out'         # 刻度朝向
 
     # label标签相关
     label_config_dic = {
         # 'family': font,
         'weight': weight,       # 粗细：normal bold
-        'size': 17,             # 大小
+        'size': 20,             # 大小 for other
+        # 'size': 12,             # 大小 for time serial
     }
 
     # 线相关
@@ -245,7 +255,7 @@ class MyPlot:
                 'W': 10000,
                 'M': 1000000,
             }
-            if step > 5 * suffix_map[suffix]: step =  step // (5 * suffix_map[suffix]) * (5 * suffix_map[suffix])
+            # if step > 5 * suffix_map[suffix]: step =  step // (5 * suffix_map[suffix]) * (5 * suffix_map[suffix])
             ax.set_yticks(
                 range(0, max_y_data, step), 
                 [str(x // suffix_map[suffix]) + suffix if x >= suffix_map[suffix] else str(x) for x in range(0, max_y_data, step)]
@@ -255,8 +265,12 @@ class MyPlot:
                 range(0, max_y_data, step), 
                 [str(x) for x in range(0, max_y_data, step)]
             )
+            # ax.set_yticks(
+            #     range(0, step*step_num, step), 
+            #     [str(x) for x in range(0, step*step_num, step)]
+            # )
 
-    def format_yticks(
+    def format_yticks_float(
         self, 
         ax: plt.Axes, 
         max_y_data: float=None,
@@ -275,14 +289,16 @@ class MyPlot:
             if step > 5 * suffix_map[suffix]: step =  step // (5 * suffix_map[suffix]) * (5 * suffix_map[suffix])
             ax.set_yticks(
                 np.arange(0, max_y_data + step, step),
-                [str(x) for x in np.arange(0, max_y_data + step, step)]
                 # range(0, max_y_data, step), 
                 # [str(x // suffix_map[suffix]) + suffix if x >= suffix_map[suffix] else str(x) for x in range(0, max_y_data, step)]
             )
         else:
             ax.set_yticks(
                 np.arange(0, max_y_data + step, step),
-                [str(x) for x in np.arange(0, max_y_data + step, step)]
+                # [str(x) for x in np.arange(0, max_y_data + step, step)]
+                [0, 0.25, 0.5, 0.75, 1]
+                # [0, 0.5, 1]
+                # [str(x) if x != 0.0 else '0' for x in np.arange(0, max_y_data + step, step)]
                 # range(0, max_y_data, step), 
                 # [str(x) for x in range(0, max_y_data, step)]
             )

@@ -26,7 +26,8 @@ file: str = args.file
 block_size = args.blocksize
 thread_num = args.thread
 
-savepath = f'../pics/warehouse/bench_warehouse_{block_size}:{thread_num}_latency.pdf'
+# savepath = f'../pics/warehouse/bench_warehouse_{block_size}:{thread_num}_latency.pdf'
+savepath = f'./bench_warehouse_{block_size}:{thread_num}_latency.pdf'
 
 
 #################### 数据准备 ####################
@@ -60,12 +61,12 @@ print(recs['warehouse'].unique())
 ax.set_xticks([int(t) for t in recs['warehouse'].unique()])
 
 # 自适应Y轴变化
-step = None
+step = 75
 # if workload == 'smallbank' and contention == 'skewed':
 #     step = 140000
 # elif workload == 'tpcc' and contention == '10orderlines':
 #     step = 13000
-# p.format_yticks(ax, step=step, step_num=4)
+p.format_yticks(ax, step=step, step_num=5)
 # ax.set_ylim(None, p.max_y_data * 1.15)       # 折线图的Y轴上限设置为数据最大值的1.15倍
 
 # 设置label
@@ -75,7 +76,7 @@ p.set_labels(ax, XLABEL, YLABEL)
 # box2: plt.Bbox = ax.get_tightbbox()
 
 # 设置图例
-p.legend(ax, loc="upper center", ncol=3, anchor=(0.5, 1.25))
+p.legend(ax, loc="upper center", ncol=3, anchor=(0.5, 1.22), columnspacing=1.5)
 
 # 保存
 p.save(savepath)

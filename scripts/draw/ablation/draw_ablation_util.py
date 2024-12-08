@@ -27,8 +27,10 @@ time1, cpu_util1 = read_csv('../../exp_results/ablation/cpu_usage_loom.csv')
 time2, cpu_util2 = read_csv('../../exp_results/ablation/cpu_usage_loomFR.csv')
 time3, cpu_util3 = read_csv('../../exp_results/ablation/cpu_usage_loomRaw.csv')
 
-savepath = '../../pics/ablation/bench_ablation_cpu-util.pdf'
-# savepath = 'bench_ablation_cpu-util.pdf'
+# savepath = '../../pics/ablation/bench_ablation_cpu-util.pdf'
+# savepath = './bench_ablation_cpu-util.pdf'
+savepath = './ablation_cpu-util.pdf'
+
 
 #################### 画图 ####################
 p = MyPlot(1, 1)
@@ -72,7 +74,7 @@ ax.set_ylabel(YLABEL, loc='center', labelpad=0)
 
 
 # 添加图例
-p.legend(ax, loc="upper center", ncol=3, anchor=(0.48, 1.25), columnspacing=3) #, anchor=(0.5, 1.2), columnspacing=0.5
+p.legend(ax, loc="upper center", ncol=3, anchor=(0.48, 1.21), columnspacing=4) #, anchor=(0.5, 1.2), columnspacing=0.5
 
 # 保存图像
 p.save(savepath)

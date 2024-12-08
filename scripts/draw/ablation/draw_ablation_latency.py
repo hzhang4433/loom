@@ -23,7 +23,8 @@ parser = argparse.ArgumentParser(HELP)
 parser.add_argument("-t", "--threads", type=int, required=True, help="threads")
 args = parser.parse_args()
 
-savepath = f'../../pics/ablation/bench_ablation_latency.pdf'
+# savepath = f'../../pics/ablation/bench_ablation_latency.pdf'
+savepath = f'./bench_ablation_latency.pdf'
 
 #################### 数据准备 ####################
 recs = pd.read_csv(f'../../exp_results/ablation/bench_ablation_tps.csv')
@@ -144,13 +145,13 @@ legend_protocols = ax.figure.legend(
     labels=protocols, 
     loc='upper center', 
     ncol=len(protocols), 
-    bbox_to_anchor=(0.5, 0.99),
+    bbox_to_anchor=(0.5, 0.98),
     columnspacing=2.4,
     frameon=False
 )
 legend_parts = ax.figure.legend(
     handles=[execution_patch, rollback_patch, re_execution_patch], 
-    labels=['Execution', 'Rollback', 'Re-execution'], 
+    labels=['Pre-Execution', 'Rollback', 'Re-Execution'], 
     loc='upper left',
     bbox_to_anchor=(0.14, 0.87),
     handletextpad=0.5,  # 缩小图例图标和文字之间的水平间距

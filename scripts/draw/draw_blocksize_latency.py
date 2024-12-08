@@ -27,7 +27,8 @@ file: str = args.file
 warehouse = args.warehouse
 thread_num = args.thread
 
-savepath = f'../pics/blocksize/bench_blocksize_{warehouse}:{thread_num}_latency.pdf'
+# savepath = f'../pics/blocksize/bench_blocksize_{warehouse}:{thread_num}_latency.pdf'
+savepath = f'./bench_blocksize_{warehouse}:{thread_num}_latency.pdf'
 
 
 #################### 数据准备 ####################
@@ -68,13 +69,14 @@ ax.set_xticks(uniform_ticks, blocksizes)
 # 自适应Y轴变化
 step = None
 # p.format_yticks(ax, suffix='K', step_num=4)
+p.format_yticks(ax, step=10, step_num=5)
 # ax.set_ylim(None, p.max_y_data * 1.15)       # 折线图的Y轴上限设置为数据最大值的1.15倍
 
 # 设置label
 p.set_labels(ax, XLABEL, YLABEL)
 
 # 设置图例
-p.legend(ax, loc="upper center", ncol=3, anchor=(0.5, 1.25))
+p.legend(ax, loc="upper center", ncol=3, anchor=(0.5, 1.22), columnspacing=1.5)
 
 # 保存
 p.save(savepath)

@@ -27,7 +27,8 @@ file: str = args.file
 warehouse = args.warehouse
 thread_num = args.thread
 
-savepath = f'../pics/blocksize/bench_blocksize_{warehouse}:{thread_num}_tps.pdf'
+# savepath = f'../pics/blocksize/bench_blocksize_{warehouse}:{thread_num}_tps.pdf'
+savepath = f'./bench_blocksize_{warehouse}:{thread_num}_tps.pdf'
 
 
 #################### 数据准备 ####################
@@ -72,7 +73,7 @@ step = None
 #     step = 140000
 # elif workload == 'tpcc' and contention == '10orderlines':
 #     step = 13000
-p.format_yticks(ax, suffix='K', step_num=4)
+p.format_yticks(ax, suffix='K', step=10000, step_num=4)
 # ax.set_ylim(None, p.max_y_data * 1.15)       # 折线图的Y轴上限设置为数据最大值的1.15倍
 
 # 设置label
@@ -82,7 +83,7 @@ p.set_labels(ax, XLABEL, YLABEL)
 # box2: plt.Bbox = ax.get_tightbbox()
 
 # 设置图例
-p.legend(ax, loc="upper center", ncol=3, anchor=(0.5, 1.25))
+p.legend(ax, loc="upper center", ncol=3, anchor=(0.5, 1.22), columnspacing=1.5)
 # if contention == 'pres':
 #     p.legend(
 #         ax, 

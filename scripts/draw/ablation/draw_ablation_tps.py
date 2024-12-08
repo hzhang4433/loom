@@ -22,7 +22,8 @@ parser.add_argument('-f', '--file', type=str, required=True, help='file to plot'
 args = parser.parse_args()
 file: str = args.file
 
-savepath = f'../../pics/ablation/bench_ablation_tps.pdf'
+# savepath = f'../../pics/ablation/bench_ablation_tps.pdf'
+savepath = f'./bench_ablation_tps.pdf'
 
 schemas_dict = {
     'Loom_20': 'Loom$_\mathit{Medium}$',
@@ -72,7 +73,7 @@ ax.set_xticks([int(t) for t in recs['threads'].unique()])
 
 # 自适应Y轴变化
 step = None
-p.format_yticks(ax, suffix='K', step_num=4)
+p.format_yticks(ax, suffix='K', step=9000, step_num=4)
 # ax.set_ylim(None, p.max_y_data * 1.15)       # 折线图的Y轴上限设置为数据最大值的1.15倍
 
 # 设置label

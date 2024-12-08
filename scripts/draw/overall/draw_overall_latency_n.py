@@ -33,7 +33,7 @@ recs = recs[recs['warehouse'] == warehouse]
 inner_schemas = recs['protocol'].unique()
 print(inner_schemas)
 
-savepath = f'block-overall-latency-{warehouse}:{blocksize}-normal.pdf'
+savepath = f'overall_latency.pdf'
 # savepath = f'../../pics/overall/block-overall-latency-{warehouse}:{blocksize}.pdf'
 
 #################### 画图 ####################
@@ -77,8 +77,9 @@ for idx, (schema, color) in enumerate(schemas):
 # ax.set_xlim(-0.6, 1.6)
 ax_bottom.set_xticks(range(len(schemas)))
 ax_bottom.set_xticklabels(
-    [schema[:4] + '.' if schema in ['Harmony', 'Fractal'] else 
-     schema[:4] + '.' + schema[7:] if schema == 'HarmonyIB' else
+    [schema[:3] + '.' if schema in ['Harmony'] else 
+     schema[:3] + '.' if schema in ['Fractal'] else
+     schema[:3] + '.' + schema[7:] if schema == 'HarmonyIB' else
      schema for (schema, _) in schemas]
 )
 
@@ -93,7 +94,7 @@ p.format_yticks(ax_bottom, step=15 if blocksize == 40 else 70, step_num=4)
 p.set_labels(ax_bottom, XLABEL, YLABEL)
 
 # 设置图例
-p.legend(ax_bottom, loc="upper center", ncol=3, anchor=(0.5, 1.25))#, columnspacing=2.5
+p.legend(ax_bottom, loc="upper center", ncol=3, anchor=(0.5, 1.23), columnspacing=1.6)#, columnspacing=2.5
 
 # 保存
 p.save(savepath)

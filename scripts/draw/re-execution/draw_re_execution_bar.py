@@ -5,7 +5,7 @@ HELP = 'python draw_re_execution.py -f file_path -w warehouse -t thread'
 # X = "warehouse"
 X = "block_size"
 Y = "concurrency_ratio"
-XLABEL = "Re-Execution Concurrency"
+XLABEL = "Degree of Concurrency"
 YLABEL = "Block Size"
 
 import pandas as pd
@@ -85,7 +85,8 @@ ax.set_yticklabels(blocksizes)
 
 # 设置X轴标签
 # ax.set_xticks(uniform_ticks, blocksizes)
-
+# ax.set_xticks(range(0, 25, 8), [str(x) for x in range(0, 25, 8)])
+ax.set_xticks(range(0, 31, 10), [str(x) for x in range(0, 31, 10)])
 # 设置label
 p.set_labels(ax, XLABEL, YLABEL)
 # ax.set_ylabel(YLABEL, labelpad=-10)

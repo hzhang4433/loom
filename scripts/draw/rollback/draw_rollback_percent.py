@@ -99,7 +99,7 @@ ax_bottom.set_xticklabels(warehouse_num)
 
 # 自适应Y轴变化
 step = 0.25
-p.format_yticks(ax_bottom, max_y_data=1.0, step=step, step_num=3)
+p.format_yticks_float(ax_bottom, max_y_data=1.0, step=step, step_num=3)
 # ax_bottom.set_ylim(0, (recs[recs['protocol'] == 'Loom'][Y].max()) * 1.25)
 # ax_top.set_ylim(recs[Y].max() * 0.4, recs[Y].max() * 1.4)
 # p.format_yticks(ax_bottom, max_y_data=int((recs[recs['protocol'] == 'Loom'][Y].max()) * 1.2), step_num=4)

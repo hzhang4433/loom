@@ -33,7 +33,8 @@ recs = recs[recs['warehouse'] == warehouse]
 inner_schemas = recs['protocol'].unique()
 print(inner_schemas)
 
-savepath = f'block-overall-tps-{warehouse}:{blocksize}.pdf'
+# savepath = f'block-overall-tps-{warehouse}:{blocksize}.pdf'
+savepath = f'overall_tps.pdf'
 # savepath = f'../../pics/overall/block-overall-tps-{warehouse}:{blocksize}.pdf'
 
 #################### 画图 ####################
@@ -77,8 +78,9 @@ for idx, (schema, color) in enumerate(schemas):
 # ax.set_xlim(-0.6, 1.6)
 ax_bottom.set_xticks(range(len(schemas)))
 ax_bottom.set_xticklabels(
-    [schema[:4] + '.' if schema in ['Harmony', 'Fractal'] else 
-     schema[:4] + '.' + schema[7:] if schema == 'HarmonyIB' else
+    [schema[:3] + '.' if schema in ['Harmony'] else 
+     schema[:3] + '.' if schema in ['Fractal'] else
+     schema[:3] + '.' + schema[7:] if schema == 'HarmonyIB' else
      schema for (schema, _) in schemas]
 )
 
@@ -86,14 +88,14 @@ ax_bottom.set_xticklabels(
 # ax_bottom.set_ylim(0, (recs[recs['protocol'] == 'Loom'][Y].max()) * 1.25)
 # ax_top.set_ylim(recs[Y].max() * 0.4, recs[Y].max() * 1.4)
 # p.format_yticks(ax_bottom, max_y_data=int((recs[recs['protocol'] == 'Loom'][Y].max()) * 1.2), step_num=4)
-p.format_yticks(ax_bottom, suffix='K', step_num=4)
+p.format_yticks(ax_bottom, suffix='K', step=7000, step_num=4)
 # ax_top.set_yticks([int(recs[Y].max() * 0.52), int(recs[Y].max() * 1.4)], ['150', '400']) #
 
 # 设置label
 p.set_labels(ax_bottom, XLABEL, YLABEL)
 
 # 设置图例
-p.legend(ax_bottom, loc="upper center", ncol=3, anchor=(0.5, 1.25))
+p.legend(ax_bottom, loc="upper center", ncol=3, anchor=(0.5, 1.23), columnspacing=1.6)
 
 # 保存
 p.save(savepath)

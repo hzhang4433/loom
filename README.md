@@ -40,8 +40,44 @@ The generated executable is called a bench. Its basic usage is as follows:
 ```
 For example:
 ```
-./build/bench Loom:48:9973:1:1 TPCC:1:1600:2:1 2s
+./build/bench Loom:48:9973:TRUE:TRUE TPCC:1:1600:2:1 2s
 ```
 
 # Evaluation
+The scripts folder contains scripts to test all execution schemes, including testing fixed warehouses with varying blocksizes, fixed blocksizes with varying warehouses, and fixed warehouses and blocksizes with varying threads.
+
+The parameters in bench-threads.py/bench-warehouse.py/bench-blocksize can be modified to test different benchmarks.
+| Parameter   | Meaning     |
+| :---------: | :---------: |
+| warehouse      | Number of warehouses   |
+| blocksize      | Number of block size   |
+| threads        | Number of threads      |
+| repeat         | Number of repetitions per bench, averaged at the end   |
+| times_to_run   | Duration of each bench test      |
+
+All Loom schemes have four parameters. Please pass parameters in the following way.
+```
+Loom:threads:table_partition:NestedReExecutionFlag(True or False):InterBlockFlag(True or False)
+```
+
+For the Aria scheme, please pass parameters in the following way.
+```
+Aria:threads:table_partition:ReOrderingFlag(True or False)
+```
+
+For the Harmony/HarmonyIB scheme, please pass parameters in the following way.
+```
+Harmony:threads:table_partition:InterBlockFlag(True or False)
+```
+The Moss scheme is similar to Harmony but does not need to include InterBlockFlag.
+
+For the Serial scheme, please pass parameters in the following way.
+```
+Serial:1:table_partition
+```
+
+
+
+
+
 

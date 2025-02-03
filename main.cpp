@@ -13,6 +13,7 @@
 #include <loom/test/HarmonyTest.cpp>
 #include <loom/test/FractalTest.cpp>
 #include <loom/test/MossTest.cpp>
+#include <loom/test/AriaERTest.cpp>
 #include <loom/utils/UArgparse.hpp>
 
 
@@ -48,10 +49,11 @@ int main(int argc, char** argv) {
     // ::testing::GTEST_FLAG(filter) = "SerialTest.TestSerial:AriaTest.TestAria";
     // ::testing::GTEST_FLAG(filter) = "SerialTest.TestSerial";
     // ::testing::GTEST_FLAG(filter) = "AriaTest.TestAria";
+    ::testing::GTEST_FLAG(filter) = "AriaERTest.TestAriaER";
     // ::testing::GTEST_FLAG(filter) = "HarmonyTest.TestHarmony";
     // ::testing::GTEST_FLAG(filter) = "FractalTest.TestFractal";
     // ::testing::GTEST_FLAG(filter) = "MossTest.TestMoss";
-    ::testing::GTEST_FLAG(filter) = "LoomTest.TestLoom";
+    // ::testing::GTEST_FLAG(filter) = "LoomTest.TestLoom";
     
     int result = RUN_ALL_TESTS();
 

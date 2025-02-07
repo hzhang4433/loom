@@ -14,6 +14,7 @@
 #include <loom/test/FractalTest.cpp>
 #include <loom/test/MossTest.cpp>
 #include <loom/test/AriaERTest.cpp>
+#include <loom/test/OptMETest.cpp>
 #include <loom/utils/UArgparse.hpp>
 
 
@@ -27,7 +28,15 @@ namespace TPCC {
     size_t N_WAREHOUSES = 1;
 };
 
+
 int main(int argc, char** argv) {
+    // 检查ENABLE_NDEBUG是否定义
+    #ifdef NDEBUG
+        std::cout << "NDEBUG is defined" << std::endl;
+    #else
+        std::cout << "NDEBUG is not defined" << std::endl;
+    #endif
+
     // set log dir
     FLAGS_log_dir = "/home/z/zh/loom/log";
     // set log level to info
@@ -49,7 +58,9 @@ int main(int argc, char** argv) {
     // ::testing::GTEST_FLAG(filter) = "SerialTest.TestSerial:AriaTest.TestAria";
     // ::testing::GTEST_FLAG(filter) = "SerialTest.TestSerial";
     // ::testing::GTEST_FLAG(filter) = "AriaTest.TestAria";
-    ::testing::GTEST_FLAG(filter) = "AriaERTest.TestAriaER";
+    // ::testing::GTEST_FLAG(filter) = "AriaERTest.TestAriaER";
+    // ::testing::GTEST_FLAG(filter) = "AriaTest.TestAria:OptMETest.TestOptME";
+    ::testing::GTEST_FLAG(filter) = "OptMETest.TestOptME";
     // ::testing::GTEST_FLAG(filter) = "HarmonyTest.TestHarmony";
     // ::testing::GTEST_FLAG(filter) = "FractalTest.TestFractal";
     // ::testing::GTEST_FLAG(filter) = "MossTest.TestMoss";

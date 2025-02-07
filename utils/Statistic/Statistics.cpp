@@ -74,6 +74,7 @@ std::string Statistics::Print() {
     
     return std::string(fmt::format(
         "{}\n"
+        "block              {}\n"
         "commit             {}\n"
         "execution          {}\n"
         "overhead           {:.3f}\n"
@@ -87,6 +88,7 @@ std::string Statistics::Print() {
         "re-execute latency {:.3f} ms\n"
         "concurrency ratio  {:.3f}",
         time_buffer,
+        count_block.load(),
         count_commit.load(),
         count_execution.load(),
         TIME(count_overhead, count_block),

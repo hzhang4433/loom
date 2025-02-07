@@ -8,7 +8,7 @@ TxGenerator::TxGenerator(int txNum, size_t block_size) : id_counter(0), m_txNum(
 std::vector<Block::Ptr> TxGenerator::generateWorkload(bool isNest) {
     Workload workload;
     // 140703587571293
-    workload.set_seed(uint64_t(140712502388573));
+    // workload.set_seed(uint64_t(140712502388573));
     auto seed = workload.get_seed();
     cout << "block size: " << m_blockSize << endl;
     cout << "seed: " << seed << endl;

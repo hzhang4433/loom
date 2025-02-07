@@ -157,6 +157,16 @@ namespace loom {
         return true;
     }
 
+    template <typename T>
+    bool hasContain(const std::unordered_map<T, T>& map, const std::unordered_set<T>& set) {
+        for (const auto& pair : map) {
+            if (set.find(pair.first) != set.end()) {
+                return true;
+            }
+        }
+        return false;
+    }
+
     // 比较两个set是否相等
     template <typename T, typename Hash>
     bool areEqual(const tbb::concurrent_unordered_set<T, Hash>& set1,

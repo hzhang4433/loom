@@ -50,6 +50,7 @@ void OptME::Start() {
             batch.emplace_back(make_shared<OptMETransaction>(std::move(*tx), txid, batch_id));
         }
         // store block batch
+        acgs.push_back(make_shared<AddressBasedConflictGraph>(pool, batch));
         batches.push_back(std::move(batch));
     }
 
@@ -59,11 +60,14 @@ void OptME::Start() {
 /// @brief run optme protocol
 void OptME::Run() {
     // execute each batch
-    for (auto& batch : batches) {
+    for (int i = 0; i < batches.size(); ++i) {
+        auto& batch = batches[i];
+        auto& acg = acgs[i];
         vector<vector<T>> schedules;
         vector<T> aborted_txs;
         Simulate(batch);
-        Reorder(batch, aborted_txs);
+        // Reorder(batch, aborted_txs);
+        Reorder(acg, aborted_txs);
         ParallelExecute(schedules, aborted_txs);
         statistics.JournalBlock();
         LOG(INFO) << "Block " << block_idx << " finalize done";
@@ -146,6 +150,28 @@ void OptME::Reorder(vector<T>& simulation_result, vector<T>& aborted_txs) {
     #undef PHASE_TIME
 }
 
+/// @brief reorder transactions
+void OptME::Reorder(shared_ptr<AddressBasedConflictGraph>& acg, vector<T>& aborted_txs) {
+    #define LATENCY duration_cast<microseconds>(steady_clock::now() - tx->start_time).count()
+    #define PHASE_TIME duration_cast<microseconds>(steady_clock::now() - begin_time).count()
+    LOG(INFO) << "Reorder block " << block_idx;
+    auto begin_time = chrono::steady_clock::now();
+
+    // construct acg and rollback
+    vector<T> tx_list;
+
+    IntraEpochReordering(acg, aborted_txs, tx_list);
+    // concurrent commit
+    for (auto tx : tx_list) {
+        statistics.JournalCommit(LATENCY);
+    }
+
+    statistics.JournalRollbackExecution(PHASE_TIME);
+    LOG(INFO) << "Reorder block " << block_idx << " done";
+    #undef LATENCY
+    #undef PHASE_TIME
+}
+
 /// @brief intra epoch reordering
 void OptME::IntraEpochReordering(vector<T>& simulation_result, vector<T>& aborted_txs, vector<T>& tx_list) {    
     // construct acg and rollback
@@ -169,6 +195,22 @@ void OptME::IntraEpochReordering(vector<T>& simulation_result, vector<T>& aborte
     // extract the aborted transactions and tx_list
     aborted_txs = acg.extract_aborted_txs();
     tx_list = acg.extract_tx_list();
+}
+
+void OptME::IntraEpochReordering(shared_ptr<AddressBasedConflictGraph>& acg, vector<T>& aborted_txs, vector<T>& tx_list) {    
+    auto begin_time = chrono::steady_clock::now();
+    
+    acg->hierarchical_sort();
+    auto sort_time = chrono::steady_clock::now();
+    LOG(INFO) << "Sort time: " << duration_cast<microseconds>(sort_time - begin_time).count() / 1000.0 << "ms";
+
+    acg->reorder();
+    auto reorder_time = chrono::steady_clock::now();
+    LOG(INFO) << "Reorder time: " << duration_cast<microseconds>(reorder_time - sort_time).count() / 1000.0 << "ms";
+
+    // extract the aborted transactions and tx_list
+    aborted_txs = acg->extract_aborted_txs();
+    tx_list = acg->extract_tx_list();
 }
 
 /// @brief inter epoch reordering

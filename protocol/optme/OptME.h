@@ -12,6 +12,8 @@ namespace loom {
 #define K string
 #define T shared_ptr<OptMETransaction>
 
+class AddressBasedConflictGraph;
+
 /// @brief optme tranaction.
 struct OptMETransaction: public Transaction {
     size_t      id;
@@ -56,7 +58,9 @@ public:
     void Run();
     void Simulate(vector<T>& batch);
     void Reorder(vector<T>& simulation_result, vector<T>& aborted_txs);
+    void Reorder(shared_ptr<AddressBasedConflictGraph>& acg, vector<T>& aborted_txs);
     void IntraEpochReordering(vector<T>& simulation_result, vector<T>& aborted_txs, vector<T>& tx_list);
+    void IntraEpochReordering(shared_ptr<AddressBasedConflictGraph>& acg, vector<T>& aborted_txs, vector<T>& tx_list);
     void InterEpochReordering(vector<vector<T>>& schedule, vector<T>& aborted_txs); // rescedule txs
     void ParallelExecute(vector<vector<T>>& schedule, vector<T>& aborted_txs);
     void Finalize(T tx);
@@ -66,6 +70,7 @@ private:
     Statistics&                     statistics;
     vector<Block::Ptr>&             blocks;
     vector<vector<T>>               batches;
+    vector<shared_ptr<AddressBasedConflictGraph>> acgs;
     size_t                          num_threads;
     OptMETable                      table;
     std::atomic<size_t>             committed_block;

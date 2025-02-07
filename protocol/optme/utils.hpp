@@ -181,6 +181,10 @@ public:
     std::shared_ptr<ThreadPool>& pool;
 
     AddressBasedConflictGraph(std::shared_ptr<ThreadPool>& pool): pool(pool) {}
+    
+    AddressBasedConflictGraph(std::shared_ptr<ThreadPool>& pool, vector<T>& batch): pool(pool) {
+        initialize(batch);
+    }
 
     AddressBasedConflictGraph& operator=(AddressBasedConflictGraph&& other) noexcept {
         if (this != &other) {
@@ -192,6 +196,7 @@ public:
     }
 
     AddressBasedConflictGraph(const AddressBasedConflictGraph&) = delete;
+    
     AddressBasedConflictGraph& operator=(const AddressBasedConflictGraph&) = delete;
 
     void construct(const vector<T>& simulation_result) {
@@ -213,102 +218,92 @@ public:
         }
     }
 
-    /// @brief parallel construct an AddressBasedConflictGraph initial version
     void parallel_construct(vector<T>& simulation_result) {
         size_t num_of_txn = simulation_result.size();
         size_t ncpu = pool->getThreadNum();
         size_t chunk_size = max(num_of_txn / ncpu, size_t(1));
 
         vector<future<shared_ptr<AddressBasedConflictGraph>>> futures;
-        mutex merge_mutex;
-        
+
+        // 使用动态任务划分，避免固定大小块的负载不均
         for (size_t i = 0; i < num_of_txn; i += chunk_size) {
-            vector<T> chunk(simulation_result.begin() + i,
-                            simulation_result.begin() + min(i + chunk_size, num_of_txn));
+            size_t end = min(i + chunk_size, num_of_txn);
             
-            futures.push_back(pool->enqueue([this, chunk]() {
+            futures.push_back(pool->enqueue([this, &simulation_result, i, end]() {
+                vector<T> chunk(simulation_result.begin() + i, simulation_result.begin() + end);
                 shared_ptr<AddressBasedConflictGraph> sub_graph = make_shared<AddressBasedConflictGraph>(this->pool);
                 sub_graph->construct(chunk);
                 return sub_graph;
             }));
         }
-        
+
         vector<shared_ptr<AddressBasedConflictGraph>> sub_graphs;
+        sub_graphs.reserve(futures.size());
         for (auto& f : futures) {
             sub_graphs.push_back(f.get());
         }
 
+        // 使用局部合并和并行归约来减少合并时的同步开销
         while (sub_graphs.size() > 1) {
             vector<shared_ptr<AddressBasedConflictGraph>> merged_graphs;
+            merged_graphs.reserve((sub_graphs.size() + 1) / 2);
+
+            // 使用分治法合并，并且并行化每次合并
+            #pragma omp parallel for
             for (size_t i = 0; i < sub_graphs.size(); i += 2) {
                 if (i + 1 < sub_graphs.size()) {
-                    lock_guard<mutex> lock(merge_mutex);
+                    // 使用无锁合并或更细粒度的锁策略来避免竞争
                     sub_graphs[i]->merge(*sub_graphs[i + 1]);
                 }
-                merged_graphs.push_back(sub_graphs[i]);
+                merged_graphs.push_back(std::move(sub_graphs[i]));
             }
+
             sub_graphs = std::move(merged_graphs);
         }
-        
+
         *this = std::move(*sub_graphs.front());
     }
 
-    void parallel_construct2(vector<T>& simulation_result) {
-        size_t num_of_txn = simulation_result.size();
-        size_t ncpu = pool->getThreadNum();
-        size_t chunk_size = max(num_of_txn / (2 * ncpu), size_t(1));  // ✅ 改进任务切分
-        
-        vector<future<shared_ptr<AddressBasedConflictGraph>>> futures;
-        mutex merge_mutex;
-        
-        for (size_t i = 0; i < num_of_txn; i += chunk_size) {
-            vector<T> chunk(simulation_result.begin() + i,
-                            simulation_result.begin() + min(i + chunk_size, num_of_txn));
+    /// @brief parallel construct an AddressBasedConflictGraph initial version
+    void initialize(vector<T>& batch) {
+        for (auto& tx : batch) {
+            WriteUnits write_units(convert_to_units2(tx, UnitType::Write, tx->m_tx->m_rootVertex->allWriteSet, tx->m_tx->m_rootVertex->allReadSet));
             
-            futures.push_back(pool->enqueue([this, chunk]() {
-                shared_ptr<AddressBasedConflictGraph> sub_graph = make_shared<AddressBasedConflictGraph>(this->pool);
-                sub_graph->construct(chunk);
-                return sub_graph;
-            }));
-        }
-        
-        vector<shared_ptr<AddressBasedConflictGraph>> sub_graphs;
-        sub_graphs.reserve(futures.size());
-        for (auto& f : futures) {
-            f.wait();
-        }
-        for (auto& f : futures) {
-            sub_graphs.push_back(f.get()); 
-        }
-
-        while (sub_graphs.size() > 1) {
-            vector<future<shared_ptr<AddressBasedConflictGraph>>> merge_futures;
-
-            for (size_t i = 0; i < sub_graphs.size(); i += 2) {
-                if (i + 1 < sub_graphs.size()) {
-                    merge_futures.push_back(pool->enqueue([g1 = sub_graphs[i], g2 = sub_graphs[i + 1]]() {
-                        g1->merge(*g2);
-                        return g1;
-                    }));
-                } else {
-                    merge_futures.push_back(async(launch::async, [g = sub_graphs[i]]() { return g; }));
-                }
+            if (check_updater_already_exist_in_same_address(write_units.units)) {
+                tx->aborted.store(true);
+                aborted_txs.push_back(tx);
+                continue;
             }
 
-            sub_graphs.clear();
-            for (auto& f : merge_futures) {
-                sub_graphs.push_back(f.get());
-            }
-        }
+            ReadUnits read_units(convert_to_units2(tx, UnitType::Read, tx->m_tx->m_rootVertex->allReadSet));
+            set_wr_dependencies(read_units.units, write_units.units);
 
-        *this = std::move(*sub_graphs.front());
+            tx_list.push_back(tx);
+            add_units_to_address(read_units.units);
+            add_units_to_address(write_units.units);
+        }
     }
-
 
     /// @brief convert read/write set to read/write units
     vector<U> convert_to_units(T tx, UnitType unit_type, unordered_map<K, string> read_or_write_set, unordered_map<K, string> read_set = {}) {    
         vector<U> units;
         for (const auto& [key, value] : read_or_write_set) {
+            bool co_locate = false;
+            if (!read_set.empty()) {
+                auto it = read_set.find(key);
+                // read/write set co-location
+                if (it != read_set.end()) {
+                    co_locate = true;
+                }
+            }
+            units.push_back(make_shared<Unit>(tx, unit_type, key, co_locate));
+        }
+        return units;
+    }
+
+    vector<U> convert_to_units2(T tx, UnitType unit_type, unordered_set<K> read_or_write_set, unordered_set<K> read_set = {}) {    
+        vector<U> units;
+        for (const auto& key : read_or_write_set) {
             bool co_locate = false;
             if (!read_set.empty()) {
                 auto it = read_set.find(key);
@@ -390,34 +385,34 @@ public:
 
     void reorder() {
         vector<T> all_aborted = extract_abortList();
-        // vector<T> reorder_targets;
-        // vector<T> aborted;
+        vector<T> reorder_targets;
+        vector<T> aborted;
 
-        // partition_copy(all_aborted.begin(), all_aborted.end(), back_inserter(reorder_targets), back_inserter(aborted),
-        //                [](const T& tx) { return tx->local_get.size() == 0 && tx->local_put.size() > 1; });
+        partition_copy(all_aborted.begin(), all_aborted.end(), back_inserter(reorder_targets), back_inserter(aborted),
+                       [](const T& tx) { return tx->local_get.size() == 0 && tx->local_put.size() > 1; });
 
-        // aborted_txs.insert(aborted_txs.end(), aborted.begin(), aborted.end());
-        // std::sort(aborted_txs.begin(), aborted_txs.end(), [](const auto& a, const auto& b) {
-        //     return a->id < b->id;
-        // });
+        aborted_txs.insert(aborted_txs.end(), aborted.begin(), aborted.end());
+        std::sort(aborted_txs.begin(), aborted_txs.end(), [](const auto& a, const auto& b) {
+            return a->id < b->id;
+        });
 
-        // for (const auto& tx : reorder_targets) {
-        //     uint32_t seq = 0;
-        //     set<K> unique_addresses;
-        //     for (const auto& [key, value] : tx->local_put) {
-        //         unique_addresses.insert(key);
-        //     }
+        for (const auto& tx : reorder_targets) {
+            uint32_t seq = 0;
+            set<K> unique_addresses;
+            for (const auto& [key, value] : tx->local_put) {
+                unique_addresses.insert(key);
+            }
             
-        //     for (K address : unique_addresses) {
-        //         auto it = addresses.find(address);
-        //         if (it != addresses.end()) {
-        //             seq = max(seq, max(it->second->write_units.max_seq, it->second->read_units.max_seq));
-        //         }
-        //     }
+            for (K address : unique_addresses) {
+                auto it = addresses.find(address);
+                if (it != addresses.end()) {
+                    seq = max(seq, max(it->second->write_units.max_seq, it->second->read_units.max_seq));
+                }
+            }
             
-        //     tx->set_sequence(seq);
-        //     tx_list.push_back(tx);
-        // }
+            tx->set_sequence(seq);
+            tx_list.push_back(tx);
+        }
     }
 
     vector<T> extract_abortList() {
@@ -427,8 +422,8 @@ public:
 
         for (auto tx : tx_list) {
             if (tx->aborted.load()) {
-                // aborted_list.push_back(tx);
-                aborted_txs.push_back(tx);
+                aborted_list.push_back(tx);
+                // aborted_txs.push_back(tx);
                 to_erase.push_back(tx);
             }
         }

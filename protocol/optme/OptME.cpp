@@ -18,7 +18,8 @@ OptME::OptME(
     vector<Block::Ptr>& blocks,
     Statistics& statistics,
     size_t num_threads, 
-    size_t table_partitions
+    size_t table_partitions,
+    bool enable_parallel
 ):
     blocks(blocks),
     statistics(statistics),
@@ -27,9 +28,10 @@ OptME::OptME(
     num_threads(num_threads),
     pool(make_shared<ThreadPool>(num_threads)),
     block_idx(0),
-    committed_block(0)
+    committed_block(0),
+    enable_parallel(enable_parallel)
 {
-    LOG(INFO) << fmt::format("OptME(num_threads={}, table_partitions={})", num_threads, table_partitions) << endl;
+    LOG(INFO) << fmt::format("OptME(num_threads={}, table_partitions={}, enable_parallel={})", num_threads, table_partitions, enable_parallel) << endl;
 }
 
 /// @brief start optme protocol
@@ -66,8 +68,11 @@ void OptME::Run() {
         vector<vector<T>> schedules;
         vector<T> aborted_txs;
         Simulate(batch);
-        // Reorder(batch, aborted_txs);
-        Reorder(acg, aborted_txs);
+        if (enable_parallel) {
+            Reorder(acg, aborted_txs);
+        } else {
+            Reorder(batch, aborted_txs);
+        }
         ParallelExecute(schedules, aborted_txs);
         statistics.JournalBlock();
         LOG(INFO) << "Block " << block_idx << " finalize done";

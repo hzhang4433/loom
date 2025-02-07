@@ -52,7 +52,7 @@ struct OptMETable: public Table<K, OptMEEntry, KeyHasher> {
 /// @brief optme protocol master class
 class OptME: public Protocol {
 public:
-    OptME(vector<Block::Ptr>& blocks, Statistics& statistics, size_t num_threads, size_t table_partitions = 1);
+    OptME(vector<Block::Ptr>& blocks, Statistics& statistics, size_t num_threads, size_t table_partitions = 1, bool enable_parallel = true);
     void Start() override;
     void Stop() override;
     void Run();
@@ -73,6 +73,7 @@ private:
     vector<shared_ptr<AddressBasedConflictGraph>> acgs;
     size_t                          num_threads;
     OptMETable                      table;
+    bool                            enable_parallel;
     std::atomic<size_t>             committed_block;
     std::shared_ptr<ThreadPool>     pool;
     size_t                          block_idx;

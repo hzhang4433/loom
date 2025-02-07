@@ -18,7 +18,7 @@ TEST(OptMETest, TestOptME) {
         // Create a Statistics instance
         auto statistics = Statistics();
         // Create a OptME instance
-        auto protocol = OptME(blocks, statistics, 48, 9973);
+        auto protocol = OptME(blocks, statistics, 48, 9973, false);
         // Start the protocol
         protocol.Start();
         // Wait for the protocol to finish

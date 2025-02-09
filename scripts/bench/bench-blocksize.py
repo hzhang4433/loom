@@ -13,7 +13,7 @@ from plot.plot import MyPlot
 workload = 'TPCC'
 repeat = 20
 times_to_tun = 3
-warehouse = 60 #1 20 60
+warehouse = 1 #1 20 60
 block_num = 2
 thread_num = 48
 table_partition = 9973
@@ -29,17 +29,19 @@ if __name__ == '__main__':
     df = pd.DataFrame(columns=['protocol', 'block_size', 'warehouse', 'threads', 'table_partition', 'commit', 'overhead', 'rollback', 'rollback_ratio', 'tx_latency', 'block_latency', 'execution_latency', 'rollback_latency', 'reExecute_latency', 'concurrency_ratio', 'tps'])
     conf = {'stdout': subprocess.PIPE, 'stderr': subprocess.PIPE}
     hash = subprocess.run(["git", "rev-parse", "HEAD"], **conf).stdout.decode('utf-8').strip()
-    with open(f'../exp_results/blocksize/bench_blocksize_{warehouse}:{thread_num}_{timestamp}', 'w') as f:
+    with open(f'../exp_results/0optme/blocksize/bench_blocksize_{warehouse}:{thread_num}_{timestamp}', 'w') as f:
         # list(range(50, 101, 10)) / list(range(100, 1501, 100)) / [1000]
         # itertools.chain(range(25, 100, 25), range(100, 1001, 100)) / generate_block_sizes(50, 1600)
         for block_size in generate_block_sizes(50, 1600):
             protocols = [
-                f"Serial:{1}:{table_partition}",
-                f"Aria:{thread_num}:{table_partition}:TRUE",
-                f"Harmony:{thread_num}:{table_partition}:FALSE",
-                f"Harmony:{thread_num}:{table_partition}:TRUE",
-                f"Moss:{thread_num}:{table_partition}",
-                f"Loom:{thread_num}:{table_partition}:TRUE:TRUE",
+                # f"Serial:{1}:{table_partition}",
+                # f"Aria:{thread_num}:{table_partition}:TRUE",
+                # f"Harmony:{thread_num}:{table_partition}:FALSE",
+                # f"Harmony:{thread_num}:{table_partition}:TRUE",
+                # f"Moss:{thread_num}:{table_partition}",
+                # f"Loom:{thread_num}:{table_partition}:TRUE:TRUE",
+                f"OptME:{thread_num}:{table_partition}:TRUE",
+                f"OptME:{thread_num}:{table_partition}:FALSE",
             ]
             for cc in protocols:
                 sum_commit = 0
@@ -117,7 +119,8 @@ if __name__ == '__main__':
                     except Exception as e:
                         print(e)
                 df.loc[len(df)] = {
-                    'protocol': cc.split(':')[0] if (cc.split(':')[0] != 'Harmony' or cc.split(':')[-1] == 'FALSE') else 'HarmonyIB', 
+                    # 'protocol': cc.split(':')[0] if (cc.split(':')[0] != 'Harmony' or cc.split(':')[-1] == 'FALSE') else 'HarmonyIB', 
+                    'protocol': cc.split(':')[0] if (cc.split(':')[0] != 'OptME' or cc.split(':')[-1] == 'FALSE') else 'OptMEP', 
                     'block_size': block_size,
                     'warehouse': warehouse,
                     'threads': thread_num,
@@ -136,7 +139,7 @@ if __name__ == '__main__':
                 }
                 print(df)
     df.reset_index(inplace=True)
-    df.to_csv(f'../exp_results/blocksize/bench_blocksize_{warehouse}:{thread_num}_{timestamp}.csv', index=False)
+    df.to_csv(f'../exp_results/0optme/blocksize/bench_blocksize_{warehouse}:{thread_num}_{timestamp}.csv', index=False)
 
 # Plot the results
 # for tps
@@ -165,7 +168,7 @@ if __name__ == '__main__':
     p.format_yticks(ax, suffix='K')
     p.set_labels(ax, XLABEL, YLABEL)
     p.legend(ax, loc="upper center", ncol=3, anchor=(0.5, 1.25))
-    p.save(f'../pics/blocksize/bench_blocksize_{warehouse}:{thread_num}_tps_{timestamp}.pdf')
+    p.save(f'../pics/0optme/blocksize/bench_blocksize_{warehouse}:{thread_num}_tps_{timestamp}.pdf')
 
 # for latency
     recs = df
@@ -190,4 +193,4 @@ if __name__ == '__main__':
     # ax.set_xticklabels([str(int(t) // 100) for t in recs['block_size'].unique()])
     p2.set_labels(ax, XLABEL, YLABEL)
     p2.legend(ax, loc="upper center", ncol=3, anchor=(0.5, 1.25))
-    p2.save(f'../pics/blocksize/bench_blocksize_{warehouse}:{thread_num}_latency_{timestamp}.pdf')
+    p2.save(f'../pics/0optme/blocksize/bench_blocksize_{warehouse}:{thread_num}_latency_{timestamp}.pdf')

@@ -13,6 +13,7 @@
 #include <loom/test/HarmonyTest.cpp>
 #include <loom/test/FractalTest.cpp>
 #include <loom/test/MossTest.cpp>
+#include <loom/test/OptMETest.cpp>
 #include <loom/utils/UArgparse.hpp>
 
 

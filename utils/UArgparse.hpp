@@ -4,6 +4,7 @@
 #include <loom/protocol/moss/Moss.h>
 #include <loom/protocol/loom/Loom.h>
 #include <loom/protocol/serial/Serial.h>
+#include <loom/protocol/optme/OptME.h>
 #include <loom/workload/tpcc/Workload.hpp>
 #include <loom/utils/UMacros.hpp>
 #include <loom/utils/Generator/UTxGenerator.h>
@@ -107,6 +108,7 @@ inline std::unique_ptr<Protocol> ParseProtocol(const char* arg, vector<Block::Pt
     OPT(Harmony,     INT, INT, BOOL)
     OPT(Moss,        INT, INT)
     OPT(Loom,        INT, INT, BOOL, BOOL)
+    OPT(OptME,        INT, INT, BOOL)
     #undef OPT
     // fallback to an error
     THROW("unknown protocol option ({})", std::string{name});

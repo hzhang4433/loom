@@ -39,7 +39,8 @@ class MyPlot:
 
     # 图例相关
     anchor = (0.5, 1.23)    # 相对位置
-    legend_word_size = 13   # 图例字体大小
+    # legend_word_size = 13   # 图例字体大小
+    legend_word_size = 11   # 图例字体大小 for re-execution and rollback
     # legend_word_size = 11   # 图例字体大小 for time serial
 
     # 画布相关
@@ -63,6 +64,7 @@ class MyPlot:
     tick_width = border_width   # 刻度宽度默认和边框宽度相同
     # tick_word_size = 15         # 刻度字体大小
     tick_word_size = 20         # 刻度字体大小 for other
+    # tick_word_size = 17         # 刻度字体大小 for bold overall
     # tick_word_size = 10         # 刻度字体大小 for time serial
     tick_toward = 'out'         # 刻度朝向
 
@@ -71,6 +73,7 @@ class MyPlot:
         # 'family': font,
         'weight': weight,       # 粗细：normal bold
         'size': 20,             # 大小 for other
+        # 'size': 17,             # 大小 for bold overall
         # 'size': 12,             # 大小 for time serial
     }
 
@@ -261,14 +264,14 @@ class MyPlot:
                 [str(x // suffix_map[suffix]) + suffix if x >= suffix_map[suffix] else str(x) for x in range(0, max_y_data, step)]
             )
         else:
-            ax.set_yticks(
-                range(0, max_y_data, step), 
-                [str(x) for x in range(0, max_y_data, step)]
-            )
             # ax.set_yticks(
-            #     range(0, step*step_num, step), 
-            #     [str(x) for x in range(0, step*step_num, step)]
+            #     range(0, max_y_data, step), 
+            #     [str(x) for x in range(0, max_y_data, step)]
             # )
+            ax.set_yticks(
+                range(0, step*step_num, step), 
+                [str(x) for x in range(0, step*step_num, step)]
+            )
 
     def format_yticks_float(
         self, 
@@ -313,12 +316,13 @@ class MyPlot:
         handles=None,
         labels=None,
         columnspacing=None,
+        handletextpad=None,
         kwargs=None
     ):
         if not handles and not labels:
             handles, labels = ax.get_legend_handles_labels()
             handles, labels = order_handles_labels(handles, labels)
-        ax.legend(
+        legend = ax.legend(
             handles=handles,
             labels=labels,
             loc=loc, 
@@ -326,6 +330,7 @@ class MyPlot:
             bbox_to_anchor=anchor or self.anchor, 
             frameon=frameon,
             columnspacing=columnspacing,
+            handletextpad=handletextpad,
             prop=kwargs
         )
 

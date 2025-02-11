@@ -76,7 +76,7 @@ p.set_labels(ax, XLABEL, YLABEL)
 # box2: plt.Bbox = ax.get_tightbbox()
 
 # 设置图例
-p.legend(ax, loc="upper center", ncol=3, anchor=(0.5, 1.23), columnspacing=1.5)
+p.legend(ax, loc="upper center", ncol=3, anchor=(0.5, 1.23), columnspacing=2.1)
 # if contention == 'pres':
 #     p.legend(
 #         ax, 

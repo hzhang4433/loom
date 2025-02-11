@@ -26,7 +26,8 @@ file: str = args.file
 warehouse = args.warehouse
 blocksize = args.blocksize
 
-savepath = f'../pics/thread/bench_thread_{warehouse}:{blocksize}_latency.pdf'
+# savepath = f'../pics/thread/bench_thread_{warehouse}:{blocksize}_latency.pdf'
+savepath = f'./bench_thread_{warehouse}:{blocksize}_latency.pdf'
 
 
 #################### 数据准备 ####################

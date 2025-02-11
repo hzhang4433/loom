@@ -24,7 +24,8 @@ args = parser.parse_args()
 
 
 #################### 数据准备 ####################
-recs = pd.read_csv('../../exp_results/overall/overall.csv')
+# recs = pd.read_csv('../../exp_results/overall/overall.csv')
+recs = pd.read_csv('../../exp_results/0optme/overall/overall.csv')
 assert args.blocksize in recs['block_size'].unique()
 blocksize = args.blocksize
 recs = recs[recs['block_size'] == blocksize]
@@ -79,6 +80,7 @@ ax_bottom.set_xticks(range(len(schemas)))
 ax_bottom.set_xticklabels(
     [schema[:3] + '.' if schema in ['Harmony'] else 
      schema[:3] + '.' if schema in ['Fractal'] else
+     schema[:3] + '.' if schema in ['OptME'] else
      schema[:3] + '.' + schema[7:] if schema == 'HarmonyIB' else
      schema for (schema, _) in schemas]
 )
@@ -87,14 +89,15 @@ ax_bottom.set_xticklabels(
 # ax_bottom.set_ylim(0, (recs[recs['protocol'] == 'Loom'][Y].max()) * 1.25)
 # ax_top.set_ylim(recs[Y].max() * 0.4, recs[Y].max() * 1.4)
 # p.format_yticks(ax_bottom, max_y_data=int((recs[recs['protocol'] == 'Loom'][Y].max()) * 1.2), step_num=4)
-p.format_yticks(ax_bottom, step=15 if blocksize == 40 else 70, step_num=4)
+p.format_yticks(ax_bottom, step=15 if blocksize == 40 else 70, step_num=5)
 # ax_top.set_yticks([int(recs[Y].max() * 0.52), int(recs[Y].max() * 1.4)], ['150', '400']) #
 
 # 设置label
 p.set_labels(ax_bottom, XLABEL, YLABEL)
 
 # 设置图例
-p.legend(ax_bottom, loc="upper center", ncol=3, anchor=(0.5, 1.23), columnspacing=1.6)#, columnspacing=2.5
+# p.legend(ax_bottom, loc="upper center", ncol=3, anchor=(0.5, 1.23), columnspacing=1.6)#, columnspacing=2.5
+p.legend(ax_bottom, loc="upper center", ncol=3, anchor=(0.5, 1.23), columnspacing=2.2)#, columnspacing=2.5
 
 # 保存
 p.save(savepath)

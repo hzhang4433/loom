@@ -24,7 +24,8 @@ args = parser.parse_args()
 
 
 #################### 数据准备 ####################
-recs = pd.read_csv('../../exp_results/overall/overall.csv')
+# recs = pd.read_csv('../../exp_results/overall/overall.csv')
+recs = pd.read_csv('../../exp_results/0optme/overall/overall.csv')
 assert args.blocksize in recs['block_size'].unique()
 blocksize = args.blocksize
 recs = recs[recs['block_size'] == blocksize]
@@ -80,6 +81,7 @@ ax_bottom.set_xticks(range(len(schemas)))
 ax_bottom.set_xticklabels(
     [schema[:3] + '.' if schema in ['Harmony'] else 
      schema[:3] + '.' if schema in ['Fractal'] else
+     schema[:3] + '.' if schema in ['OptME'] else
      schema[:3] + '.' + schema[7:] if schema == 'HarmonyIB' else
      schema for (schema, _) in schemas]
 )
@@ -95,7 +97,8 @@ p.format_yticks(ax_bottom, suffix='K', step=7000, step_num=4)
 p.set_labels(ax_bottom, XLABEL, YLABEL)
 
 # 设置图例
-p.legend(ax_bottom, loc="upper center", ncol=3, anchor=(0.5, 1.23), columnspacing=1.6)
+# p.legend(ax_bottom, loc="upper center", ncol=3, anchor=(0.5, 1.23), columnspacing=1.6)
+p.legend(ax_bottom, loc="upper center", ncol=3, anchor=(0.5, 1.23), columnspacing=2.2)
 
 # 保存
 p.save(savepath)

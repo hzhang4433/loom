@@ -61,12 +61,13 @@ print(recs['warehouse'].unique())
 ax.set_xticks([int(t) for t in recs['warehouse'].unique()])
 
 # 自适应Y轴变化
-step = 75
+step = 75 # 4 15 75
 # if workload == 'smallbank' and contention == 'skewed':
 #     step = 140000
 # elif workload == 'tpcc' and contention == '10orderlines':
 #     step = 13000
 p.format_yticks(ax, step=step, step_num=5)
+# p.format_yticks(ax, step_num=4)
 # ax.set_ylim(None, p.max_y_data * 1.15)       # 折线图的Y轴上限设置为数据最大值的1.15倍
 
 # 设置label
@@ -76,7 +77,8 @@ p.set_labels(ax, XLABEL, YLABEL)
 # box2: plt.Bbox = ax.get_tightbbox()
 
 # 设置图例
-p.legend(ax, loc="upper center", ncol=3, anchor=(0.5, 1.22), columnspacing=1.5)
+# p.legend(ax, loc="upper center", ncol=3, anchor=(0.5, 1.22), columnspacing=1.5)
+p.legend(ax, loc="upper center", ncol=3, anchor=(0.5, 1.22), columnspacing=2.1)
 
 # 保存
 p.save(savepath)

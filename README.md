@@ -69,7 +69,12 @@ For the Harmony scheme, please pass parameters in the following way.
 ```
 Harmony:threads:table_partition:InterBlockFlag(True or False)
 ```
-The Moss scheme is similar to Harmony but does not need to include InterBlockFlag.
+
+For the OptME scheme, please pass parameters in the following way.
+```
+OptME:threads:table_partition:ParallelFlag(True or False)
+```
+The Moss scheme is similar to OptME but does not need to include ParallelFlag.
 
 For the Serial scheme, please pass parameters in the following way.
 ```

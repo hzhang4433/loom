@@ -4,8 +4,10 @@ HELP = 'python draw_rollback_percent.py -f file_path -b blocksize -t thread'
 
 X = "warehouse"
 Y = "rollback_ratio"
-XLABEL = "Warehouse"
-YLABEL = "Re-Execution Ratio"
+# XLABEL = "Warehouse"
+# YLABEL = "Re-Execution Ratio"
+XLABEL = "仓库数"
+YLABEL = "重执行开销比例"
 
 import pandas as pd
 import argparse
@@ -29,7 +31,7 @@ block_size = args.blocksize
 thread_num = args.thread
 
 # savepath = f'../../pics/rollback/bench_rollback_{block_size}:{thread_num}_ratio.pdf'
-savepath = f'./bench_rollback_{block_size}:{thread_num}_ratio.pdf'
+savepath = f'./rollback_{block_size}:{thread_num}_ratio.pdf'
 
 
 #################### 数据准备 ####################
@@ -114,6 +116,7 @@ p.set_labels(ax_bottom, XLABEL, YLABEL)
 
 # 设置图例
 p.legend(ax_bottom, loc="upper center", ncol=4, anchor=(0.5, 1.13), columnspacing=1.2, handletextpad=0.3)
+# p.legend(ax_bottom, loc="upper center", ncol=2, anchor=(0.5, 1.28), columnspacing=3, handletextpad=0.8, labelspacing=0.15)
 
 # 保存
 p.save(savepath)

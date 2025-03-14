@@ -6,6 +6,8 @@ X = "threads"
 Y = "tps"
 XLABEL = "Threads"
 YLABEL = "Troughput(Txn/s)"
+# XLABEL = "线程数"
+# YLABEL = "系统吞吐(交易数/秒)"
 
 import pandas as pd
 import argparse
@@ -23,7 +25,8 @@ args = parser.parse_args()
 file: str = args.file
 
 # savepath = f'../../pics/ablation/bench_ablation_tps.pdf'
-savepath = f'./bench_ablation_tps.pdf'
+# savepath = f'./bench_ablation_tps.pdf'
+savepath = f'./ablation_tps.pdf'
 
 schemas_dict = {
     'Loom_20': 'Loom$_\mathit{Medium}$',
@@ -33,6 +36,15 @@ schemas_dict = {
     'LoomFR_1': 'LoomFR$_\mathit{High}$',
     'LoomRaw_1': 'LoomRaw$_\mathit{High}$',
 }
+
+# schemas_dict = {
+#     'Loom_20': 'Loom++$_\mathit{Medium}$',
+#     'LoomFR_20': 'Loom+$_\mathit{Medium}$',
+#     'LoomRaw_20': 'Loom$_\mathit{Medium}$',
+#     'Loom_1': 'Loom++$_\mathit{High}$',
+#     'LoomFR_1': 'Loom+$_\mathit{High}$',
+#     'LoomRaw_1': 'Loom$_\mathit{High}$',
+# }
 
 #################### 数据准备 ####################
 recs = pd.read_csv(file)
@@ -83,7 +95,7 @@ p.set_labels(ax, XLABEL, YLABEL)
 # box2: plt.Bbox = ax.get_tightbbox()
 
 # 设置图例
-p.legend(ax, loc="upper center", ncol=3, anchor=(0.5, 1.2), columnspacing=0.5)
+p.legend(ax, loc="upper center", ncol=3, anchor=(0.5, 1.21), columnspacing=0.6, handletextpad=0.35, labelspacing=0.25, handlelength=1.4) #0.8
 # if contention == 'pres':
 #     p.legend(
 #         ax, 

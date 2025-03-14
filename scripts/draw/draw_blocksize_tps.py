@@ -6,6 +6,8 @@ X = "block_size"
 Y = "tps"
 XLABEL = "Block Size"
 YLABEL = "Troughput(Txn/s)"
+# XLABEL = "区块大小"
+# YLABEL = "系统吞吐(交易数/秒)"
 
 import pandas as pd
 import argparse
@@ -58,6 +60,7 @@ for idx, (schema, color) in enumerate(schemas):
         # xdata=records[X],
         ydata=records[Y],
         color=color, 
+        # legend_label="Loom++" if schema == "Loom" else schema,
         legend_label=schema,
     )
 
@@ -73,7 +76,7 @@ step = None
 #     step = 140000
 # elif workload == 'tpcc' and contention == '10orderlines':
 #     step = 13000
-p.format_yticks(ax, suffix='K', step=7000, step_num=4) # 7000 9000 10000
+p.format_yticks(ax, suffix='K', step=10000, step_num=4) # 7000 9000 10000
 # ax.set_ylim(None, p.max_y_data * 1.15)       # 折线图的Y轴上限设置为数据最大值的1.15倍
 
 # 设置label
@@ -84,7 +87,8 @@ p.set_labels(ax, XLABEL, YLABEL)
 
 # 设置图例
 # p.legend(ax, loc="upper center", ncol=3, anchor=(0.5, 1.22), columnspacing=1.5)
-p.legend(ax, loc="upper center", ncol=3, anchor=(0.5, 1.22), columnspacing=2.1)
+# p.legend(ax, loc="upper center", ncol=3, anchor=(0.5, 1.22), columnspacing=2.1)
+p.legend(ax, loc="upper center", ncol=3, anchor=(0.5, 1.33), columnspacing=0.6, handletextpad=0.3, labelspacing=0.2, handlelength=1.1)
 # if contention == 'pres':
 #     p.legend(
 #         ax, 

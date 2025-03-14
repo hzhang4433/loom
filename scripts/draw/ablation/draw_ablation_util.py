@@ -6,6 +6,8 @@ X = "Sample"
 Y = "Average_CPU_Util"
 XLABEL = "Time(s)"
 YLABEL = "CPU Util(%)"
+# XLABEL = "时间(秒)"
+# YLABEL = "CUP利用率(%)"
 
 import pandas as pd
 import numpy as np
@@ -52,14 +54,17 @@ time_axis = np.linspace(0, 100, len(time1))
 # 绘制时序图
 x_smooth3, y_smooth3 = smooth_curve(time_axis, cpu_util3)
 p.plot(ax, x_smooth3, y_smooth3, legend_label="LoomRaw", marker="None", nogrid=True, color="#D0CECE") # D0CECE/BFBFBF
+# p.plot(ax, x_smooth3, y_smooth3, legend_label="Loom", marker="None", nogrid=True, color="#D0CECE") # D0CECE/BFBFBF
 # ax.lines[-1].set_linestyle('--')  # 设置为虚线
 
 x_smooth2, y_smooth2 = smooth_curve(time_axis, cpu_util2)
 p.plot(ax, x_smooth2, y_smooth2, legend_label="LoomFR", marker="None", nogrid=True, color="#5075BF")
+# p.plot(ax, x_smooth2, y_smooth2, legend_label="Loom+", marker="None", nogrid=True, color="#5075BF")
 ax.lines[-1].set_linestyle('--')  # 设置为虚线
 
 x_smooth1, y_smooth1 = smooth_curve(time_axis, cpu_util1)
 p.plot(ax, x_smooth1, y_smooth1, legend_label="Loom", marker="None", nogrid=True, color="#F28807")
+# p.plot(ax, x_smooth1, y_smooth1, legend_label="Loom++", marker="None", nogrid=True, color="#F28807")
 # ax.lines[-1].set_linestyle('--')  # 设置为虚线
 
 # 设置X轴标签
@@ -74,7 +79,7 @@ ax.set_ylabel(YLABEL, loc='center', labelpad=0)
 
 
 # 添加图例
-p.legend(ax, loc="upper center", ncol=3, anchor=(0.48, 1.21), columnspacing=4) #, anchor=(0.5, 1.2), columnspacing=0.5
+p.legend(ax, loc="upper center", ncol=3, anchor=(0.48, 1.22), columnspacing=4) #, anchor=(0.5, 1.2), columnspacing=0.5
 
 # 保存图像
 p.save(savepath)

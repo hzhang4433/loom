@@ -19,7 +19,8 @@ class MyPlot:
     # font = r'E:/spectrum/字体合并补全工具/Times+SimSun.ttf'
     # 字体加载
     plot_dir_root = os.path.dirname(os.path.abspath(__file__))
-    font_path = os.path.join(plot_dir_root, 'Fonts', 'msyh.ttc')
+    # font_path = os.path.join(plot_dir_root, 'Fonts', 'msyh.ttc')
+    font_path = os.path.join(plot_dir_root, 'Fonts', 'msyhbd.ttc')
     # font_path = r'D:\0-Spectrum/字体合并补全工具/Times+SimSun.ttf'
     font_manager.fontManager.addfont(font_path)
     prop = font_manager.FontProperties(fname=font_path)
@@ -28,7 +29,8 @@ class MyPlot:
     # 字体设置
     rcParams['font.family'] = 'sans-serif' # 使用字体中的无衬线体
     # rcParams['font.sans-serif'] = prop.get_name()  # 根据名称设置字体
-    rcParams['font.sans-serif'] = 'Helvetica'  # 根据名称设置字体
+    # rcParams['font.sans-serif'] = 'Helvetica'  # 根据名称设置字体
+    rcParams['font.sans-serif'] = 'Microsoft YaHei'  # 根据名称设置字体
     # rcParams['font.weight'] = 'bold' # 设置刻度标签粗细
     # rcParams['font.size'] = 10 # 设置字体大小
     rcParams['axes.unicode_minus'] = False # 使坐标轴刻度标签正常显示正负号
@@ -40,19 +42,24 @@ class MyPlot:
     # 图例相关
     anchor = (0.5, 1.23)    # 相对位置
     # legend_word_size = 13   # 图例字体大小
+    # legend_word_size = 20   # 图例字体大小 for b_w big
+    # legend_word_size = 17   # 图例字体大小 for re-execution and rollback big
+    # legend_word_size = 15   # 图例字体大小 for overall/thread/ablation big
     legend_word_size = 11   # 图例字体大小 for re-execution and rollback
-    # legend_word_size = 11   # 图例字体大小 for time serial
+    # legend_word_size = 12   # 图例字体大小 for time serial
 
     # 画布相关
     # figsize = (5.5, 4)     # 画布大小 origin
     # figsize = (5.8, 4.2)     # 画布大小 for bold b_w
+    # figsize = (5.8, 3.8)     # 画布大小 for bold b_w bigfont
     # figsize = (5.8, 4.0)     # 画布大小 for bold thread
-    # figsize = (5.8, 4)     # 画布大小 for overall
+    # figsize = (5.8, 4)     # 画布大小 for overall/thread big
     # figsize = (6.5, 4.5)   # 画布大小 for 4 columns
     # figsize = (8, 2.5)   # 画布大小 for time series
     # figsize = (5.3, 4)      # 画布大小 for rollback
     figsize = (5.3, 4)      # 画布大小 for bold re-execution and rollback
-    # figsize = (6.98, 4.7)   # 画布大小 for bold ablation
+    # figsize = (5.1, 3.7)      # 画布大小 for bold re-execution and rollback bigfont
+    # figsize = (6.98, 4.7)   # 画布大小 for bold ablation/big
     facecolor = 'white'     # 背景颜色
 
     # 边框相关
@@ -317,6 +324,8 @@ class MyPlot:
         labels=None,
         columnspacing=None,
         handletextpad=None,
+        labelspacing=None,
+        handlelength=None,
         kwargs=None
     ):
         if not handles and not labels:
@@ -331,6 +340,8 @@ class MyPlot:
             frameon=frameon,
             columnspacing=columnspacing,
             handletextpad=handletextpad,
+            labelspacing=labelspacing,
+            handlelength=handlelength,
             prop=kwargs
         )
 

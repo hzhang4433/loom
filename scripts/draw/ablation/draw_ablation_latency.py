@@ -6,6 +6,8 @@ X = "contention"
 Y = "block_latency"
 XLABEL = "Contention"
 YLABEL = "Latency(ms)"
+# XLABEL = "冲突度"
+# YLABEL = "延迟(毫秒)"
 
 import pandas as pd
 import argparse
@@ -24,10 +26,11 @@ parser.add_argument("-t", "--threads", type=int, required=True, help="threads")
 args = parser.parse_args()
 
 # savepath = f'../../pics/ablation/bench_ablation_latency.pdf'
-savepath = f'./bench_ablation_latency.pdf'
+# savepath = f'./bench_ablation_latency.pdf'
+savepath = f'./ablation_latency.pdf'
 
 #################### 数据准备 ####################
-recs = pd.read_csv(f'../../exp_results/ablation/bench_ablation_tps.csv')
+recs = pd.read_csv(f'../exp_results/ablation/bench_ablation_tps.csv')
 assert args.threads in recs['threads'].unique()
 threads = args.threads
 # fliter the records with the given threads
@@ -54,6 +57,10 @@ contentions_dict = {
     20: 'Medium', 
     1 : 'High',
 }
+# contentions_dict = {
+#     20: '中级', 
+#     1 : '高级',
+# }
 # 协议部分
 # protocols = inner_schemas
 protocols = list(inner_schemas)
@@ -124,7 +131,7 @@ ax.set_xticklabels([contentions_dict[contention] for contention in contentions])
 ax.set_xlim(-0.6, 1.6)
 
 # 自适应Y轴变化
-p.format_yticks(ax)
+p.format_yticks(ax, step=45, step_num=5)
 
 # 设置label
 p.set_labels(ax, XLABEL, YLABEL)
@@ -142,15 +149,17 @@ re_execution_patch = plt.Rectangle((0, 0), 1, 1, color=colors[2])
 # 使用 ax.figure.legend() 分别为两个图例创建图例对象
 legend_protocols = ax.figure.legend(
     handles=protocol_handles, 
+    # labels=['Loom', 'Loom+', 'Loom++'], 
     labels=protocols, 
     loc='upper center', 
     ncol=len(protocols), 
-    bbox_to_anchor=(0.5, 0.98),
-    columnspacing=2.4,
+    bbox_to_anchor=(0.51, 1),
+    columnspacing=2.65,
     frameon=False
 )
 legend_parts = ax.figure.legend(
     handles=[execution_patch, rollback_patch, re_execution_patch], 
+    # labels=['预执行', '回滚', '重执行'], 
     labels=['Pre-Execution', 'Rollback', 'Re-Execution'], 
     loc='upper left',
     bbox_to_anchor=(0.14, 0.87),

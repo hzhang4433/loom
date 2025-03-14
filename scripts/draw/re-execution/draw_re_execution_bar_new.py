@@ -7,6 +7,8 @@ X = "block_size"
 Y = "concurrency_ratio"
 XLABEL = "Degree of Concurrency"
 YLABEL = "Block Size"
+# XLABEL = "执行并发度"
+# YLABEL = "区块大小"
 
 import pandas as pd
 import argparse
@@ -30,7 +32,8 @@ warehouse = args.warehouse
 thread_num = args.thread
 
 # savepath = f'../../pics/re-execution/bench_re-execution_{block_size}:{thread_num}.pdf'
-savepath = f'./bench_re-execution_{warehouse}:{thread_num}_bar.pdf'
+# savepath = f'./bench_re-execution_{warehouse}:{thread_num}_bar.pdf'
+savepath = f'./re-execution_{warehouse}:{thread_num}_bar.pdf'
 
 
 #################### 数据准备 ####################
@@ -72,6 +75,7 @@ for idx, (schema, color) in enumerate(schemas):
         bar_positions + idx * width, 
         data[schema], 
         width, 
+        # label="Loom++" if schema == "Loom" else schema,
         label=schema,
         color=color,
         hatch=['||', '\\\\', '--', 'xx', '++', '//'][idx % 6],
@@ -85,8 +89,8 @@ ax.set_yticklabels(blocksizes)
 
 # 设置X轴标签
 # ax.set_xticks(uniform_ticks, blocksizes)
-# ax.set_xticks(range(0, 25, 8), [str(x) for x in range(0, 25, 8)])
-ax.set_xticks(range(0, 31, 10), [str(x) for x in range(0, 31, 10)])
+ax.set_xticks(range(0, 25, 8), [str(x) for x in range(0, 25, 8)])
+# ax.set_xticks(range(0, 31, 10), [str(x) for x in range(0, 31, 10)])
 
 # 设置label
 p.set_labels(ax, XLABEL, YLABEL)
@@ -96,7 +100,8 @@ p.set_labels(ax, XLABEL, YLABEL)
 
 # 设置图例
 # p.legend(ax, loc="upper center", ncol=3, anchor=(0.5, 1.15))
-p.legend(ax, loc="upper center", ncol=4, anchor=(0.5, 1.13), columnspacing=1.2, handletextpad=0.3)
+# p.legend(ax, loc="upper center", ncol=4, anchor=(0.5, 1.13), columnspacing=1.0, handletextpad=0.3)
+p.legend(ax, loc="upper center", ncol=2, anchor=(0.5, 1.28), columnspacing=3, handletextpad=1.0, labelspacing=0.15)
 
 # 保存
 p.save(savepath)

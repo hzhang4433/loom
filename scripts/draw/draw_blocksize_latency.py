@@ -6,6 +6,8 @@ X = "block_size"
 Y = "tx_latency"
 XLABEL = "Block Size"
 YLABEL = "Latency(ms)"
+# XLABEL = "区块大小"
+# YLABEL = "延迟(毫秒)"
 
 import pandas as pd
 import argparse
@@ -58,6 +60,7 @@ for idx, (schema, color) in enumerate(schemas):
         # xdata=records[X],
         ydata=records[Y],
         color=color, 
+        # legend_label="Loom++" if schema == "Loom" else schema,
         legend_label=schema,
     )
 
@@ -69,7 +72,7 @@ ax.set_xticks(uniform_ticks, blocksizes)
 # 自适应Y轴变化
 step = None
 # p.format_yticks(ax, suffix='K', step_num=4)
-p.format_yticks(ax, step=75, step_num=5)
+p.format_yticks(ax, step=10, step_num=5) # 75 15 10
 # ax.set_ylim(None, p.max_y_data * 1.15)       # 折线图的Y轴上限设置为数据最大值的1.15倍
 
 # 设置label
@@ -77,7 +80,8 @@ p.set_labels(ax, XLABEL, YLABEL)
 
 # 设置图例
 # p.legend(ax, loc="upper center", ncol=3, anchor=(0.5, 1.22), columnspacing=1.5)
-p.legend(ax, loc="upper center", ncol=3, anchor=(0.5, 1.22), columnspacing=2.1)
+# p.legend(ax, loc="upper center", ncol=3, anchor=(0.5, 1.22), columnspacing=2.1)
+p.legend(ax, loc="upper center", ncol=3, anchor=(0.5, 1.33), columnspacing=0.6, handletextpad=0.3, labelspacing=0.2, handlelength=1.1)
 
 # 保存
 p.save(savepath)

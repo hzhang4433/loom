@@ -25,7 +25,7 @@ args = parser.parse_args()
 
 #################### 数据准备 ####################
 # recs = pd.read_csv('../../exp_results/overall/overall.csv')
-recs = pd.read_csv('../../exp_results/0optme/overall/overall.csv')
+recs = pd.read_csv('../exp_results/0optme/overall/overall.csv')
 assert args.blocksize in recs['block_size'].unique()
 blocksize = args.blocksize
 recs = recs[recs['block_size'] == blocksize]
@@ -98,7 +98,7 @@ p.set_labels(ax_bottom, XLABEL, YLABEL)
 
 # 设置图例
 # p.legend(ax_bottom, loc="upper center", ncol=3, anchor=(0.5, 1.23), columnspacing=1.6)
-p.legend(ax_bottom, loc="upper center", ncol=3, anchor=(0.5, 1.23), columnspacing=2.2)
+p.legend(ax_bottom, loc="upper center", ncol=3, anchor=(0.5, 1.25), columnspacing=1.3, handletextpad=0.7, labelspacing=0.25)
 
 # 保存
 p.save(savepath)

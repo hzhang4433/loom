@@ -65,7 +65,7 @@ For the Aria scheme, please pass parameters in the following way.
 Aria:threads:table_partition:ReOrderingFlag(True or False)
 ```
 
-For the Harmony/HarmonyIB scheme, please pass parameters in the following way.
+For the Harmony scheme, please pass parameters in the following way.
 ```
 Harmony:threads:table_partition:InterBlockFlag(True or False)
 ```

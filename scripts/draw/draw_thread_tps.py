@@ -6,6 +6,8 @@ X = "threads"
 Y = "tps"
 XLABEL = "Threads"
 YLABEL = "Troughput(Txn/s)"
+# XLABEL = "线程数"
+# YLABEL = "系统吞吐(交易数/秒)"
 
 import pandas as pd
 import argparse
@@ -27,7 +29,8 @@ warehouse = args.warehouse
 blocksize = args.blocksize
 
 # savepath = f'../pics/thread/bench_thread_{warehouse}:{blocksize}_tps.pdf'
-savepath = f'./bench_thread_{warehouse}:{blocksize}_tps.pdf'
+# savepath = f'./bench_thread_{warehouse}:{blocksize}_tps.pdf'
+savepath = f'./thread_{warehouse}:{blocksize}_tps.pdf'
 
 
 #################### 数据准备 ####################
@@ -52,6 +55,7 @@ for idx, (schema, color) in enumerate(schemas):
         xdata=records[X],
         ydata=records[Y],
         color=color, 
+        # legend_label="Loom++" if schema == "Loom" else schema,
         legend_label=schema,
     )
 
@@ -76,7 +80,7 @@ p.set_labels(ax, XLABEL, YLABEL)
 # box2: plt.Bbox = ax.get_tightbbox()
 
 # 设置图例
-p.legend(ax, loc="upper center", ncol=3, anchor=(0.5, 1.23), columnspacing=2.1)
+p.legend(ax, loc="upper center", ncol=3, anchor=(0.5, 1.25), columnspacing=1.3, handletextpad=0.7, labelspacing=0.25)
 # if contention == 'pres':
 #     p.legend(
 #         ax, 

@@ -6,6 +6,8 @@ X = "warehouse"
 Y = "tps"
 XLABEL = "Warehouse"
 YLABEL = "Troughput(Txn/s)"
+# XLABEL = "仓库数"
+# YLABEL = "系统吞吐(交易数/秒)"
 
 import pandas as pd
 import argparse
@@ -77,7 +79,8 @@ p.set_labels(ax, XLABEL, YLABEL)
 
 # 设置图例
 # p.legend(ax, loc="upper center", ncol=3, anchor=(0.5, 1.22), columnspacing=1.5)
-p.legend(ax, loc="upper center", ncol=3, anchor=(0.5, 1.22), columnspacing=2.1)
+# p.legend(ax, loc="upper center", ncol=3, anchor=(0.5, 1.22), columnspacing=2.1)
+p.legend(ax, loc="upper center", ncol=3, anchor=(0.5, 1.32), columnspacing=0.6, handletextpad=0.3, labelspacing=0.2, handlelength=1.1)
 
 # 保存
 p.save(savepath)
